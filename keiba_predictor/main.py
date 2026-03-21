@@ -22,6 +22,19 @@
 
     # 7. 全ステップを一括実行
     python -m keiba_predictor.main all --start 2023-01 --end 2023-12
+
+    # 8. Twitter/X 連携
+    # Xにログイン（初回・セッション切れ時）
+    python -m keiba_predictor.main twitter login --username YOUR_USERNAME --password YOUR_PASSWORD
+
+    # TLを監視して伸びてる投稿に引用ポスト
+    python -m keiba_predictor.main twitter quote
+
+    # ドライラン（実際には投稿しない）
+    python -m keiba_predictor.main twitter quote --dry-run
+
+    # 競馬テンプレートを使用して一定間隔で繰り返す
+    python -m keiba_predictor.main twitter quote --keiba --interval 600 --max-posts 3
 """
 
 import argparse
@@ -84,6 +97,91 @@ def cmd_all(args: argparse.Namespace) -> None:
     cmd_train(args)
 
 
+# ── Twitter/X 連携コマンド ──────────────────────────────────────
+
+def cmd_twitter_login(args: argparse.Namespace) -> None:
+    """ChromeでXにログインしてセッションを保存する。"""
+    from keiba_predictor.twitter.auth import login
+
+    success = login(
+        username=getattr(args, "username", None),
+        password=getattr(args, "password", None),
+        headless=getattr(args, "headless", False),
+    )
+    if success:
+        logger.info("ログイン成功！次回からセッションが再利用されます。")
+    else:
+        logger.error("ログインに失敗しました。認証情報を確認してください。")
+        sys.exit(1)
+
+
+def cmd_twitter_quote(args: argparse.Namespace) -> None:
+    """
+    TLをスキャンして伸びてる/伸びそうな投稿に引用ポストを作成する。
+
+    --interval が指定された場合は繰り返し実行する。
+    """
+    import time as time_mod
+    from keiba_predictor.twitter.auth import open_browser_with_session
+    from keiba_predictor.twitter.timeline import fetch_trending_tweets
+    from keiba_predictor.twitter.quote_poster import process_trending_tweets
+
+    dry_run = getattr(args, "dry_run", False)
+    interval = getattr(args, "interval", 0)
+    scroll_count = getattr(args, "scroll", 5)
+    max_posts = getattr(args, "max_posts", 5)
+    template = getattr(args, "template", None)
+    use_keiba = getattr(args, "keiba", False)
+    headless = getattr(args, "headless", False)
+    min_likes = getattr(args, "min_likes", 0)
+
+    already_quoted: set = set()
+
+    pw, browser, context, page = open_browser_with_session(headless=headless)
+
+    try:
+        while True:
+            logger.info("=== タイムラインスキャン開始 ===")
+
+            # TLに戻る
+            page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=30000)
+            time_mod.sleep(3)
+
+            # トレンド投稿を取得
+            trending = fetch_trending_tweets(
+                page,
+                scroll_count=scroll_count,
+                min_likes=min_likes,
+            )
+
+            if not trending:
+                logger.info("トレンド候補が見つかりませんでした。")
+            else:
+                # 引用投稿を実行
+                results = process_trending_tweets(
+                    page,
+                    trending,
+                    template=template,
+                    use_keiba_template=use_keiba,
+                    max_posts=max_posts,
+                    dry_run=dry_run,
+                    already_quoted=already_quoted,
+                )
+
+                success = sum(1 for r in results if r.success)
+                logger.info(f"今回の実行: {success}/{len(results)} 件投稿")
+
+            if interval <= 0:
+                break
+
+            logger.info(f"次のスキャンまで {interval} 秒待機...")
+            time_mod.sleep(interval)
+
+    finally:
+        browser.close()
+        pw.stop()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m keiba_predictor.main",
@@ -141,6 +239,65 @@ def build_parser() -> argparse.ArgumentParser:
     p_all.add_argument("--end", metavar="YYYY-MM", help="取得終了年月")
     p_all.add_argument("--cv-splits", type=int, default=5)
     p_all.set_defaults(func=cmd_all)
+
+    # ── twitter ────────────────────────────────────────────
+    p_tw = sub.add_parser("twitter", help="Twitter/X 連携機能")
+    tw_sub = p_tw.add_subparsers(dest="twitter_command", required=True)
+
+    # twitter login
+    p_tw_login = tw_sub.add_parser("login", help="ChromeでXにログインしてセッションを保存")
+    p_tw_login.add_argument(
+        "--username", "-u",
+        help="Xのユーザー名またはメールアドレス (未指定時は環境変数 X_USERNAME を使用)"
+    )
+    p_tw_login.add_argument(
+        "--password", "-p",
+        help="Xのパスワード (未指定時は環境変数 X_PASSWORD を使用)"
+    )
+    p_tw_login.add_argument(
+        "--headless", action="store_true",
+        help="ヘッドレスモードで起動 (画面なし)"
+    )
+    p_tw_login.set_defaults(func=cmd_twitter_login)
+
+    # twitter quote
+    p_tw_quote = tw_sub.add_parser(
+        "quote",
+        help="TLをスキャンして伸びてる投稿に引用ポストを作成"
+    )
+    p_tw_quote.add_argument(
+        "--dry-run", action="store_true",
+        help="実際には投稿せずログのみ表示"
+    )
+    p_tw_quote.add_argument(
+        "--interval", type=int, default=0, metavar="SECONDS",
+        help="繰り返し実行する間隔（秒）。0なら1回だけ実行 (デフォルト: 0)"
+    )
+    p_tw_quote.add_argument(
+        "--scroll", type=int, default=5, metavar="N",
+        help="TLをスクロールする回数 (デフォルト: 5)"
+    )
+    p_tw_quote.add_argument(
+        "--max-posts", type=int, default=5, metavar="N",
+        help="1回の実行で投稿する最大件数 (デフォルト: 5)"
+    )
+    p_tw_quote.add_argument(
+        "--template", metavar="TEXT",
+        help="カスタム引用テンプレート ({hashtags} でハッシュタグを挿入)"
+    )
+    p_tw_quote.add_argument(
+        "--keiba", action="store_true",
+        help="競馬向けテンプレートを使用"
+    )
+    p_tw_quote.add_argument(
+        "--min-likes", type=int, default=0, metavar="N",
+        help="対象とする最低いいね数 (デフォルト: 0)"
+    )
+    p_tw_quote.add_argument(
+        "--headless", action="store_true",
+        help="ヘッドレスモードで起動 (画面なし)"
+    )
+    p_tw_quote.set_defaults(func=cmd_twitter_quote)
 
     return parser
 
