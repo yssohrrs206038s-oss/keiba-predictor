@@ -6,3 +6,6 @@ numpy>=1.26.0
 scikit-learn>=1.3.0
 xgboost>=2.0.0
 matplotlib>=3.8.0
+
+# Twitter/X 自動投稿機能
+playwright>=1.40.0
