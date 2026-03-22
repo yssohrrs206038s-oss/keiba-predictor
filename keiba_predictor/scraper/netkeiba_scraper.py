@@ -65,15 +65,24 @@ def _sleep():
 def _get(url: str, session: requests.Session, encoding: str = "EUC-JP") -> Optional[BeautifulSoup]:
     """
     GETリクエストを送り BeautifulSoup を返す。失敗時はNone。
-    netkeibaはEUC-JPエンコーディングのため明示指定する。
+
+    エンコーディング検出順:
+      1. Content-Type ヘッダーの charset
+      2. 引数 encoding（デフォルト EUC-JP）
+      3. HTML内の <meta charset> タグ（BS4が自動検出）
+    resp.content (bytes) + from_encoding を使うことで BS4 に正しく検出させる。
     """
     try:
         resp = session.get(url, headers=HEADERS, timeout=20)
         resp.raise_for_status()
-        resp.encoding = encoding
-        return BeautifulSoup(resp.text, "html.parser")
+        # Content-Type ヘッダーから charset を取得（あればそちらを優先）
+        ct = resp.headers.get("Content-Type", "")
+        m = re.search(r"charset=([^\s;,]+)", ct, re.I)
+        detected = m.group(1).strip() if m else encoding
+        # bytes + from_encoding: BS4 が <meta charset> も考慮して正しく解析する
+        return BeautifulSoup(resp.content, "html.parser", from_encoding=detected)
     except requests.RequestException as e:
-        logger.warning(f"Request failed [{resp.status_code if 'resp' in dir() else 'N/A'}]: {url} -> {e}")
+        logger.warning(f"Request failed: {url} -> {e}")
         return None
 
 

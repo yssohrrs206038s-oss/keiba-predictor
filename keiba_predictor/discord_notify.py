@@ -99,13 +99,13 @@ def _is_grade_race(el) -> bool:
         return True
 
     # 3. 子 <span> に "G1"/"G2"/"G3"/"GⅠ" 等のグレードテキストがあるか
-    #    または gradeicon-* クラスがあるか
+    #    または gradeicon-g1/g2/g3 クラスがあるか（"grade" だけでは広すぎるため限定）
     for span in el.select("span"):
         stext = span.get_text(strip=True)
         if re.search(r"^G[Ⅰ-Ⅲ1-3]$|^GI{1,3}$", stext):
             return True
         scls = " ".join(span.get("class", [])).lower()
-        if "gradeicon" in scls or "grade" in scls:
+        if re.search(r"gradeicon-g[123]", scls):
             return True
 
     # 4. 画像 alt 属性に "G1"/"G2"/"G3" があるか
@@ -612,8 +612,9 @@ def run_predict_notify(
 
         race_df = df_all[df_all["race_id"].astype(str) == race_id].copy()
         if race_df.empty:
+            logger.info(f"  スキップ(データなし): {race_name} ({race_id})")
             send_discord(webhook_url,
-                f"⚠️ **{race_name}** のデータなし (race_id: `{race_id}`)")
+                f"**{race_name}**  {race_date}\n※このレースは予測データが不足しています")
             continue
 
         # コース情報
