@@ -160,6 +160,18 @@ def clean_raw_data(raw_df: pd.DataFrame) -> pd.DataFrame:
     # ── 日付変換 ─────────────────────────────────────────────
     df["race_date"] = pd.to_datetime(_ensure_col(df, "race_date"), errors="coerce")
 
+    # race_dateがNaNの行はrace_idの先頭8桁(YYYYMMDD)から補完する
+    if "race_id" in df.columns:
+        missing_date = df["race_date"].isna()
+        if missing_date.any():
+            fallback = pd.to_datetime(
+                df.loc[missing_date, "race_id"].astype(str).str[:8],
+                format="%Y%m%d",
+                errors="coerce",
+            )
+            df.loc[missing_date, "race_date"] = fallback
+            logger.info(f"race_date: {missing_date.sum()}行をrace_idから補完しました")
+
     # ── 目的変数の整合 ───────────────────────────────────────
     if "top3" not in df.columns:
         df["top3"] = np.nan

@@ -88,12 +88,13 @@ def add_past_time_features(df: pd.DataFrame) -> pd.DataFrame:
     # コース別（芝/ダート・距離）
     for n, col in [(3, "avg_time_3"), (5, "avg_time_5")]:
         vals = _rolling_avg_time(df, ["course_type_enc", "distance"], n, col)
-        df[col] = vals.values
+        # groupbyはNaNキーを除外するためインデックスで整合させる
+        df[col] = vals.reindex(df.index)
 
     # コース問わず（全体平均）
     for n, col in [(3, "avg_time_3_any"), (5, "avg_time_5_any")]:
         vals = _rolling_avg_time(df, [], n, col)
-        df[col] = vals.values
+        df[col] = vals.reindex(df.index)
 
     return df
 
