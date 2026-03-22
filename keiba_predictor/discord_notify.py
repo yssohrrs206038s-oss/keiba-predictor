@@ -87,34 +87,57 @@ def _weekend_dates() -> list[str]:
 
 
 def _is_grade_race(el) -> bool:
-    """BeautifulSoup要素（<li>など）が重賞かどうかを判定する。"""
-    # 1. 要素自身のクラスに grade 関連文字列があるか
-    cls = " ".join(el.get("class", [])).lower()
-    if "grade" in cls:
-        return True
+    """BeautifulSoup要素（<li>など）が重賞かどうかを判定する。
 
-    # 2. 全テキストに (G1)/(G2)/(G3)/(GⅠ)/(GⅡ)/(GⅢ) があるか
+    netkeiba で確認されているグレード表示パターン:
+      - <span class="Icon_GradeType2">   (CSS背景画像、テキストなし)
+      - <span class="gradeicon-g2">G2</span>  (テキストあり旧形式)
+      - <li class="... isGrade ...">
+      - 全テキストに (G2) などの括弧付きグレード表記
+    """
+    # 1. 全子孫要素のクラスを走査（テキストなし CSS アイコンも捕捉）
+    GRADE_CLS_RE = re.compile(
+        r"icon_gradetype[123]"    # Icon_GradeType1/2/3 (race.netkeiba.com)
+        r"|gradeicon-g[123]"      # gradeicon-g1/g2/g3 (旧形式)
+        r"|grade_?type[123]"      # grade_type1/2/3 (変形)
+        r"|\bisgrade\b",          # isGrade クラス
+        re.I,
+    )
+    for child in el.find_all(True):
+        cls_str = " ".join(child.get("class", []))
+        if GRADE_CLS_RE.search(cls_str):
+            return True
+
+    # 2. 全テキストに括弧付きグレード表記 (G1)/(G2)/(G3)/(GⅠ)/(GⅡ)/(GⅢ) があるか
     text = el.get_text(" ", strip=True)
     if GRADE_RE.search(text):
         return True
 
-    # 3. 子 <span> に "G1"/"G2"/"G3"/"GⅠ" 等のグレードテキストがあるか
-    #    または gradeicon-g1/g2/g3 クラスがあるか（"grade" だけでは広すぎるため限定）
-    for span in el.select("span"):
-        stext = span.get_text(strip=True)
-        if re.search(r"^G[Ⅰ-Ⅲ1-3]$|^GI{1,3}$", stext):
-            return True
-        scls = " ".join(span.get("class", [])).lower()
-        if re.search(r"gradeicon-g[123]", scls):
+    # 3. 単体テキストが "G1"/"G2"/"G3"/"GⅠ" 等の子孫要素があるか
+    for child in el.find_all(True):
+        stext = child.get_text(strip=True)
+        if re.fullmatch(r"G[Ⅰ-Ⅲ1-3]|GI{1,3}", stext):
             return True
 
     # 4. 画像 alt 属性に "G1"/"G2"/"G3" があるか
-    for img in el.select("img[alt]"):
-        alt = img.get("alt", "").strip()
-        if re.search(r"^G[Ⅰ-Ⅲ1-3]$|^GI{1,3}$", alt):
+    for img in el.find_all("img", alt=True):
+        alt = img["alt"].strip()
+        if re.fullmatch(r"G[Ⅰ-Ⅲ1-3]|GI{1,3}", alt):
             return True
 
     return False
+
+
+def _dump_html_for_debug(soup, kaisai_date: str) -> None:
+    """取得した soup の HTML をデバッグ用ファイルに保存する。"""
+    try:
+        debug_dir = DATA_DIR / "debug"
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        path = debug_dir / f"race_list_{kaisai_date}.html"
+        path.write_text(soup.prettify(), encoding="utf-8")
+        logger.info(f"  [debug] HTML保存: {path}")
+    except Exception as e:
+        logger.debug(f"  [debug] HTML保存失敗: {e}")
 
 
 def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
@@ -145,6 +168,10 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
             # <a> ではなく <li> 全体を検査する
             items = soup.select("li.RaceList_DataItem")
             logger.info(f"  {kaisai_date}: {len(items)} RaceList_DataItem発見 ({path})")
+
+            # 最初の取得時にHTMLをデバッグ保存（クラス構造確認用）
+            if items:
+                _dump_html_for_debug(soup, kaisai_date)
 
             for li in items:
                 # race_id を li 内の a タグから取得
@@ -177,9 +204,15 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
                 # 重賞判定: <li> 全体を渡す（a タグ外のグレードアイコンも検査）
                 is_grade = _is_grade_race(li)
 
+                # デバッグ: li 内の全クラス一覧を出力
+                all_cls = [
+                    " ".join(c.get("class", []))
+                    for c in li.find_all(True)
+                    if c.get("class")
+                ]
                 logger.debug(
-                    f"    {race_id} [{race_name!r}] "
-                    f"li_cls={li.get('class',[])} grade={is_grade}"
+                    f"    {race_id} [{race_name!r}] grade={is_grade} "
+                    f"child_classes={all_cls}"
                 )
 
                 if is_grade:
