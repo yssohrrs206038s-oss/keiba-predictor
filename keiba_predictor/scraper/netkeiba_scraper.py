@@ -171,8 +171,10 @@ def _parse_course_distance(text: str, race_info: dict) -> None:
     いることがある。この関数はテキスト部分のみを担当し、img alt は
     _fill_from_img_alts() で補完する。
     """
-    # コース種別＋距離が同一テキスト内にある場合: "芝・右2000m" / "ダート1800m" 等
-    m = re.search(r"(芝|ダート?|障)[^\d]*(\d{3,4})m", text)
+    # コース種別＋距離が同一テキスト内にある場合
+    # 対応フォーマット: "芝2000m" "芝・右2000m" "ダ1400m (左)" "ダート1800m" "障2000m"
+    # ※ netkeibaは "ダ" の略記も使うため (芝|ダ|障) で先頭1文字に合わせる
+    m = re.search(r"(芝|ダ|障)[^\d]*(\d{3,4})m", text)
     if m:
         raw_type = m.group(1)
         if raw_type.startswith("障"):
@@ -185,7 +187,8 @@ def _parse_course_distance(text: str, race_info: dict) -> None:
     elif race_info["distance"] is None:
         # コース種別がimg alt等に分離されている場合: 距離数字だけ取得する
         # 例: <img alt="芝"> 2000m → get_text()で "2000m" のみ残る
-        m = re.search(r"\b(\d{3,4})m\b", text)
+        # \b は日本語文字との境界で機能しないため使わない
+        m = re.search(r"(\d{3,4})m", text)
         if m:
             race_info["distance"] = int(m.group(1))
 
