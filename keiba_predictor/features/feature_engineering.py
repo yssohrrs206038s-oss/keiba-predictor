@@ -67,15 +67,15 @@ def _rolling_avg_time(
     """
     馬ごと（+ key_cols条件）に直近n走の平均タイムを計算する。
     当該レース自身は含めない（leakage防止）。
+
+    groupby().transform() を使うことで、常に入力と同じ長さの
+    Series が返り、NaNキーの行は自動的に NaN になる。
     """
     df = df.sort_values("race_date")
 
-    def _horse_group_avg(group: pd.DataFrame) -> pd.Series:
-        times = group["time_sec"].shift(1)  # 前走以前のみ使う
-        return times.rolling(n, min_periods=1).mean()
-
-    result = df.groupby(["horse_id"] + key_cols, group_keys=False).apply(
-        _horse_group_avg
+    result = (
+        df.groupby(["horse_id"] + key_cols, group_keys=False)["time_sec"]
+        .transform(lambda x: x.shift(1).rolling(n, min_periods=1).mean())
     )
     result.name = col_name
     return result
@@ -87,14 +87,11 @@ def add_past_time_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # コース別（芝/ダート・距離）
     for n, col in [(3, "avg_time_3"), (5, "avg_time_5")]:
-        vals = _rolling_avg_time(df, ["course_type_enc", "distance"], n, col)
-        # groupbyはNaNキーを除外するためインデックスで整合させる
-        df[col] = vals.reindex(df.index)
+        df[col] = _rolling_avg_time(df, ["course_type_enc", "distance"], n, col)
 
     # コース問わず（全体平均）
     for n, col in [(3, "avg_time_3_any"), (5, "avg_time_5_any")]:
-        vals = _rolling_avg_time(df, [], n, col)
-        df[col] = vals.reindex(df.index)
+        df[col] = _rolling_avg_time(df, [], n, col)
 
     return df
 
