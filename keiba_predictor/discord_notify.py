@@ -29,7 +29,7 @@ import pandas as pd
 import requests
 
 from keiba_predictor.scraper.netkeiba_scraper import (
-    _get, _sleep, RACE_LIST_URL, RACE_RESULT_URL,
+    _get, _sleep, RACE_RESULT_URL,
 )
 from keiba_predictor.model.predict import load_model, predict_race
 
@@ -86,6 +86,37 @@ def _weekend_dates() -> list[str]:
     return [sat.strftime("%Y%m%d"), sun.strftime("%Y%m%d")]
 
 
+def _is_grade_race(el) -> bool:
+    """BeautifulSoup要素（<li>など）が重賞かどうかを判定する。"""
+    # 1. 要素自身のクラスに grade 関連文字列があるか
+    cls = " ".join(el.get("class", [])).lower()
+    if "grade" in cls:
+        return True
+
+    # 2. 全テキストに (G1)/(G2)/(G3)/(GⅠ)/(GⅡ)/(GⅢ) があるか
+    text = el.get_text(" ", strip=True)
+    if GRADE_RE.search(text):
+        return True
+
+    # 3. 子 <span> に "G1"/"G2"/"G3"/"GⅠ" 等のグレードテキストがあるか
+    #    または gradeicon-* クラスがあるか
+    for span in el.select("span"):
+        stext = span.get_text(strip=True)
+        if re.search(r"^G[Ⅰ-Ⅲ1-3]$|^GI{1,3}$", stext):
+            return True
+        scls = " ".join(span.get("class", [])).lower()
+        if "gradeicon" in scls or "grade" in scls:
+            return True
+
+    # 4. 画像 alt 属性に "G1"/"G2"/"G3" があるか
+    for img in el.select("img[alt]"):
+        alt = img.get("alt", "").strip()
+        if re.search(r"^G[Ⅰ-Ⅲ1-3]$|^GI{1,3}$", alt):
+            return True
+
+    return False
+
+
 def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
     """今週末の重賞レース一覧 [{race_id, race_name, race_date}, ...] を返す。"""
     found: list[dict] = []
@@ -94,71 +125,121 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
     dates = _weekend_dates()
     logger.info(f"検索対象日付: {dates[0]} (土) / {dates[1]} (日)")
 
+    # race_list_sub.html（静的フラグメント）と race_list.html の両方を試みる
+    LIST_PATHS = ["race_list_sub.html", "race_list.html"]
+
     for kaisai_date in dates:
-        url = f"{RACE_LIST_URL}?kaisai_date={kaisai_date}"
-        logger.info(f"取得中: {url}")
-        soup = _get(url, session)
-        if soup is None:
-            logger.warning(f"  race_list_sub 取得失敗: {kaisai_date} (ネットワークエラー)")
-            continue
+        race_date_str = f"{kaisai_date[:4]}-{kaisai_date[4:6]}-{kaisai_date[6:]}"
+        found_this_day: list[dict] = []
 
-        all_links = soup.select("a[href*='race_id=']")
-        logger.info(f"  {kaisai_date}: {len(all_links)} レースリンク発見")
-
-        for a in all_links:
-            m = re.search(r"race_id=(\d{12})", a.get("href", ""))
-            if not m:
+        for path in LIST_PATHS:
+            url = f"https://race.netkeiba.com/top/{path}?kaisai_date={kaisai_date}"
+            logger.info(f"取得中: {url}")
+            soup = _get(url, session)
+            if soup is None:
+                logger.warning(f"  取得失敗: {url}")
                 continue
-            race_id = m.group(1)
-            if race_id in seen:
-                continue
-            seen.add(race_id)
 
-            # レース名: Race_Name → RaceName → RaceList_ItemTitle → 全テキスト
-            name_el = (
-                a.select_one(".Race_Name")
-                or a.select_one(".RaceName")
-                or a.select_one(".RaceList_ItemTitle")
-            )
-            full_text = a.get_text(" ", strip=True)
-            race_name = name_el.get_text(strip=True) if name_el else full_text
+            # ── <li class="RaceList_DataItem"> を起点に取得 ──────────
+            # グレードアイコンは <a> タグの外 (<li> 直下) に置かれることが多いため
+            # <a> ではなく <li> 全体を検査する
+            items = soup.select("li.RaceList_DataItem")
+            logger.info(f"  {kaisai_date}: {len(items)} RaceList_DataItem発見 ({path})")
 
-            # ─── 重賞判定（4段階） ─────────────────────────────
-            # 1. レース名または全テキストに (G1/G2/G3/GⅠ/GⅡ/GⅢ) が含まれるか
-            is_grade = bool(GRADE_RE.search(race_name)) or bool(GRADE_RE.search(full_text))
-
-            # 2. <a> 自身のクラスに isGrade / Grade が含まれるか
-            if not is_grade:
-                cls = " ".join(a.get("class", []))
-                is_grade = "isGrade" in cls or "Grade" in cls
-
-            # 3. 祖先要素（<li>/<div>）のクラスを確認
-            #    netkeiba は <li class="RaceList_DataItem isGrade isGradeG3"> に付く
-            if not is_grade:
-                node = a.parent
-                while node and node.name not in ("body", "html", None):
-                    pcls = " ".join(node.get("class", []))
-                    if "isGrade" in pcls or "Grade" in pcls:
-                        is_grade = True
+            for li in items:
+                # race_id を li 内の a タグから取得
+                a_tag = None
+                for a in li.select("a[href]"):
+                    if re.search(r"race_id=\d{12}", a.get("href", "")):
+                        a_tag = a
                         break
-                    node = node.parent
+                if a_tag is None:
+                    continue
+                m = re.search(r"race_id=(\d{12})", a_tag.get("href", ""))
+                if not m:
+                    continue
+                race_id = m.group(1)
+                if race_id in seen:
+                    continue
 
-            # 4. グレードアイコン span （"G1" "G2" "G3" "GⅠ" 等）が子に存在するか
-            if not is_grade:
-                for span in a.select("span"):
-                    if re.search(r"^G[Ⅰ-Ⅲ1-3]$", span.get_text(strip=True)):
-                        is_grade = True
-                        break
+                # レース名（<li> 全体から複数セレクタで試みる）
+                name_el = (
+                    li.select_one(".Race_Name")
+                    or li.select_one(".RaceName")
+                    or li.select_one(".RaceList_ItemTitle")
+                    or li.select_one(".ItemTitle")
+                )
+                race_name = (
+                    name_el.get_text(strip=True) if name_el
+                    else a_tag.get_text(" ", strip=True)
+                )
 
-            logger.debug(f"    {race_id} [{race_name!r}] grade={is_grade}")
+                # 重賞判定: <li> 全体を渡す（a タグ外のグレードアイコンも検査）
+                is_grade = _is_grade_race(li)
 
-            if is_grade:
-                found.append({
-                    "race_id":   race_id,
-                    "race_name": race_name,
-                    "race_date": f"{kaisai_date[:4]}-{kaisai_date[4:6]}-{kaisai_date[6:8]}",
-                })
-                logger.info(f"  ★重賞: {race_name} ({race_id})")
+                logger.debug(
+                    f"    {race_id} [{race_name!r}] "
+                    f"li_cls={li.get('class',[])} grade={is_grade}"
+                )
+
+                if is_grade:
+                    seen.add(race_id)
+                    found_this_day.append({
+                        "race_id":   race_id,
+                        "race_name": race_name,
+                        "race_date": race_date_str,
+                    })
+                    logger.info(f"  ★重賞: {race_name} ({race_id})")
+
+            # フォールバック: <li> がない場合は <a href*='race_id='> から全件取得して
+            # <li> と同様に親要素を検査する
+            if not items:
+                logger.info(f"  RaceList_DataItem なし → href ベースにフォールバック ({path})")
+                for a in soup.select("a[href*='race_id=']"):
+                    m = re.search(r"race_id=(\d{12})", a.get("href", ""))
+                    if not m:
+                        continue
+                    race_id = m.group(1)
+                    if race_id in seen:
+                        continue
+
+                    # <a> の最も近い block 祖先（<li>/<div>/<tr>）を検査対象にする
+                    container = a
+                    for anc in a.parents:
+                        if anc.name in ("li", "div", "tr", "td"):
+                            container = anc
+                            break
+
+                    name_el = (
+                        container.select_one(".Race_Name")
+                        or container.select_one(".RaceName")
+                        or container.select_one(".RaceList_ItemTitle")
+                    )
+                    race_name = (
+                        name_el.get_text(strip=True) if name_el
+                        else a.get_text(" ", strip=True)
+                    )
+
+                    is_grade = _is_grade_race(container)
+                    logger.debug(f"    [fallback] {race_id} [{race_name!r}] grade={is_grade}")
+
+                    if is_grade:
+                        seen.add(race_id)
+                        found_this_day.append({
+                            "race_id":   race_id,
+                            "race_name": race_name,
+                            "race_date": race_date_str,
+                        })
+                        logger.info(f"  ★重賞(fallback): {race_name} ({race_id})")
+
+            # 重賞が見つかれば次のURLは試さない
+            if found_this_day:
+                break
+            if items:
+                # アイテムはあったが重賞なし → もう一方のURLも試す
+                logger.info(f"  {path}: {len(items)}件あるが重賞0件 → 次URLを試みる")
+
+        found.extend(found_this_day)
         _sleep()
 
     logger.info(f"重賞合計: {len(found)} レース")
