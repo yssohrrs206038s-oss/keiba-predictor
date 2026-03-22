@@ -28,3 +28,8 @@ keiba_predictor/model/*.pkl
 # OS
 .DS_Store
 Thumbs.db
+
+# Secrets / 認証情報（Discord Webhook URL 等を含むため）
+.env
+keiba_notify.bat
+logs/
