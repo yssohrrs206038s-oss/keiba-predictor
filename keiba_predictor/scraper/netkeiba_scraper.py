@@ -169,15 +169,23 @@ def _parse_course_distance(text: str, race_info: dict) -> None:
             race_info["course_type"] = "芝"
         race_info["distance"] = int(m.group(2))
 
-    # 天候（書式: "天候:晴" / "天候：晴" / "天候 : 晴" / "天候/晴"）
-    m = re.search(r"天候\s*[:/：/]\s*([^\s/]+)", text)
+    # 天候（書式: "天候:晴" / "天候：晴" / "天候 : 晴"）
+    # 全角コロン・半角コロン・スペース有無すべて対応
+    m = re.search(r"天候\s*[:/：]\s*([^\s/　/]+)", text)
     if m:
         race_info["weather"] = m.group(1).strip()
 
-    # 馬場状態（書式: "馬場:良" / "馬場:稍重" 等）
-    m = re.search(r"馬場\s*[:/：/]\s*([^\s/]+)", text)
+    # 馬場状態の取得（2パターンに対応）
+    # パターン1（旧/共通）: "馬場:良" / "馬場 : 稍重" / "馬場：重"
+    m = re.search(r"馬場\s*[:/：]\s*([^\s/　/]+)", text)
     if m:
         race_info["track_condition"] = m.group(1).strip()
+    else:
+        # パターン2（新フォーマット）: "芝:良" / "芝：不良" / "ダ:稍重" など
+        # 表層種別ラベルが直接馬場状態の接頭辞になっている場合
+        m = re.search(r"(?:芝|ダート?|ダ)\s*[:/：]\s*(良|稍重|重|不良)", text)
+        if m:
+            race_info["track_condition"] = m.group(1).strip()
 
 
 def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.DataFrame]:
@@ -250,7 +258,32 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
             if race_info["distance"] is not None:
                 found_meta = True
 
-    if not found_meta:
+    # ── RaceData01 の <span> 要素を個別解析（新レイアウト対応） ──
+    # 新レイアウトでは各情報が個別の <span> に分かれていることがある
+    # 例: <span>芝2000m</span><span>天候：晴</span><span>芝：良</span>
+    race_data01 = soup.select_one("div.RaceData01")
+    if race_data01:
+        for span in race_data01.select("span"):
+            span_text = span.get_text(strip=True)
+            if not span_text:
+                continue
+            # distance/course_type が未取得なら span 単体でも試みる
+            if race_info["distance"] is None:
+                _parse_course_distance(span_text, race_info)
+            # weather が未取得
+            if race_info["weather"] is None:
+                m = re.search(r"天候\s*[:/：]\s*([^\s/　]+)", span_text)
+                if m:
+                    race_info["weather"] = m.group(1).strip()
+            # track_condition が未取得
+            if race_info["track_condition"] is None:
+                m = re.search(r"馬場\s*[:/：]\s*([^\s/　]+)", span_text)
+                if not m:
+                    m = re.search(r"(?:芝|ダート?|ダ)\s*[:/：]\s*(良|稍重|重|不良)", span_text)
+                if m:
+                    race_info["track_condition"] = m.group(1).strip()
+
+    if not found_meta and race_info["distance"] is None:
         # 最終手段: ページ内の全テキストから検索
         all_text = soup.get_text(" ", strip=True)
         _parse_course_distance(all_text, race_info)
@@ -291,7 +324,7 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
 
     # ── ヘッダからカラムインデックスをマッピング ───────────────
     # db.netkeiba.com のカラム名（表記が変わることがある）
-    # 例: 着順,枠番,馬番,馬名,性齢,斤量,騎手,タイム,着差,単勝,人気,馬体重,上り,調教師
+    # 例: 着順,枠番,馬番,馬名,性齢,斤量,騎手,タイム,着差,通過,上り,単勝,人気,馬体重,調教師
     HEADER_ALIASES: dict[str, list[str]] = {
         "finish_position": ["着順"],
         "frame_number":    ["枠番", "枠"],
@@ -306,13 +339,20 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         "popularity":      ["人気"],
         "horse_weight":    ["馬体重"],
         "last_3f":         ["上り", "上がり", "上り3F", "上がり3F"],
-        "trainer":         ["調教師"],
+        "trainer":         ["調教師", "厩舎"],
     }
 
-    header_row = result_table.select_one("tr")
+    # <thead> tr → <th> を優先。なければ最初の <tr> の <th> にフォールバック
+    header_row = (
+        result_table.select_one("thead tr")
+        or result_table.select_one("tr")
+    )
     raw_headers = []
     if header_row:
         raw_headers = [th.get_text(strip=True) for th in header_row.select("th")]
+        # <th> が無く <td> のみの場合（一部旧フォーマット対応）
+        if not raw_headers:
+            raw_headers = [td.get_text(strip=True) for td in header_row.select("td")]
     logger.info(f"  [table headers] {raw_headers}")
 
     # インデックス辞書: フィールド名 -> カラムインデックス
@@ -327,15 +367,17 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
                 break
 
     # ヘッダが取れない場合はデフォルトのカラム順を使う
-    # db.netkeiba.com race_table_01 デフォルト順（2024年現在）:
+    # db.netkeiba.com race_table_01 実際の列順:
     # 0:着順 1:枠番 2:馬番 3:馬名 4:性齢 5:斤量 6:騎手 7:タイム
-    # 8:着差 9:単勝 10:人気 11:馬体重(増減) 12:上り 13:調教師
+    # 8:着差 9:通過(コーナー通過順) 10:上り 11:単勝 12:人気
+    # 13:馬体重(増減) 14:調教師
+    # ※「通過」列が index=9 に入るため、単勝以降がひとつ後ろにズレる
     DEFAULT_IDX = {
         "finish_position": 0, "frame_number": 1, "horse_number": 2,
         "horse_name": 3, "sex_age": 4, "weight_carried": 5,
         "jockey": 6, "time": 7, "margin": 8,
-        "odds": 9, "popularity": 10, "horse_weight": 11,
-        "last_3f": 12, "trainer": 13,
+        "last_3f": 10, "odds": 11, "popularity": 12,
+        "horse_weight": 13, "trainer": 14,
     }
     for field, default in DEFAULT_IDX.items():
         if field not in col_idx:
