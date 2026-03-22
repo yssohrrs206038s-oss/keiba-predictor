@@ -32,7 +32,16 @@ RACE_TOP_URL    = "https://race.netkeiba.com"
 DB_URL          = "https://db.netkeiba.com"
 CALENDAR_URL    = RACE_TOP_URL + "/top/calendar.html"
 RACE_LIST_URL   = RACE_TOP_URL + "/top/race_list_sub.html"  # 静的HTMLフラグメント
-RACE_RESULT_URL = DB_URL + "/race/{race_id}/"
+RACE_RESULT_URL     = DB_URL + "/race/{race_id}/"
+RACE_RESULT_SITE_URL = RACE_TOP_URL + "/race/result.html"   # 静的HTML版（距離取得用）
+
+# ── 競馬場コードマッピング ──────────────────────────────────────
+# race_id[8:10] = 競馬場コード
+VENUE_CODE_MAP: dict[str, str] = {
+    "01": "札幌", "02": "函館", "03": "福島", "04": "新潟",
+    "05": "東京", "06": "中山", "07": "中京", "08": "京都",
+    "09": "阪神", "10": "小倉",
+}
 
 HEADERS = {
     "User-Agent": (
@@ -226,6 +235,62 @@ def _fill_from_img_alts(el, race_info: dict) -> None:
             race_info["track_condition"] = alt
 
 
+def _race_id_to_date(race_id: str) -> str:
+    """race_id の先頭8桁（YYYYMMDD）から YYYY-MM-DD 形式の日付を返す。
+
+    HTMLに依存せず、race_id が常に正確な日付を持つことを前提とする。
+    """
+    return f"{race_id[:4]}-{race_id[4:6]}-{race_id[6:8]}"
+
+
+def _scrape_meta_from_race_site(
+    race_id: str, session: requests.Session, race_info: dict
+) -> None:
+    """race.netkeiba.com/race/result.html から距離・コース・天候・馬場を補完する。
+
+    db.netkeiba.com のレース情報がJavaScript動的描画のため取得できない場合の
+    代替手段。race.netkeiba.com は静的HTMLで距離情報を含む可能性がある。
+
+    取得できた項目のみ race_info を更新し、既存の値は上書きしない。
+    接続失敗時はスキップ（ログのみ）。
+    """
+    url = f"{RACE_RESULT_SITE_URL}?race_id={race_id}"
+    try:
+        resp = session.get(url, headers={**HEADERS, "Referer": RACE_TOP_URL + "/"}, timeout=15)
+        resp.raise_for_status()
+        resp.encoding = "EUC-JP"
+        soup = BeautifulSoup(resp.text, "html.parser")
+    except requests.RequestException as e:
+        logger.debug(f"  [race_site] skipped ({e})")
+        return
+
+    # race.netkeiba.com の HTML から距離・コース・天候・馬場を取得
+    # 既知セレクタを優先順に試みる
+    site_candidates = [
+        soup.select_one("div.RaceData01"),
+        soup.select_one("div.RaceData"),
+        soup.select_one("dl.RaceData"),
+        soup.select_one("p.smalltxt"),
+        soup.select_one("div.data_intro"),
+    ]
+    for el in site_candidates:
+        if el is None:
+            continue
+        text = el.get_text(" ", strip=True)
+        logger.info(f"  [race_site] {el.name}.{' '.join(el.get('class', []))} {text[:120]!r}")
+        _parse_course_distance(text, race_info)
+        _fill_from_img_alts(el, race_info)
+        for child in el.select("span, dd, p"):
+            _parse_course_distance(child.get_text(strip=True), race_info)
+            _fill_from_img_alts(child, race_info)
+
+    # <title> タグにコース情報が含まれる場合がある
+    # 例: "〇〇特別 | 阪神/芝2000m | race.netkeiba.com"
+    title_el = soup.select_one("title")
+    if title_el and race_info["distance"] is None:
+        _parse_course_distance(title_el.get_text(strip=True), race_info)
+
+
 def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.DataFrame]:
     """
     db.netkeiba.com/race/{race_id}/ からレース結果を取得してDataFrameで返す。
@@ -311,14 +376,33 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         all_text = soup.get_text(" ", strip=True)
         _parse_course_distance(all_text, race_info)
         _fill_from_img_alts(soup, race_info)
-        if race_info["distance"] is None:
-            logger.warning(f"  [distance] NOT FOUND for {race_id}")
 
-    # ── race_date: race_idの先頭8桁を正として使用（HTML上書き禁止） ──
-    # HTMLには "1970年01月01日"（Unixエポックのプレースホルダー）が
-    # 埋め込まれていることがあり、上書きすると誤った日付になる。
-    # race_id の先頭8桁は常に正確な日付を含むため、それを優先する。
-    # （race_dateはすでに上部で race_id から設定済み）
+    # ── それでも取れなければ race.netkeiba.com を試みる ──────────
+    # db.netkeiba.com は距離情報がJavaScript描画のため取得できないことがある。
+    # race.netkeiba.com/race/result.html は静的HTMLで提供される可能性がある。
+    if race_info["distance"] is None:
+        _scrape_meta_from_race_site(race_id, session, race_info)
+
+    # ── 最終フォールバック: レース名から距離を推測 ───────────────
+    # 例: "〇〇1800m特別" / "芝2000m" 等の表記が名称中にある場合
+    if race_info["distance"] is None and race_info["race_name"]:
+        m = re.search(r"(\d{3,4})m", race_info["race_name"])
+        if m:
+            race_info["distance"] = int(m.group(1))
+            logger.info(f"  [distance] race_name から取得: {race_info['distance']}m")
+
+    if race_info["distance"] is None:
+        logger.warning(f"  [distance] NOT FOUND for {race_id}")
+
+    # ── race_date: 常に race_id の先頭8桁を使用（最終確定） ──────
+    # HTMLには "1970年01月01日"（Unix エポックのJSプレースホルダー）が
+    # 含まれることがある。ここで再設定することで確実に上書きを防ぐ。
+    # race_id = YYYYMMDDVVRRNN（12桁）の先頭8桁が日付。
+    race_info["race_date"] = _race_id_to_date(race_id)
+
+    # ── 競馬場名をrace_idから設定 ────────────────────────────────
+    venue_code = race_id[8:10] if len(race_id) >= 10 else ""
+    race_info["venue"] = VENUE_CODE_MAP.get(venue_code, venue_code)
 
     logger.info(
         f"  [race_info] {race_id}: date={race_info['race_date']} "

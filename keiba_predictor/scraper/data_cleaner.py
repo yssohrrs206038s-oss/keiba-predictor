@@ -160,17 +160,26 @@ def clean_raw_data(raw_df: pd.DataFrame) -> pd.DataFrame:
     # ── 日付変換 ─────────────────────────────────────────────
     df["race_date"] = pd.to_datetime(_ensure_col(df, "race_date"), errors="coerce")
 
-    # race_dateがNaNの行はrace_idの先頭8桁(YYYYMMDD)から補完する
+    # race_dateがNaN または 1970年（Unixエポックのプレースホルダー）の行を
+    # race_idの先頭8桁（YYYYMMDD）から補完・上書きする。
+    # netkeibaのHTMLには "1970年01月01日" がJSプレースホルダとして
+    # 埋め込まれることがあり、古いデータにはこの誤った日付が残っている。
     if "race_id" in df.columns:
-        missing_date = df["race_date"].isna()
-        if missing_date.any():
+        epoch_or_missing = (
+            df["race_date"].isna()
+            | (df["race_date"].dt.year == 1970)
+        )
+        if epoch_or_missing.any():
             fallback = pd.to_datetime(
-                df.loc[missing_date, "race_id"].astype(str).str[:8],
+                df.loc[epoch_or_missing, "race_id"].astype(str).str[:8],
                 format="%Y%m%d",
                 errors="coerce",
             )
-            df.loc[missing_date, "race_date"] = fallback
-            logger.info(f"race_date: {missing_date.sum()}行をrace_idから補完しました")
+            df.loc[epoch_or_missing, "race_date"] = fallback
+            logger.info(
+                f"race_date: {epoch_or_missing.sum()}行をrace_idから補完・修正しました"
+                f"（NaN または 1970年のエポック値）"
+            )
 
     # ── 目的変数の整合 ───────────────────────────────────────
     if "top3" not in df.columns:
