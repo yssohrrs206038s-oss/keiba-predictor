@@ -175,7 +175,7 @@ def clean_raw_data(raw_df: pd.DataFrame) -> pd.DataFrame:
 
     # ── 欠損カラムの補足レポート ─────────────────────────────
     missing = [c for c in ["distance", "course_type", "weather", "track_condition", "race_date"]
-               if df[c].isna().all()]
+               if c not in df.columns or df[c].isna().all()]
     if missing:
         logger.warning(
             f"以下のカラムが全行NaNです（スクレイパーのHTML解析を確認してください）: {missing}"
