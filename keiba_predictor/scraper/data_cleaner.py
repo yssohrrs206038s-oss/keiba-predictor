@@ -101,25 +101,42 @@ COURSE_TYPE_MAP = {
 }
 
 
+def _ensure_col(df: pd.DataFrame, col: str, default=np.nan) -> pd.Series:
+    """
+    カラムが存在すればそのSeriesを、なければデフォルト値で埋めたSeriesを返す。
+    KeyError を防ぐためのヘルパー。
+    """
+    if col in df.columns:
+        return df[col]
+    logger.warning(f"カラム '{col}' が見つからないため空列として処理します")
+    return pd.Series([default] * len(df), index=df.index)
+
+
 def clean_raw_data(raw_df: pd.DataFrame) -> pd.DataFrame:
     """
     スクレイピング生データをクリーニングし、型変換・エンコードを行う。
+
+    スクレイパーがHTMLを正しくパースできなかった場合に一部カラムが
+    欠損していても KeyError にならないよう _ensure_col を使う。
 
     Returns:
         クリーニング済みDataFrame
     """
     df = raw_df.copy()
 
+    # ── 実際のカラム状況をログ出力（デバッグ用） ────────────
+    logger.info(f"入力カラム: {list(df.columns)}")
+
     # ── 数値変換 ─────────────────────────────────────────────
-    df["finish_position"] = df["finish_position"].apply(parse_finish_position)
-    df["time_sec"] = df["time"].apply(parse_time_to_seconds)
-    df["odds"] = df["odds"].apply(parse_odds)
-    df["popularity"] = pd.to_numeric(df["popularity"], errors="coerce").astype("Int64")
-    df["weight_carried"] = pd.to_numeric(df["weight_carried"], errors="coerce")
-    df["horse_weight"] = pd.to_numeric(df["horse_weight"], errors="coerce").astype("Int64")
-    df["horse_weight_diff"] = pd.to_numeric(df["horse_weight_diff"], errors="coerce").astype("Int64")
-    df["distance"] = pd.to_numeric(df["distance"], errors="coerce").astype("Int64")
-    df["last_3f"] = pd.to_numeric(df["last_3f"], errors="coerce")
+    df["finish_position"] = _ensure_col(df, "finish_position").apply(parse_finish_position)
+    df["time_sec"]        = _ensure_col(df, "time").apply(parse_time_to_seconds)
+    df["odds"]            = _ensure_col(df, "odds").apply(parse_odds)
+    df["popularity"]      = pd.to_numeric(_ensure_col(df, "popularity"), errors="coerce").astype("Int64")
+    df["weight_carried"]  = pd.to_numeric(_ensure_col(df, "weight_carried"), errors="coerce")
+    df["horse_weight"]    = pd.to_numeric(_ensure_col(df, "horse_weight"), errors="coerce").astype("Int64")
+    df["horse_weight_diff"] = pd.to_numeric(_ensure_col(df, "horse_weight_diff"), errors="coerce").astype("Int64")
+    df["distance"]        = pd.to_numeric(_ensure_col(df, "distance"), errors="coerce").astype("Int64")
+    df["last_3f"]         = pd.to_numeric(_ensure_col(df, "last_3f"), errors="coerce")
 
     # ── 性別・年齢 ───────────────────────────────────────────
     if "sex_age" in df.columns:
@@ -132,19 +149,20 @@ def clean_raw_data(raw_df: pd.DataFrame) -> pd.DataFrame:
         df["age"] = pd.NA
 
     # ── カテゴリエンコード ───────────────────────────────────
-    df["track_condition_enc"] = df["track_condition"].map(TRACK_CONDITION_MAP)
-    df["weather_enc"] = df["weather"].map(WEATHER_MAP)
-    df["course_type_enc"] = df["course_type"].map(COURSE_TYPE_MAP)
+    df["track_condition_enc"] = _ensure_col(df, "track_condition").map(TRACK_CONDITION_MAP)
+    df["weather_enc"]         = _ensure_col(df, "weather").map(WEATHER_MAP)
+    df["course_type_enc"]     = _ensure_col(df, "course_type").map(COURSE_TYPE_MAP)
 
     # sex のエンコード
     sex_map = {"牡": 0, "牝": 1, "セ": 2, "騸": 2}
     df["sex_enc"] = df["sex"].map(sex_map)
 
     # ── 日付変換 ─────────────────────────────────────────────
-    df["race_date"] = pd.to_datetime(df["race_date"], errors="coerce")
+    df["race_date"] = pd.to_datetime(_ensure_col(df, "race_date"), errors="coerce")
 
     # ── 目的変数の整合 ───────────────────────────────────────
-    # finish_positionが確定している場合は再計算して確実にする
+    if "top3" not in df.columns:
+        df["top3"] = np.nan
     mask = df["finish_position"].notna()
     df.loc[mask, "top3"] = (df.loc[mask, "finish_position"] <= 3).astype(int)
 
@@ -152,8 +170,16 @@ def clean_raw_data(raw_df: pd.DataFrame) -> pd.DataFrame:
     df = df[df["finish_position"].notna()].reset_index(drop=True)
 
     # ── 枠番・馬番の数値化 ────────────────────────────────────
-    df["frame_number"] = pd.to_numeric(df["frame_number"], errors="coerce").astype("Int64")
-    df["horse_number"] = pd.to_numeric(df["horse_number"], errors="coerce").astype("Int64")
+    df["frame_number"] = pd.to_numeric(_ensure_col(df, "frame_number"), errors="coerce").astype("Int64")
+    df["horse_number"] = pd.to_numeric(_ensure_col(df, "horse_number"), errors="coerce").astype("Int64")
+
+    # ── 欠損カラムの補足レポート ─────────────────────────────
+    missing = [c for c in ["distance", "course_type", "weather", "track_condition", "race_date"]
+               if df[c].isna().all()]
+    if missing:
+        logger.warning(
+            f"以下のカラムが全行NaNです（スクレイパーのHTML解析を確認してください）: {missing}"
+        )
 
     logger.info(f"クリーニング完了: {len(df)} rows")
     return df

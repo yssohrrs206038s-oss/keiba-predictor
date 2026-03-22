@@ -176,32 +176,55 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
     if soup is None:
         return None
 
-    # ── レース基本情報 ──────────────────────────────────────────
-    race_info: dict = {"race_id": race_id}
+    # ── レース基本情報（全フィールドをデフォルト値で初期化） ──────
+    # ※ 正規表現がマッチしない場合もカラムが必ず存在するようにする
+    race_info: dict = {
+        "race_id":         race_id,
+        "race_name":       "",
+        "race_date":       None,
+        "course_type":     None,
+        "distance":        None,
+        "weather":         None,
+        "track_condition": None,
+    }
 
     # レース名
     name_el = soup.select_one("h1.RaceName") or soup.select_one("div.race_head_inner h1")
     race_info["race_name"] = name_el.get_text(strip=True) if name_el else ""
 
     # RaceData01: コース・距離・馬場・天気情報
-    # 例: "芝2000m / 天候: 晴 / 馬場: 良 / 発走 15:40"
+    # 実際の書式例:
+    #   "芝・右2000m / 天候:晴 / 馬場:良 / 発走:15:25"
+    #   "ダート・右1800m / 天候:曇 / 馬場:稍重"
+    #   "障害・芝3390m"
     data01 = soup.select_one("div.RaceData01") or soup.select_one("p.smalltxt")
     if data01:
         text = data01.get_text()
+
         # コース種別・距離
-        m = re.search(r"(芝|ダ|障)(\d{3,4})m", text)
+        # "芝" / "ダート"(ダで始まる) / "障"(障害)、続いて任意文字・距離数字m
+        m = re.search(r"(芝|ダート?|障)[^\d]*(\d{3,4})m", text)
         if m:
             raw_type = m.group(1)
-            race_info["course_type"] = "芝" if raw_type == "芝" else ("障害" if raw_type == "障" else "ダート")
+            if raw_type.startswith("障"):
+                race_info["course_type"] = "障害"
+            elif raw_type.startswith("ダ"):
+                race_info["course_type"] = "ダート"
+            else:
+                race_info["course_type"] = "芝"
             race_info["distance"] = int(m.group(2))
-        # 天候
+        else:
+            logger.debug(f"  distance not found in RaceData01: {text[:80]!r}")
+
+        # 天候（書式: "天候:晴" or "天候：晴" or "天候 : 晴"）
         m = re.search(r"天候\s*[:/：]\s*(\S+)", text)
         if m:
-            race_info["weather"] = m.group(1).strip()
-        # 馬場状態
+            race_info["weather"] = m.group(1).rstrip("/").strip()
+
+        # 馬場状態（書式: "馬場:良" etc.）
         m = re.search(r"馬場\s*[:/：]\s*(\S+)", text)
         if m:
-            race_info["track_condition"] = m.group(1).strip()
+            race_info["track_condition"] = m.group(1).rstrip("/").strip()
 
     # RaceData02: 開催日・開催回・開催場所
     # 例: "2024年1月6日 1回中山1日目"
@@ -210,18 +233,9 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         text = data02.get_text()
         m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", text)
         if m:
-            race_info["race_date"] = f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
-
-    # フォールバック: race_idから日付を推定（YYYYMMDD形式）
-    if "race_date" not in race_info and len(race_id) == 12:
-        try:
-            y = race_id[:4]
-            # race_id = YYYY + 場コード(2) + 回(2) + 日(2) + R番(2)
-            # 日付はrace_idから直接取れない（開催日の通し番号が入っているため）
-            # なのでrace_info["race_date"]は空のまま
-            pass
-        except Exception:
-            pass
+            race_info["race_date"] = (
+                f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+            )
 
     # ── 着順テーブル ──────────────────────────────────────────
     # table.race_table_01 or table.nk_tb_common
