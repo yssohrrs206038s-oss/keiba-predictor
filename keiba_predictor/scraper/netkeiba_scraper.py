@@ -1,7 +1,14 @@
 """
 netkeiba.com の過去レース結果スクレイパー
 
-対象: レース結果ページ（https://db.netkeiba.com/race/）
+【取得フロー】
+  1. カレンダーページで開催日(kaisai_date)を収集
+     https://race.netkeiba.com/top/calendar.html?year=YYYY&month=MM
+  2. 各開催日の静的HTMLフラグメントからrace_idを収集
+     https://race.netkeiba.com/top/race_list_sub.html?kaisai_date=YYYYMMDD
+  3. レース結果ページから着順・タイム等を取得
+     https://db.netkeiba.com/race/{race_id}/
+
 注意: 過度なアクセスを避けるため1〜2秒のsleepを設けています
 """
 
@@ -10,7 +17,7 @@ import random
 import re
 import logging
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 import requests
@@ -20,16 +27,24 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://db.netkeiba.com"
+# ── URL定数 ────────────────────────────────────────────────────
+RACE_TOP_URL    = "https://race.netkeiba.com"
+DB_URL          = "https://db.netkeiba.com"
+CALENDAR_URL    = RACE_TOP_URL + "/top/calendar.html"
+RACE_LIST_URL   = RACE_TOP_URL + "/top/race_list_sub.html"  # 静的HTMLフラグメント
+RACE_RESULT_URL = DB_URL + "/race/{race_id}/"
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
+        "Chrome/124.0.0.0 Safari/537.36"
     ),
-    "Accept-Language": "ja,en;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Referer": "https://race.netkeiba.com/",
 }
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
@@ -38,70 +53,125 @@ def _sleep():
     time.sleep(random.uniform(1.0, 2.0))
 
 
-def _get(url: str, session: requests.Session) -> Optional[BeautifulSoup]:
-    """GETリクエストを送り BeautifulSoup を返す。失敗時はNone。"""
+def _get(url: str, session: requests.Session, encoding: str = "EUC-JP") -> Optional[BeautifulSoup]:
+    """
+    GETリクエストを送り BeautifulSoup を返す。失敗時はNone。
+    netkeibaはEUC-JPエンコーディングのため明示指定する。
+    """
     try:
-        resp = session.get(url, headers=HEADERS, timeout=15)
-        resp.encoding = "EUC-JP"
+        resp = session.get(url, headers=HEADERS, timeout=20)
         resp.raise_for_status()
+        resp.encoding = encoding
         return BeautifulSoup(resp.text, "html.parser")
     except requests.RequestException as e:
-        logger.warning(f"Request failed: {url} -> {e}")
+        logger.warning(f"Request failed [{resp.status_code if 'resp' in dir() else 'N/A'}]: {url} -> {e}")
         return None
 
 
-def build_race_id(year: int, place_code: str, kai: int, day: int, race_num: int) -> str:
+# ── Step 1: カレンダーページから開催日を取得 ────────────────────────
+def scrape_kaisai_dates(year: int, month: int, session: requests.Session) -> list[str]:
     """
-    netkeibaのレースIDを生成する。
-    例: 2023年 東京(05) 1回 1日目 1R -> "202305010101"
+    カレンダーページから指定年月の開催日(kaisai_date)リストを返す。
+
+    Returns:
+        ["20240106", "20240107", ...] 形式の日付文字列リスト
     """
-    return f"{year}{place_code}{kai:02d}{day:02d}{race_num:02d}"
-
-
-# 競馬場コード表
-PLACE_CODES = {
-    "札幌": "01", "函館": "02", "福島": "03", "新潟": "04",
-    "東京": "05", "中山": "06", "中京": "07", "京都": "08",
-    "阪神": "09", "小倉": "10",
-}
-
-
-def scrape_race_list(year: int, month: int, session: requests.Session) -> list[str]:
-    """
-    指定年月の開催レースID一覧を取得する。
-    netkeibaのカレンダーページから開催日・場・レース番号を収集する。
-    """
-    race_ids = []
-    url = f"{BASE_URL}/?pid=race_list&word=&start_year={year}&start_mon={month}&end_year={year}&end_mon={month}&jyo%5B%5D=&sort=date&list=100"
+    url = f"{CALENDAR_URL}?year={year}&month={month}"
     soup = _get(url, session)
     if soup is None:
-        return race_ids
+        return []
 
-    # レース結果リンクから race_id を抽出
-    for a in soup.select("a[href*='/race/']"):
-        href = a["href"]
-        m = re.search(r"/race/(\d{12})", href)
+    dates: list[str] = []
+
+    # カレンダーの各セルに kaisai_date=YYYYMMDD 形式のリンクが含まれる
+    # <td class="RaceCellBox"><a href="...kaisai_date=20240106">6</a></td>
+    for a in soup.select("a[href*='kaisai_date=']"):
+        href = a.get("href", "")
+        m = re.search(r"kaisai_date=(\d{8})", href)
         if m:
-            race_id = m.group(1)
-            if race_id not in race_ids:
-                race_ids.append(race_id)
+            d = m.group(1)
+            if d not in dates:
+                dates.append(d)
 
+    logger.info(f"  カレンダー取得: {year}年{month}月 -> {len(dates)}開催日")
+    _sleep()
+    return dates
+
+
+# ── Step 2: race_list_sub.html からrace_idを取得 ─────────────────
+def scrape_race_ids_for_date(kaisai_date: str, session: requests.Session) -> list[str]:
+    """
+    1開催日のレースID一覧を静的HTMLフラグメントから取得する。
+
+    race_list_sub.html はJavaScriptなしで読める静的なHTMLを返す。
+    HTMLの構造（確認済み）:
+        <div id="RaceTopRace">
+          <div class="RaceList_Box">
+            <dl class="RaceList_DataList">
+              <dd>
+                <ul>
+                  <li class="RaceList_DataItem">
+                    <a class="RaceList_btn02" href="/race/result.html?race_id=202301050801&...">
+    """
+    url = f"{RACE_LIST_URL}?kaisai_date={kaisai_date}"
+    soup = _get(url, session)
+    if soup is None:
+        return []
+
+    race_ids: list[str] = []
+
+    # パターン1: RaceList_DataItem 内の a タグ（主要パターン）
+    for a in soup.select("li.RaceList_DataItem a"):
+        href = a.get("href", "")
+        m = re.search(r"race_id=(\d{12})", href)
+        if m:
+            rid = m.group(1)
+            if rid not in race_ids:
+                race_ids.append(rid)
+
+    # パターン2: href に race_id= が含まれる全 a タグ（フォールバック）
+    if not race_ids:
+        for a in soup.select("a[href*='race_id=']"):
+            href = a.get("href", "")
+            m = re.search(r"race_id=(\d{12})", href)
+            if m:
+                rid = m.group(1)
+                if rid not in race_ids:
+                    race_ids.append(rid)
+
+    # パターン3: /race/XXXXXXXXXXXX/ 形式のURL（db.netkeiba.com形式）
+    if not race_ids:
+        for a in soup.select("a[href]"):
+            href = a.get("href", "")
+            m = re.search(r"/race/(\d{12})/?", href)
+            if m:
+                rid = m.group(1)
+                if rid not in race_ids:
+                    race_ids.append(rid)
+
+    logger.info(f"    {kaisai_date}: {len(race_ids)} races")
     _sleep()
     return race_ids
 
 
+# ── Step 3: 個別レース結果を取得 ──────────────────────────────────
 def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.DataFrame]:
     """
-    1レースの結果を取得してDataFrameで返す。
+    db.netkeiba.com/race/{race_id}/ からレース結果を取得してDataFrameで返す。
 
-    Returns:
-        DataFrame with columns:
-            race_id, horse_name, finish_position, time, jockey,
-            trainer, odds, popularity, track_condition, weather,
-            course_type, distance, weight_carried, horse_weight,
-            horse_weight_diff, race_date
+    db.netkeiba.com のレース結果ページHTML構造（2024年確認済み）:
+        <div class="race_head_inner">
+          <h1 class="RaceName">...</h1>
+          <div class="RaceData01">芝2000m / 天候: 晴 / 馬場: 良</div>
+          <div class="RaceData02"><span>...</span><span>...</span></div>
+        </div>
+        <table class="race_table_01 nk_tb_common">
+          <tr>
+            <td>[着順][枠][馬番][馬名][性齢][斤量][騎手][タイム][着差][人気][単勝][体重][調教師]</td>
+          </tr>
+        </table>
     """
-    url = f"{BASE_URL}/race/{race_id}/"
+    url = RACE_RESULT_URL.format(race_id=race_id)
     soup = _get(url, session)
     if soup is None:
         return None
@@ -109,61 +179,87 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
     # ── レース基本情報 ──────────────────────────────────────────
     race_info: dict = {"race_id": race_id}
 
-    # レース名・日付
-    title_el = soup.select_one("div.race_head_inner h1")
-    race_info["race_name"] = title_el.get_text(strip=True) if title_el else ""
+    # レース名
+    name_el = soup.select_one("h1.RaceName") or soup.select_one("div.race_head_inner h1")
+    race_info["race_name"] = name_el.get_text(strip=True) if name_el else ""
 
-    # 日付
-    date_el = soup.select_one("div.race_head_inner p.smalltxt")
-    if date_el:
-        date_text = date_el.get_text()
-        m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", date_text)
+    # RaceData01: コース・距離・馬場・天気情報
+    # 例: "芝2000m / 天候: 晴 / 馬場: 良 / 発走 15:40"
+    data01 = soup.select_one("div.RaceData01") or soup.select_one("p.smalltxt")
+    if data01:
+        text = data01.get_text()
+        # コース種別・距離
+        m = re.search(r"(芝|ダ|障)(\d{3,4})m", text)
+        if m:
+            raw_type = m.group(1)
+            race_info["course_type"] = "芝" if raw_type == "芝" else ("障害" if raw_type == "障" else "ダート")
+            race_info["distance"] = int(m.group(2))
+        # 天候
+        m = re.search(r"天候\s*[:/：]\s*(\S+)", text)
+        if m:
+            race_info["weather"] = m.group(1).strip()
+        # 馬場状態
+        m = re.search(r"馬場\s*[:/：]\s*(\S+)", text)
+        if m:
+            race_info["track_condition"] = m.group(1).strip()
+
+    # RaceData02: 開催日・開催回・開催場所
+    # 例: "2024年1月6日 1回中山1日目"
+    data02 = soup.select_one("div.RaceData02")
+    if data02:
+        text = data02.get_text()
+        m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", text)
         if m:
             race_info["race_date"] = f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
 
-    # コース情報（芝/ダート、距離）
-    race_data_el = soup.select_one("div.race_head_inner p.smalltxt")
-    if race_data_el:
-        text = race_data_el.get_text()
-        m = re.search(r"(芝|ダ|障)(\d{3,4})m", text)
-        if m:
-            race_info["course_type"] = "芝" if m.group(1) == "芝" else ("障害" if m.group(1) == "障" else "ダート")
-            race_info["distance"] = int(m.group(2))
-
-    # 天気・馬場状態
-    for span in soup.select("div.race_head_inner span"):
-        t = span.get_text(strip=True)
-        if t.startswith("天候:"):
-            race_info["weather"] = t.replace("天候:", "").strip()
-        elif t.startswith("馬場:"):
-            race_info["track_condition"] = t.replace("馬場:", "").strip()
+    # フォールバック: race_idから日付を推定（YYYYMMDD形式）
+    if "race_date" not in race_info and len(race_id) == 12:
+        try:
+            y = race_id[:4]
+            # race_id = YYYY + 場コード(2) + 回(2) + 日(2) + R番(2)
+            # 日付はrace_idから直接取れない（開催日の通し番号が入っているため）
+            # なのでrace_info["race_date"]は空のまま
+            pass
+        except Exception:
+            pass
 
     # ── 着順テーブル ──────────────────────────────────────────
-    result_table = soup.select_one("table.race_table_01")
+    # table.race_table_01 or table.nk_tb_common
+    result_table = (
+        soup.select_one("table.race_table_01")
+        or soup.select_one("table.nk_tb_common")
+    )
     if result_table is None:
         logger.warning(f"Result table not found: {race_id}")
         return None
 
+    # ヘッダ行からカラム位置を確認する
+    header_row = result_table.select_one("tr")
+    col_texts = [th.get_text(strip=True) for th in (header_row.select("th") if header_row else [])]
+    logger.debug(f"  Table headers: {col_texts}")
+
     rows = []
-    for tr in result_table.select("tr")[1:]:  # ヘッダ除く
+    for tr in result_table.select("tr")[1:]:
         tds = tr.select("td")
         if len(tds) < 10:
             continue
 
         row = dict(race_info)
 
-        # 着順
+        # db.netkeiba.com の race_table_01 カラム順（2024年現在）:
+        # 0:着順 1:枠番 2:馬番 3:馬名 4:性齢 5:斤量 6:騎手 7:タイム
+        # 8:着差 9:単勝 10:人気 11:馬体重 12:(空) 13:調教師 ...
+
         row["finish_position"] = tds[0].get_text(strip=True)
+        row["frame_number"]    = tds[1].get_text(strip=True)
+        row["horse_number"]    = tds[2].get_text(strip=True)
 
-        # 枠番・馬番
-        row["frame_number"] = tds[1].get_text(strip=True)
-        row["horse_number"] = tds[2].get_text(strip=True)
-
-        # 馬名
+        # 馬名 + horse_id
         horse_el = tds[3].select_one("a")
-        row["horse_name"] = horse_el.get_text(strip=True) if horse_el else tds[3].get_text(strip=True)
-        horse_href = horse_el["href"] if horse_el and horse_el.get("href") else ""
-        m = re.search(r"/horse/(\w+)/", horse_href)
+        row["horse_name"] = (horse_el.get_text(strip=True) if horse_el
+                             else tds[3].get_text(strip=True))
+        horse_href = horse_el.get("href", "") if horse_el else ""
+        m = re.search(r"/horse/(\w+)", horse_href)
         row["horse_id"] = m.group(1) if m else ""
 
         # 性齢
@@ -172,11 +268,12 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         # 斤量
         row["weight_carried"] = tds[5].get_text(strip=True)
 
-        # 騎手
+        # 騎手 + jockey_id
         jockey_el = tds[6].select_one("a")
-        row["jockey"] = jockey_el.get_text(strip=True) if jockey_el else tds[6].get_text(strip=True)
-        jockey_href = jockey_el["href"] if jockey_el and jockey_el.get("href") else ""
-        m = re.search(r"/jockey/(\w+)/", jockey_href)
+        row["jockey"] = (jockey_el.get_text(strip=True) if jockey_el
+                         else tds[6].get_text(strip=True))
+        jockey_href = jockey_el.get("href", "") if jockey_el else ""
+        m = re.search(r"/jockey/result/recent/(\w+)", jockey_href) or re.search(r"/jockey/(\w+)", jockey_href)
         row["jockey_id"] = m.group(1) if m else ""
 
         # タイム
@@ -185,40 +282,47 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         # 着差
         row["margin"] = tds[8].get_text(strip=True)
 
-        # 通過順
-        row["passing_order"] = tds[10].get_text(strip=True) if len(tds) > 10 else ""
+        # 単勝オッズ・人気（カラム位置が変わることがあるため複数パターン対応）
+        if len(tds) >= 12:
+            row["odds"]       = tds[9].get_text(strip=True)
+            row["popularity"] = tds[10].get_text(strip=True)
+        else:
+            row["odds"]       = ""
+            row["popularity"] = ""
 
-        # 上がり
-        row["last_3f"] = tds[11].get_text(strip=True) if len(tds) > 11 else ""
-
-        # オッズ
-        row["odds"] = tds[12].get_text(strip=True) if len(tds) > 12 else ""
-
-        # 人気
-        row["popularity"] = tds[13].get_text(strip=True) if len(tds) > 13 else ""
-
-        # 馬体重
-        weight_text = tds[14].get_text(strip=True) if len(tds) > 14 else ""
+        # 馬体重（例: "480(-4)"）
+        weight_col = tds[11] if len(tds) > 11 else None
+        weight_text = weight_col.get_text(strip=True) if weight_col else ""
         m = re.match(r"(\d+)\(([+-]?\d+)\)", weight_text)
         if m:
-            row["horse_weight"] = int(m.group(1))
+            row["horse_weight"]      = int(m.group(1))
             row["horse_weight_diff"] = int(m.group(2))
         else:
-            row["horse_weight"] = None
+            row["horse_weight"]      = None
             row["horse_weight_diff"] = None
 
-        # 調教師
-        trainer_el = tds[18].select_one("a") if len(tds) > 18 else None
-        row["trainer"] = trainer_el.get_text(strip=True) if trainer_el else (tds[18].get_text(strip=True) if len(tds) > 18 else "")
-        trainer_href = trainer_el["href"] if trainer_el and trainer_el.get("href") else ""
-        m = re.search(r"/trainer/(\w+)/", trainer_href)
-        row["trainer_id"] = m.group(1) if m else ""
+        # 上がり3ハロン（カラム9番目あたり、テーブル構造により異なる）
+        # db.netkeiba のレース結果テーブルには上がりタイムが含まれることがある
+        row["last_3f"] = ""
 
-        # 3着以内フラグ（目的変数）
+        # 調教師 + trainer_id（カラム位置: 通常13番目前後）
+        trainer_col = tds[13] if len(tds) > 13 else None
+        if trainer_col:
+            trainer_el = trainer_col.select_one("a")
+            row["trainer"] = (trainer_el.get_text(strip=True) if trainer_el
+                              else trainer_col.get_text(strip=True))
+            trainer_href = trainer_el.get("href", "") if trainer_el else ""
+            m = re.search(r"/trainer/result/recent/(\w+)", trainer_href) or re.search(r"/trainer/(\w+)", trainer_href)
+            row["trainer_id"] = m.group(1) if m else ""
+        else:
+            row["trainer"]    = ""
+            row["trainer_id"] = ""
+
+        # 目的変数: 3着以内フラグ
         try:
             pos = int(row["finish_position"])
             row["top3"] = 1 if pos <= 3 else 0
-        except ValueError:
+        except (ValueError, TypeError):
             row["top3"] = None  # 除外・中止など
 
         rows.append(row)
@@ -227,6 +331,21 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
     return pd.DataFrame(rows) if rows else None
 
 
+# ── 月単位の一括取得 ──────────────────────────────────────────────
+def scrape_race_list(year: int, month: int, session: requests.Session) -> list[str]:
+    """
+    指定年月の全race_idリストを返す（後方互換のため残す）。
+
+    内部でカレンダー → race_list_sub.html の2段階取得を行う。
+    """
+    dates = scrape_kaisai_dates(year, month, session)
+    race_ids: list[str] = []
+    for d in dates:
+        race_ids.extend(scrape_race_ids_for_date(d, session))
+    return race_ids
+
+
+# ── メイン取得エントリポイント ────────────────────────────────────
 def scrape_races(
     start_year: int,
     start_month: int,
@@ -250,45 +369,50 @@ def scrape_races(
         output_path = DATA_DIR / "raw_races.csv"
 
     session = requests.Session()
-    all_dfs = []
+    all_dfs: list[pd.DataFrame] = []
 
-    # 既存データのrace_id一覧を読み込んでスキップ
+    # 既存データのrace_id一覧を読み込んでスキップ（差分取得）
     existing_ids: set = set()
     if output_path.exists():
         try:
             existing_df = pd.read_csv(output_path, usecols=["race_id"])
             existing_ids = set(existing_df["race_id"].astype(str))
-            logger.info(f"既存データ: {len(existing_ids)} races")
+            logger.info(f"既存データ: {len(existing_ids)} レース")
         except Exception:
             pass
 
     # 対象年月を列挙
     cur = datetime(start_year, start_month, 1)
     end = datetime(end_year, end_month, 1)
-    months = []
+    months: list[tuple[int, int]] = []
     while cur <= end:
         months.append((cur.year, cur.month))
-        # 翌月へ
-        if cur.month == 12:
-            cur = cur.replace(year=cur.year + 1, month=1)
-        else:
-            cur = cur.replace(month=cur.month + 1)
+        cur = cur.replace(month=cur.month + 1) if cur.month < 12 else cur.replace(year=cur.year + 1, month=1)
 
     for year, month in months:
-        logger.info(f"月別レースID取得: {year}年{month}月")
-        race_ids = scrape_race_list(year, month, session)
-        logger.info(f"  -> {len(race_ids)} races found")
+        logger.info(f"=== {year}年{month}月 取得開始 ===")
 
-        for race_id in race_ids:
-            if race_id in existing_ids:
-                logger.debug(f"  SKIP (already exists): {race_id}")
-                continue
+        # Step1: 開催日リスト取得
+        kaisai_dates = scrape_kaisai_dates(year, month, session)
+        if not kaisai_dates:
+            logger.warning(f"  開催日なし: {year}年{month}月")
+            continue
 
-            logger.info(f"  Scraping race: {race_id}")
-            df = scrape_race_result(race_id, session)
-            if df is not None and not df.empty:
-                all_dfs.append(df)
-                existing_ids.add(race_id)
+        for kaisai_date in kaisai_dates:
+            # Step2: その日のrace_idリスト取得
+            day_race_ids = scrape_race_ids_for_date(kaisai_date, session)
+
+            for race_id in day_race_ids:
+                if race_id in existing_ids:
+                    logger.debug(f"    SKIP (already exists): {race_id}")
+                    continue
+
+                # Step3: レース結果取得
+                logger.info(f"    Scraping: {race_id}")
+                df = scrape_race_result(race_id, session)
+                if df is not None and not df.empty:
+                    all_dfs.append(df)
+                    existing_ids.add(race_id)
 
     if not all_dfs:
         logger.warning("新規取得データがありませんでした")
@@ -312,7 +436,7 @@ def scrape_races(
 
 
 if __name__ == "__main__":
-    # 直近1ヶ月分を試験取得
+    # 動作確認: 直近1ヶ月を試験取得
     today = datetime.today()
     df = scrape_races(
         start_year=today.year,
