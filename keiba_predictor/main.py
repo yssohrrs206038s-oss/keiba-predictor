@@ -84,6 +84,15 @@ def cmd_all(args: argparse.Namespace) -> None:
     cmd_train(args)
 
 
+def cmd_notify(args: argparse.Namespace) -> None:
+    from keiba_predictor.discord_notify import run_predict_notify, run_result_notify
+    webhook = getattr(args, "webhook_url", None)
+    if args.mode == "predict":
+        run_predict_notify(webhook_url=webhook)
+    else:
+        run_result_notify(webhook_url=webhook)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m keiba_predictor.main",
@@ -141,6 +150,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_all.add_argument("--end", metavar="YYYY-MM", help="取得終了年月")
     p_all.add_argument("--cv-splits", type=int, default=5)
     p_all.set_defaults(func=cmd_all)
+
+    # ── notify ─────────────────────────────────────────────
+    p_notify = sub.add_parser("notify", help="Discord 週末重賞通知")
+    p_notify.add_argument(
+        "--mode", choices=["predict", "result"], required=True,
+        help="predict=金曜予想送信 / result=日曜結果送信"
+    )
+    p_notify.add_argument(
+        "--webhook-url", dest="webhook_url",
+        help="Discord Webhook URL（未指定時は環境変数 DISCORD_WEBHOOK_URL を使用）"
+    )
+    p_notify.set_defaults(func=cmd_notify)
 
     return parser
 

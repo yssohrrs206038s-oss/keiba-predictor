@@ -1,145 +1,117 @@
 """
-週末重賞自動予想 → Discord通知スクリプト
+週末重賞 自動予想・結果通知 → Discord
 
-【使い方】
-    python -m keiba_predictor.discord_notify
+【機能1】毎週金曜 09:00 ── 週末重賞の予想を送信
+    python -m keiba_predictor.main notify --mode predict
+
+【機能2】毎週日曜 17:00 ── 重賞レースの結果・的中判定を送信
+    python -m keiba_predictor.main notify --mode result
 
 【環境変数】
-    DISCORD_WEBHOOK_URL : Discord の Incoming Webhook URL
-    または --webhook-url オプションで直接指定可能
+    DISCORD_WEBHOOK_URL : Discord Incoming Webhook URL
 
 【前提条件】
-    1. モデルが学習済み (keiba_predictor/model/xgb_model.pkl)
-    2. 特徴量CSVが生成済み (keiba_predictor/data/featured_races.csv)
-    上記がない場合は先に以下を実行してください:
-        python -m keiba_predictor.main all --start 2023-01 --end YYYY-MM
-
-【Windowsタスクスケジューラ】
-    keiba_notify.bat をプロジェクトルートに配置し、
-    毎週金曜 09:00 に実行登録してください（README参照）。
+    学習済みモデル: keiba_predictor/model/xgb_model.pkl
+    特徴量 CSV  : keiba_predictor/data/featured_races.csv
+    ない場合は先に: python -m keiba_predictor.main all --start 2023-01 --end YYYY-MM
 """
 
-import argparse
+import json
 import logging
 import os
 import re
-import sys
 from datetime import date, timedelta
 from itertools import combinations
 from pathlib import Path
 from typing import Optional
 
-import requests
 import pandas as pd
+import requests
 
 from keiba_predictor.scraper.netkeiba_scraper import (
-    _get, _sleep, RACE_LIST_URL,
+    _get, _sleep, RACE_LIST_URL, RACE_RESULT_URL,
 )
 from keiba_predictor.model.predict import load_model, predict_race
 
 logger = logging.getLogger(__name__)
 
-DATA_DIR  = Path(__file__).parent / "data"
-MODEL_DIR = Path(__file__).parent / "model"
+# ── パス定数 ────────────────────────────────────────────────────
+DATA_DIR   = Path(__file__).parent / "data"
+MODEL_PATH = Path(__file__).parent / "model" / "xgb_model.pkl"
+PRED_CACHE = DATA_DIR / "predictions_cache.json"   # 予想キャッシュ
 
-# 重賞判定パターン: "(G1)" "(GI)" "(GII)" "(GIII)" 等
+# 重賞判定 (G1/G2/G3 を含む括弧表記)
 GRADE_RE = re.compile(r"\(G[Ⅰ-Ⅲ1-3]\)|\(GI{1,3}\)")
 
-MARK_HONMEI = "◎"
-MARK_TAIKOU = "○"
-MARK_ANA    = "△"
+MARK = {"honmei": "◎", "taikou": "○", "ana": "△"}
 
 
-# ── Discord送信 ──────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# Discord 送信
+# ══════════════════════════════════════════════════════════════
 
 def send_discord(webhook_url: str, content: str) -> bool:
-    """Discord Webhook にメッセージを送信する。2000字超は自動分割。"""
+    """Discord Webhook にメッセージを送信する。2000 字超は自動分割。"""
     if not webhook_url:
         logger.error("Discord Webhook URL が未設定です")
         return False
-
-    # Discord の 1メッセージ上限は 2000 文字
     chunks = [content[i : i + 1900] for i in range(0, len(content), 1900)]
-    success = True
+    ok = True
     for chunk in chunks:
         try:
-            resp = requests.post(
-                webhook_url, json={"content": chunk}, timeout=15
-            )
-            if resp.status_code not in (200, 204):
-                logger.error(f"Discord送信失敗: {resp.status_code} {resp.text[:200]}")
-                success = False
+            r = requests.post(webhook_url, json={"content": chunk}, timeout=15)
+            if r.status_code not in (200, 204):
+                logger.error(f"Discord 送信失敗: {r.status_code} {r.text[:200]}")
+                ok = False
         except requests.RequestException as e:
-            logger.error(f"Discord送信エラー: {e}")
-            success = False
-    return success
+            logger.error(f"Discord 送信エラー: {e}")
+            ok = False
+    return ok
 
 
-# ── 週末重賞レース取得 ───────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# 今週末のレース取得
+# ══════════════════════════════════════════════════════════════
 
-def _weekend_kaisai_dates() -> list[str]:
-    """今週末（土・日）の開催日を YYYYMMDD 形式で返す。
-
-    金曜実行を想定: 翌日=土、翌々日=日。
-    土曜実行時は当日・翌日、それ以外は直近の土・日を返す。
-    """
+def _weekend_dates() -> list[str]:
+    """今週末（土・日）の YYYYMMDD リストを返す。金曜実行前提。"""
     today   = date.today()
-    weekday = today.weekday()  # 0=月 … 5=土 6=日
-
-    if weekday == 4:      # 金曜 → 明日が土
-        days_to_sat = 1
-    elif weekday == 5:    # 土曜 → 当日
-        days_to_sat = 0
-    elif weekday == 6:    # 日曜 → 昨日が土
-        days_to_sat = -1
-    else:                 # 月〜木 → 次の土曜
-        days_to_sat = 5 - weekday
-
-    saturday = today + timedelta(days=days_to_sat)
-    sunday   = saturday + timedelta(days=1)
-    return [saturday.strftime("%Y%m%d"), sunday.strftime("%Y%m%d")]
+    wd      = today.weekday()          # 0=月 … 5=土 6=日
+    if   wd == 4: d = 1                # 金 → 翌日=土
+    elif wd == 5: d = 0                # 土
+    elif wd == 6: d = -1               # 日 → 昨日=土
+    else:         d = 5 - wd          # 月〜木 → 次の土
+    sat = today + timedelta(days=d)
+    sun = sat + timedelta(days=1)
+    return [sat.strftime("%Y%m%d"), sun.strftime("%Y%m%d")]
 
 
 def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
-    """今週末の重賞レース一覧を取得する。
-
-    Returns:
-        [{"race_id": "202603220911", "race_name": "...(G1)", "race_date": "2026-03-22"}, ...]
-    """
+    """今週末の重賞レース一覧 [{race_id, race_name, race_date}, ...] を返す。"""
     found: list[dict] = []
     seen:  set[str]   = set()
 
-    for kaisai_date in _weekend_kaisai_dates():
-        url  = f"{RACE_LIST_URL}?kaisai_date={kaisai_date}"
-        soup = _get(url, session)
+    for kaisai_date in _weekend_dates():
+        soup = _get(f"{RACE_LIST_URL}?kaisai_date={kaisai_date}", session)
         if soup is None:
-            logger.warning(f"  race_list_sub 取得失敗: {kaisai_date}")
+            logger.warning(f"race_list_sub 取得失敗: {kaisai_date}")
             continue
 
         for a in soup.select("a[href*='race_id=']"):
-            href = a.get("href", "")
-            m = re.search(r"race_id=(\d{12})", href)
+            m = re.search(r"race_id=(\d{12})", a.get("href", ""))
             if not m:
                 continue
             race_id = m.group(1)
             if race_id in seen:
                 continue
 
-            # レース名
-            name_el  = (
-                a.select_one(".RaceName")
-                or a.select_one(".RaceList_ItemTitle")
-                or a.select_one("span")
-            )
-            race_name = (
-                name_el.get_text(strip=True) if name_el else a.get_text(strip=True)
-            )
+            name_el   = a.select_one(".RaceName, .RaceList_ItemTitle, span")
+            race_name = name_el.get_text(strip=True) if name_el else a.get_text(strip=True)
 
-            # 重賞判定
             is_grade = bool(GRADE_RE.search(race_name))
             if not is_grade:
-                cls_str  = " ".join(a.get("class", []))
-                is_grade = "isGrade" in cls_str or "Grade" in cls_str
+                cls = " ".join(a.get("class", []))
+                is_grade = "isGrade" in cls or "Grade" in cls
 
             if is_grade:
                 seen.add(race_id)
@@ -148,29 +120,131 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
                     "race_name": race_name,
                     "race_date": f"{kaisai_date[:4]}-{kaisai_date[4:6]}-{kaisai_date[6:8]}",
                 })
-                logger.info(f"  重賞発見: {race_name} ({race_id})")
-
+                logger.info(f"  重賞: {race_name} ({race_id})")
         _sleep()
 
     return found
 
 
-# ── 予想フォーマット ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# 予想キャッシュ
+# ══════════════════════════════════════════════════════════════
 
-def _format_discord_message(
-    result_df: pd.DataFrame,
-    race_name: str,
-    race_date: str,
-) -> str:
-    """Discord 向け予想メッセージを生成する（コードブロック形式）。"""
-    lines = [f"```\n🏇 {race_name}  {race_date}", "=" * 46]
+def _load_cache() -> dict:
+    if PRED_CACHE.exists():
+        with open(PRED_CACHE, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
 
-    # ── TOP5 確率 ─────────────────────────────────────────
-    lines.append("■ 3着以内確率 TOP5")
-    lines.append(f"  {'印':1}  {'馬番':>3}  {'馬名':<12}  {'確率':>6}  {'人気':>3}")
-    lines.append("  " + "-" * 38)
 
-    # 穴馬インデックス (3位以降でオッズ10倍以上の最高確率馬)
+def _save_cache(cache: dict) -> None:
+    PRED_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    with open(PRED_CACHE, "w", encoding="utf-8") as f:
+        json.dump(cache, f, ensure_ascii=False, indent=2)
+
+
+def _store_prediction(race_id: str, race_name: str, race_date: str,
+                      result_df: pd.DataFrame) -> None:
+    """予想結果をキャッシュに保存する（日曜の結果比較に使用）。"""
+    cache = _load_cache()
+
+    def _row(df: pd.DataFrame, idx: int) -> dict:
+        if len(df) <= idx:
+            return {}
+        r = df.iloc[idx]
+        return {
+            "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
+            "horse_name":   str(r.get("horse_name", "")),
+            "prob":         float(r["prob_top3"]),
+        }
+
+    # 穴馬: 3位以降でオッズ10倍以上の最高確率
+    ana: dict = {}
+    try:
+        odds_ser = pd.to_numeric(result_df["odds"], errors="coerce")
+        cands = result_df.iloc[2:][odds_ser.iloc[2:].fillna(0) >= 10.0]
+        if not cands.empty:
+            ana = _row(result_df, result_df.index.get_loc(cands.index[0]))
+    except Exception:
+        pass
+    if not ana:
+        ana = _row(result_df, 2)
+
+    top3_nums = []
+    for _, row in result_df.head(3).iterrows():
+        v = row.get("horse_number")
+        if pd.notna(v):
+            top3_nums.append(int(v))
+
+    cache[race_id] = {
+        "race_name":     race_name,
+        "race_date":     race_date,
+        "honmei":        _row(result_df, 0),
+        "taikou":        _row(result_df, 1),
+        "ana":           ana,
+        "predicted_top3_nums": top3_nums,
+    }
+    _save_cache(cache)
+
+
+# ══════════════════════════════════════════════════════════════
+# 払戻金取得
+# ══════════════════════════════════════════════════════════════
+
+def scrape_payouts(race_id: str, session: requests.Session) -> dict:
+    """レース払戻金を取得する。
+
+    Returns:
+        {"馬連": [{"combo": "3-5", "amount": 1450}], "ワイド": [...], ...}
+    """
+    url  = RACE_RESULT_URL.format(race_id=race_id)
+    soup = _get(url, session)
+    if soup is None:
+        return {}
+
+    payouts: dict[str, list] = {}
+
+    for table in soup.select("table.pay_table_01"):
+        current_type = None
+        for tr in table.select("tr"):
+            th = tr.select_one("th")
+            tds = tr.select("td")
+            if th:
+                current_type = th.get_text(strip=True)
+            if not current_type or len(tds) < 2:
+                continue
+
+            combos  = tds[0].get_text(" ", strip=True)
+            amounts = tds[1].get_text(" ", strip=True)
+
+            # 金額を数値に（"¥1,450" → 1450）
+            def _parse_yen(s: str) -> Optional[int]:
+                s = re.sub(r"[¥,\s]", "", s)
+                try:
+                    return int(s)
+                except ValueError:
+                    return None
+
+            amt = _parse_yen(amounts)
+            payouts.setdefault(current_type, []).append({
+                "combo":  combos,
+                "amount": amt,
+            })
+
+    return payouts
+
+
+# ══════════════════════════════════════════════════════════════
+# メッセージフォーマット
+# ══════════════════════════════════════════════════════════════
+
+def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
+                 course_info: str = "") -> str:
+    """金曜予想メッセージを生成する。"""
+    lines = [f"```\n🏇 {race_name}  {race_date}" + (f"  {course_info}" if course_info else "")]
+    lines.append("=" * 46)
+
+    # 穴馬インデックス
     ana_ridx: Optional[int] = None
     try:
         odds_ser = pd.to_numeric(result_df["odds"], errors="coerce")
@@ -180,204 +254,338 @@ def _format_discord_message(
     except Exception:
         pass
 
-    mark_map = {0: MARK_HONMEI, 1: MARK_TAIKOU}
+    mark_map = {0: MARK["honmei"], 1: MARK["taikou"]}
 
+    # TOP5 確率
+    lines.append("■ 3着以内確率 TOP5")
+    lines.append(f"  {'印':1}  {'馬番':>3}  {'馬名':<12}  {'確率':>6}  {'人気':>4}")
+    lines.append("  " + "-" * 38)
     for rank, (ridx, row) in enumerate(result_df.head(5).iterrows()):
         mark = mark_map.get(rank, "")
         if ridx == ana_ridx:
-            mark = MARK_ANA
-        num  = str(int(row.get("horse_number", 0))) if pd.notna(row.get("horse_number")) else "-"
+            mark = MARK["ana"]
+        num  = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "-"
         name = str(row.get("horse_name", "-"))[:12]
         prob = row["prob_top3"] * 100
         pop  = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
         lines.append(f"  {mark or ' ':1}  {num:>3}番  {name:<12}  {prob:>5.1f}%  {pop}人気")
 
-    # ── 予想印 ────────────────────────────────────────────
-    lines.append("")
-    lines.append("■ 予想印")
-    honmei = result_df.iloc[0]
-    taikou = result_df.iloc[1] if len(result_df) >= 2 else None
+    # 予想印
+    lines += ["", "■ 予想印"]
+    def _lbl(r: pd.Series) -> str:
+        n = int(r["horse_number"]) if pd.notna(r.get("horse_number")) else 0
+        return f"{n}番 {r.get('horse_name','?')} ({r['prob_top3']*100:.1f}%)"
 
-    def _label(row: pd.Series) -> str:
-        num  = int(row.get("horse_number", 0)) if pd.notna(row.get("horse_number")) else 0
-        name = str(row.get("horse_name", "?"))
-        prob = row["prob_top3"] * 100
-        return f"{num}番 {name} ({prob:.1f}%)"
+    lines.append(f"  {MARK['honmei']} 本命: {_lbl(result_df.iloc[0])}")
+    if len(result_df) >= 2:
+        lines.append(f"  {MARK['taikou']} 対抗: {_lbl(result_df.iloc[1])}")
+    ana_row = result_df.loc[ana_ridx] if ana_ridx is not None else (result_df.iloc[2] if len(result_df) >= 3 else None)
+    if ana_row is not None:
+        lines.append(f"  {MARK['ana']} 穴馬: {_lbl(ana_row)}")
 
-    lines.append(f"  {MARK_HONMEI} 本命: {_label(honmei)}")
-    if taikou is not None:
-        lines.append(f"  {MARK_TAIKOU} 対抗: {_label(taikou)}")
-
-    if ana_ridx is not None:
-        ana = result_df.loc[ana_ridx]
-    elif len(result_df) >= 3:
-        ana = result_df.iloc[2]
-    else:
-        ana = None
-    if ana is not None:
-        lines.append(f"  {MARK_ANA} 穴馬: {_label(ana)}")
-
-    # ── 推奨買い目 ───────────────────────────────────────
-    lines.append("")
-    lines.append("■ 推奨買い目")
-
-    top3_nums = []
-    for _, row in result_df.head(3).iterrows():
-        v = row.get("horse_number")
+    # 推奨買い目
+    top3 = []
+    for _, r in result_df.head(3).iterrows():
+        v = r.get("horse_number")
         if pd.notna(v):
-            top3_nums.append(int(v))
+            top3.append(int(v))
 
-    if len(top3_nums) >= 2:
-        pairs = list(combinations(top3_nums, 2))
-        umaren_str = " / ".join(f"{a}-{b}" for a, b in pairs)
-        lines.append(f"  馬連  : {umaren_str}")
-        lines.append(f"  ワイド: {umaren_str}")
-    if len(top3_nums) >= 3:
-        lines.append(f"  三連複: {top3_nums[0]}-{top3_nums[1]}-{top3_nums[2]}")
+    lines += ["", "■ 推奨買い目"]
+    if len(top3) >= 2:
+        pairs_str = " / ".join(f"{a}-{b}" for a, b in combinations(top3, 2))
+        lines.append(f"  馬連  : {pairs_str}")
+        lines.append(f"  ワイド: {pairs_str}")
+    if len(top3) >= 3:
+        lines.append(f"  三連複: {top3[0]}-{top3[1]}-{top3[2]}")
 
     lines.append("```")
     return "\n".join(lines)
 
 
-# ── メイン処理 ───────────────────────────────────────────────────
+def _fmt_result(race_name: str, race_date: str,
+                actual_df: pd.DataFrame,
+                pred: dict,
+                payouts: dict) -> str:
+    """日曜結果メッセージを生成する。"""
+    lines = [f"```\n🏆 {race_name}  {race_date}  【結果】"]
+    lines.append("=" * 46)
 
-def run_weekly_notify(
+    # 確定着順（1〜3着）
+    lines.append("■ 確定着順")
+    top3_actual = actual_df[actual_df["finish_position"].apply(
+        lambda x: str(x).strip() in ("1", "2", "3")
+    )].copy()
+    # finish_position を数値にして並び替え
+    top3_actual["_fp"] = pd.to_numeric(top3_actual["finish_position"], errors="coerce")
+    top3_actual = top3_actual.sort_values("_fp").head(3)
+
+    actual_top3_nums: list[int] = []
+    for _, r in top3_actual.iterrows():
+        fp   = int(r["_fp"])
+        num  = int(r["horse_number"]) if pd.notna(r.get("horse_number")) else 0
+        name = str(r.get("horse_name", ""))
+        actual_top3_nums.append(num)
+        lines.append(f"  {fp}着: {num}番 {name}")
+
+    # AI予想との比較
+    lines += ["", "■ AI予想 vs 実際"]
+    for role, mark in MARK.items():
+        p = pred.get(role, {})
+        if not p:
+            continue
+        pnum  = p.get("horse_number")
+        pname = p.get("horse_name", "?")
+        prob  = p.get("prob", 0) * 100
+
+        if pnum in actual_top3_nums:
+            actual_rank = actual_top3_nums.index(pnum) + 1
+            hit = f"→ {actual_rank}着 ✅"
+        else:
+            # 実際の着順を検索
+            row = actual_df[actual_df["horse_number"].apply(
+                lambda x: int(x) == pnum if pd.notna(x) else False
+            )]
+            fp_val = row["finish_position"].values[0] if not row.empty else "?"
+            hit = f"→ {fp_val}着 ❌"
+
+        lines.append(f"  {mark} {pname}({pnum}番, {prob:.1f}%)  {hit}")
+
+    # 買い目的中判定
+    predicted_nums = pred.get("predicted_top3_nums", [])
+    lines += ["", "■ 買い目結果"]
+
+    def _check_umaren() -> tuple[bool, str]:
+        if len(predicted_nums) < 2 or len(actual_top3_nums) < 2:
+            return False, ""
+        p1, p2 = predicted_nums[0], predicted_nums[1]
+        a1, a2 = actual_top3_nums[0], actual_top3_nums[1]
+        hit = {p1, p2} == {a1, a2}
+        combo = f"{p1}-{p2}"
+        pay = _get_payout(payouts, "馬連", combo)
+        return hit, pay
+
+    def _check_wide_pairs() -> list[tuple[str, bool, str]]:
+        results = []
+        if len(predicted_nums) < 2 or len(actual_top3_nums) < 3:
+            return results
+        for a, b in combinations(predicted_nums[:3], 2):
+            hit = a in actual_top3_nums and b in actual_top3_nums
+            combo = f"{a}-{b}"
+            pay = _get_payout(payouts, "ワイド", combo)
+            results.append((combo, hit, pay))
+        return results
+
+    def _check_sanrenpuku() -> tuple[bool, str]:
+        if len(predicted_nums) < 3 or len(actual_top3_nums) < 3:
+            return False, ""
+        hit = set(predicted_nums[:3]) == set(actual_top3_nums[:3])
+        combo = "-".join(str(n) for n in sorted(predicted_nums[:3]))
+        pay = _get_payout(payouts, "三連複", combo)
+        return hit, pay
+
+    umaren_hit, umaren_pay = _check_umaren()
+    if len(predicted_nums) >= 2:
+        mark = "✅ 的中" if umaren_hit else "❌ ハズレ"
+        lines.append(f"  馬連 {predicted_nums[0]}-{predicted_nums[1]}: {mark}"
+                     + (f"  {umaren_pay}" if umaren_pay else ""))
+
+    for combo, hit, pay in _check_wide_pairs():
+        mark = "✅ 的中" if hit else "❌ ハズレ"
+        lines.append(f"  ワイド {combo}: {mark}"
+                     + (f"  {pay}" if pay else ""))
+
+    sanren_hit, sanren_pay = _check_sanrenpuku()
+    if len(predicted_nums) >= 3:
+        mark = "✅ 的中" if sanren_hit else "❌ ハズレ"
+        lines.append(f"  三連複 {'-'.join(str(n) for n in predicted_nums[:3])}: {mark}"
+                     + (f"  {sanren_pay}" if sanren_pay else ""))
+
+    # 払戻金一覧（あれば）
+    if payouts:
+        lines += ["", "■ 主な払戻金"]
+        for bet_type in ("単勝", "複勝", "馬連", "ワイド", "三連複", "三連単"):
+            for entry in payouts.get(bet_type, []):
+                amt = entry["amount"]
+                amt_str = f"¥{amt:,}" if amt else "-"
+                lines.append(f"  {bet_type:<4} {entry['combo']:>12}  {amt_str}")
+
+    lines.append("```")
+    return "\n".join(lines)
+
+
+def _get_payout(payouts: dict, bet_type: str, combo: str) -> str:
+    """払戻金辞書から指定の組み合わせ・金額を文字列で返す。"""
+    for entry in payouts.get(bet_type, []):
+        # combo 内の馬番をセットで比較（順序不問）
+        e_nums = set(re.findall(r"\d+", entry["combo"]))
+        c_nums = set(re.findall(r"\d+", combo))
+        if e_nums == c_nums:
+            amt = entry["amount"]
+            return f"¥{amt:,}" if amt else ""
+    return ""
+
+
+# ══════════════════════════════════════════════════════════════
+# 機能1: 金曜予想
+# ══════════════════════════════════════════════════════════════
+
+def run_predict_notify(
     webhook_url: Optional[str] = None,
     featured_path: Optional[Path] = None,
     model_path: Optional[Path] = None,
 ) -> None:
-    """週末重賞を予想して Discord に通知する。
+    """週末重賞を予想して Discord に送信し、結果をキャッシュに保存する。"""
+    webhook_url = _resolve_webhook(webhook_url)
 
-    毎週金曜 09:00 に Windows タスクスケジューラ等から呼び出す想定。
-    """
-    # --- Webhook URL ---
-    if not webhook_url:
-        webhook_url = os.environ.get("DISCORD_WEBHOOK_URL", "")
-    if not webhook_url:
-        raise ValueError(
-            "Discord Webhook URL が未設定です。\n"
-            "環境変数 DISCORD_WEBHOOK_URL を設定するか "
-            "--webhook-url オプションを指定してください。"
-        )
-
-    # --- パス解決 ---
     if featured_path is None:
         featured_path = DATA_DIR / "featured_races.csv"
     if model_path is None:
-        model_path = MODEL_DIR / "xgb_model.pkl"
+        model_path = MODEL_PATH
 
     session = requests.Session()
 
-    # ── 重賞レース取得 ──────────────────────────────────
-    logger.info("週末重賞レースを検索中...")
+    # 重賞レース取得
+    logger.info("週末重賞を検索中...")
     grade_races = scrape_grade_race_ids(session)
-
     if not grade_races:
         send_discord(webhook_url, "🏇 今週末の重賞レース情報が取得できませんでした。")
         return
 
-    # ── 前提ファイル確認 ────────────────────────────────
+    # 前提ファイル確認
     if not featured_path.exists():
-        msg = (
+        send_discord(webhook_url,
             "⚠️ 特徴量データが見つかりません。\n"
-            "先に以下を実行してください:\n"
-            "```\npython -m keiba_predictor.main all --start 2023-01 --end YYYY-MM\n```"
-        )
-        send_discord(webhook_url, msg)
+            "```\npython -m keiba_predictor.main all --start 2023-01 --end YYYY-MM\n```")
         return
-
     if not model_path.exists():
-        msg = (
+        send_discord(webhook_url,
             "⚠️ モデルファイルが見つかりません。\n"
-            "先に以下を実行してください:\n"
-            "```\npython -m keiba_predictor.main train\n```"
-        )
-        send_discord(webhook_url, msg)
+            "```\npython -m keiba_predictor.main train\n```")
         return
 
-    # ── モデル・データ読み込み ────────────────────────
     model_bundle = load_model(model_path)
-    df_all = pd.read_csv(
-        featured_path, encoding="utf-8-sig", parse_dates=["race_date"]
-    )
+    df_all = pd.read_csv(featured_path, encoding="utf-8-sig")
 
-    # ── ヘッダー送信 ─────────────────────────────────
+    # ヘッダー
     dates_str = " / ".join(sorted({r["race_date"] for r in grade_races}))
-    header = (
-        f"🏇 **今週末の重賞予想** ({dates_str})\n"
-        f"対象: {len(grade_races)} レース"
-    )
-    send_discord(webhook_url, header)
+    send_discord(webhook_url,
+        f"🏇 **今週末の重賞予想** ({dates_str})  全{len(grade_races)}レース")
 
-    # ── 各重賞を予測して送信 ──────────────────────────
     notified = 0
-    skipped  = 0
     for race in grade_races:
-        race_id   = race["race_id"]
-        race_name = race["race_name"]
-        race_date = race["race_date"]
+        race_id, race_name, race_date = race["race_id"], race["race_name"], race["race_date"]
 
-        race_df = df_all[df_all["race_id"].astype(str) == str(race_id)].copy()
-
+        race_df = df_all[df_all["race_id"].astype(str) == race_id].copy()
         if race_df.empty:
-            logger.warning(f"  データなし: {race_name} ({race_id})")
-            send_discord(
-                webhook_url,
-                f"⚠️ **{race_name}** のデータが見つかりません (race_id: `{race_id}`)\n"
-                "スクレイピング後に再実行してください。",
-            )
-            skipped += 1
+            send_discord(webhook_url,
+                f"⚠️ **{race_name}** のデータなし (race_id: `{race_id}`)")
             continue
 
-        result = predict_race(race_df, model_bundle)
-        msg    = _format_discord_message(result, race_name, race_date)
+        # コース情報
+        course_info = ""
+        if "course_type" in race_df.columns and "distance" in race_df.columns:
+            ct  = race_df["course_type"].iloc[0]
+            dst = race_df["distance"].iloc[0]
+            if pd.notna(ct) and pd.notna(dst):
+                course_info = f"{ct}{int(dst)}m"
 
+        result = predict_race(race_df, model_bundle)
+        _store_prediction(race_id, race_name, race_date, result)
+
+        msg = _fmt_predict(result, race_name, race_date, course_info)
         if send_discord(webhook_url, msg):
             notified += 1
-            logger.info(f"  送信完了: {race_name}")
-        else:
-            logger.error(f"  送信失敗: {race_name}")
+            logger.info(f"  送信: {race_name}")
 
-    # ── フッター ─────────────────────────────────────
-    send_discord(
-        webhook_url,
-        f"✅ {notified}/{len(grade_races)} レース送信完了"
-        + (f"（{skipped} レースはデータなし）" if skipped else ""),
-    )
+    send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース送信完了")
 
 
-# ── エントリポイント ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# 機能2: 日曜結果
+# ══════════════════════════════════════════════════════════════
+
+def run_result_notify(
+    webhook_url: Optional[str] = None,
+    model_path: Optional[Path] = None,
+) -> None:
+    """週末重賞の結果をスクレイピングし、予想との比較をDiscordに送信する。"""
+    webhook_url = _resolve_webhook(webhook_url)
+
+    session = requests.Session()
+    cache   = _load_cache()
+
+    # 今週末の重賞IDを取得
+    logger.info("今週末の重賞を検索中...")
+    grade_races = scrape_grade_race_ids(session)
+    if not grade_races:
+        send_discord(webhook_url, "🏆 今週末の重賞レース情報が取得できませんでした。")
+        return
+
+    dates_str = " / ".join(sorted({r["race_date"] for r in grade_races}))
+    send_discord(webhook_url,
+        f"🏆 **今週末の重賞結果** ({dates_str})  全{len(grade_races)}レース")
+
+    notified = 0
+    for race in grade_races:
+        race_id, race_name, race_date = race["race_id"], race["race_name"], race["race_date"]
+
+        # 結果スクレイピング
+        from keiba_predictor.scraper.netkeiba_scraper import scrape_race_result
+        actual_df = scrape_race_result(race_id, session)
+        if actual_df is None or actual_df.empty:
+            send_discord(webhook_url, f"⚠️ **{race_name}** の結果が取得できませんでした。")
+            continue
+
+        # 払戻金取得
+        payouts = scrape_payouts(race_id, session)
+
+        # 予想キャッシュ取得
+        pred = cache.get(race_id, {})
+        if not pred:
+            logger.warning(f"  予想キャッシュなし: {race_id}")
+            pred = {"race_name": race_name, "race_date": race_date,
+                    "honmei": {}, "taikou": {}, "ana": {}, "predicted_top3_nums": []}
+
+        msg = _fmt_result(race_name, race_date, actual_df, pred, payouts)
+        if send_discord(webhook_url, msg):
+            notified += 1
+            logger.info(f"  送信: {race_name}")
+
+    send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース結果送信完了")
+
+
+# ══════════════════════════════════════════════════════════════
+# ユーティリティ
+# ══════════════════════════════════════════════════════════════
+
+def _resolve_webhook(url: Optional[str]) -> str:
+    """引数 → 環境変数 → エラー の順で Webhook URL を解決する。"""
+    if url:
+        return url
+    url = os.environ.get("DISCORD_WEBHOOK_URL", "")
+    if not url:
+        raise ValueError(
+            "Discord Webhook URL が未設定です。\n"
+            "環境変数 DISCORD_WEBHOOK_URL を設定するか "
+            "--webhook-url オプションを使用してください。"
+        )
+    return url
+
 
 def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-    )
-    parser = argparse.ArgumentParser(
-        description="週末重賞の予想を Discord に送信する",
-    )
-    parser.add_argument(
-        "--webhook-url",
-        help="Discord Webhook URL（未指定時は環境変数 DISCORD_WEBHOOK_URL を使用）",
-    )
-    parser.add_argument(
-        "--featured-csv",
-        help="特徴量CSVパス（デフォルト: keiba_predictor/data/featured_races.csv）",
-    )
-    parser.add_argument(
-        "--model",
-        help="モデルファイルパス（デフォルト: keiba_predictor/model/xgb_model.pkl）",
-    )
-    args = parser.parse_args()
+    import argparse
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s %(levelname)s %(message)s")
+    p = argparse.ArgumentParser(description="週末重賞 Discord 通知")
+    p.add_argument("--mode", choices=["predict", "result"], required=True,
+                   help="predict=金曜予想 / result=日曜結果")
+    p.add_argument("--webhook-url", help="Discord Webhook URL（未指定=環境変数）")
+    args = p.parse_args()
 
-    featured_path = Path(args.featured_csv) if args.featured_csv else None
-    model_path    = Path(args.model)         if args.model         else None
-
-    run_weekly_notify(
-        webhook_url   = args.webhook_url,
-        featured_path = featured_path,
-        model_path    = model_path,
-    )
+    if args.mode == "predict":
+        run_predict_notify(webhook_url=args.webhook_url)
+    else:
+        run_result_notify(webhook_url=args.webhook_url)
 
 
 if __name__ == "__main__":
