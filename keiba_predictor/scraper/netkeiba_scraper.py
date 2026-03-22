@@ -155,21 +155,46 @@ def scrape_race_ids_for_date(kaisai_date: str, session: requests.Session) -> lis
 
 
 # ── Step 3: 個別レース結果を取得 ──────────────────────────────────
+def _parse_course_distance(text: str, race_info: dict) -> None:
+    """テキストからコース種別・距離・天候・馬場状態をrace_infoに抽出する"""
+    # コース種別・距離: "芝・右2000m" / "ダート・右1800m" / "障害3390m" 等
+    m = re.search(r"(芝|ダート?|障)[^\d]*(\d{3,4})m", text)
+    if m:
+        raw_type = m.group(1)
+        if raw_type.startswith("障"):
+            race_info["course_type"] = "障害"
+        elif raw_type.startswith("ダ"):
+            race_info["course_type"] = "ダート"
+        else:
+            race_info["course_type"] = "芝"
+        race_info["distance"] = int(m.group(2))
+
+    # 天候（書式: "天候:晴" / "天候：晴" / "天候 : 晴" / "天候/晴"）
+    m = re.search(r"天候\s*[:/：/]\s*([^\s/]+)", text)
+    if m:
+        race_info["weather"] = m.group(1).strip()
+
+    # 馬場状態（書式: "馬場:良" / "馬場:稍重" 等）
+    m = re.search(r"馬場\s*[:/：/]\s*([^\s/]+)", text)
+    if m:
+        race_info["track_condition"] = m.group(1).strip()
+
+
 def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.DataFrame]:
     """
     db.netkeiba.com/race/{race_id}/ からレース結果を取得してDataFrameで返す。
 
-    db.netkeiba.com のレース結果ページHTML構造（2024年確認済み）:
-        <div class="race_head_inner">
-          <h1 class="RaceName">...</h1>
-          <div class="RaceData01">芝2000m / 天候: 晴 / 馬場: 良</div>
-          <div class="RaceData02"><span>...</span><span>...</span></div>
+    db.netkeiba.com のレース結果ページには2種類のHTML構造が存在する:
+    【新構造】
+        <div class="RaceData01">芝・右2000m / 天候:晴 / 馬場:良 / ...</div>
+        <div class="RaceData02"><span>2024年1月6日</span><span>...</span></div>
+    【旧構造】
+        <div class="data_intro">
+          <p class="smalltxt">2024年01月06日 / 芝・右2000m / 天候 : 晴 / 馬場 : 良</p>
         </div>
-        <table class="race_table_01 nk_tb_common">
-          <tr>
-            <td>[着順][枠][馬番][馬名][性齢][斤量][騎手][タイム][着差][人気][単勝][体重][調教師]</td>
-          </tr>
-        </table>
+
+    race_id は YYYYMMDD+会場コード+日次+レース番号（12桁）のため、
+    先頭8桁から日付を確実に取得できる。
     """
     url = RACE_RESULT_URL.format(race_id=race_id)
     soup = _get(url, session)
@@ -177,7 +202,6 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         return None
 
     # ── レース基本情報（全フィールドをデフォルト値で初期化） ──────
-    # ※ 正規表現がマッチしない場合もカラムが必ず存在するようにする
     race_info: dict = {
         "race_id":         race_id,
         "race_name":       "",
@@ -188,57 +212,75 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         "track_condition": None,
     }
 
-    # レース名
-    name_el = soup.select_one("h1.RaceName") or soup.select_one("div.race_head_inner h1")
+    # ── race_date: race_idの先頭8桁から確実に取得（YYYYMMDD形式）──
+    if len(race_id) >= 8:
+        try:
+            race_info["race_date"] = (
+                f"{race_id[:4]}-{race_id[4:6]}-{race_id[6:8]}"
+            )
+        except Exception:
+            pass
+
+    # ── レース名 ──────────────────────────────────────────────
+    name_el = (
+        soup.select_one("h1.RaceName")
+        or soup.select_one("div.race_head_inner h1")
+        or soup.select_one("div.RaceMainColumn h1")
+        or soup.select_one("h2.RaceName")
+    )
     race_info["race_name"] = name_el.get_text(strip=True) if name_el else ""
 
-    # RaceData01: コース・距離・馬場・天気情報
-    # 実際の書式例:
-    #   "芝・右2000m / 天候:晴 / 馬場:良 / 発走:15:25"
-    #   "ダート・右1800m / 天候:曇 / 馬場:稍重"
-    #   "障害・芝3390m"
-    data01 = soup.select_one("div.RaceData01") or soup.select_one("p.smalltxt")
-    if data01:
-        text = data01.get_text()
+    # ── コース・距離・天候・馬場（複数セレクタでフォールバック） ──
+    # 優先順: RaceData01 → p.smalltxt → data_intro内テキスト → ページ全体
+    meta_candidates = [
+        soup.select_one("div.RaceData01"),
+        soup.select_one("p.smalltxt"),
+        soup.select_one("div.data_intro"),
+        soup.select_one("div.race_head_inner"),
+        soup.select_one("div.RaceMainColumn"),
+    ]
+    found_meta = False
+    for el in meta_candidates:
+        if el is None:
+            continue
+        text = el.get_text(" ", strip=True)  # スペース区切りで結合
+        logger.info(f"  [meta selector={el.name}.{' '.join(el.get('class', []))}] {text[:120]!r}")
+        if not found_meta:
+            _parse_course_distance(text, race_info)
+            if race_info["distance"] is not None:
+                found_meta = True
 
-        # コース種別・距離
-        # "芝" / "ダート"(ダで始まる) / "障"(障害)、続いて任意文字・距離数字m
-        m = re.search(r"(芝|ダート?|障)[^\d]*(\d{3,4})m", text)
-        if m:
-            raw_type = m.group(1)
-            if raw_type.startswith("障"):
-                race_info["course_type"] = "障害"
-            elif raw_type.startswith("ダ"):
-                race_info["course_type"] = "ダート"
-            else:
-                race_info["course_type"] = "芝"
-            race_info["distance"] = int(m.group(2))
-        else:
-            logger.debug(f"  distance not found in RaceData01: {text[:80]!r}")
+    if not found_meta:
+        # 最終手段: ページ内の全テキストから検索
+        all_text = soup.get_text(" ", strip=True)
+        _parse_course_distance(all_text, race_info)
+        if race_info["distance"] is None:
+            logger.warning(f"  [distance] NOT FOUND for {race_id}")
 
-        # 天候（書式: "天候:晴" or "天候：晴" or "天候 : 晴"）
-        m = re.search(r"天候\s*[:/：]\s*(\S+)", text)
-        if m:
-            race_info["weather"] = m.group(1).rstrip("/").strip()
-
-        # 馬場状態（書式: "馬場:良" etc.）
-        m = re.search(r"馬場\s*[:/：]\s*(\S+)", text)
-        if m:
-            race_info["track_condition"] = m.group(1).rstrip("/").strip()
-
-    # RaceData02: 開催日・開催回・開催場所
-    # 例: "2024年1月6日 1回中山1日目"
-    data02 = soup.select_one("div.RaceData02")
-    if data02:
-        text = data02.get_text()
+    # ── race_date: HTMLからも取得を試みる（上書き可） ─────────────
+    date_candidates = [
+        soup.select_one("div.RaceData02"),
+        soup.select_one("p.smalltxt"),
+        soup.select_one("div.data_intro"),
+    ]
+    for el in date_candidates:
+        if el is None:
+            continue
+        text = el.get_text()
         m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", text)
         if m:
             race_info["race_date"] = (
                 f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
             )
+            break
+
+    logger.info(
+        f"  [race_info] {race_id}: date={race_info['race_date']} "
+        f"course={race_info['course_type']} dist={race_info['distance']} "
+        f"weather={race_info['weather']} cond={race_info['track_condition']}"
+    )
 
     # ── 着順テーブル ──────────────────────────────────────────
-    # table.race_table_01 or table.nk_tb_common
     result_table = (
         soup.select_one("table.race_table_01")
         or soup.select_one("table.nk_tb_common")
@@ -247,66 +289,105 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         logger.warning(f"Result table not found: {race_id}")
         return None
 
-    # ヘッダ行からカラム位置を確認する
+    # ── ヘッダからカラムインデックスをマッピング ───────────────
+    # db.netkeiba.com のカラム名（表記が変わることがある）
+    # 例: 着順,枠番,馬番,馬名,性齢,斤量,騎手,タイム,着差,単勝,人気,馬体重,上り,調教師
+    HEADER_ALIASES: dict[str, list[str]] = {
+        "finish_position": ["着順"],
+        "frame_number":    ["枠番", "枠"],
+        "horse_number":    ["馬番"],
+        "horse_name":      ["馬名"],
+        "sex_age":         ["性齢"],
+        "weight_carried":  ["斤量"],
+        "jockey":          ["騎手"],
+        "time":            ["タイム", "走破タイム"],
+        "margin":          ["着差"],
+        "odds":            ["単勝"],
+        "popularity":      ["人気"],
+        "horse_weight":    ["馬体重"],
+        "last_3f":         ["上り", "上がり", "上り3F", "上がり3F"],
+        "trainer":         ["調教師"],
+    }
+
     header_row = result_table.select_one("tr")
-    col_texts = [th.get_text(strip=True) for th in (header_row.select("th") if header_row else [])]
-    logger.debug(f"  Table headers: {col_texts}")
+    raw_headers = []
+    if header_row:
+        raw_headers = [th.get_text(strip=True) for th in header_row.select("th")]
+    logger.info(f"  [table headers] {raw_headers}")
+
+    # インデックス辞書: フィールド名 -> カラムインデックス
+    col_idx: dict[str, int] = {}
+    for field, aliases in HEADER_ALIASES.items():
+        for alias in aliases:
+            for i, h in enumerate(raw_headers):
+                if alias in h:
+                    col_idx[field] = i
+                    break
+            if field in col_idx:
+                break
+
+    # ヘッダが取れない場合はデフォルトのカラム順を使う
+    # db.netkeiba.com race_table_01 デフォルト順（2024年現在）:
+    # 0:着順 1:枠番 2:馬番 3:馬名 4:性齢 5:斤量 6:騎手 7:タイム
+    # 8:着差 9:単勝 10:人気 11:馬体重(増減) 12:上り 13:調教師
+    DEFAULT_IDX = {
+        "finish_position": 0, "frame_number": 1, "horse_number": 2,
+        "horse_name": 3, "sex_age": 4, "weight_carried": 5,
+        "jockey": 6, "time": 7, "margin": 8,
+        "odds": 9, "popularity": 10, "horse_weight": 11,
+        "last_3f": 12, "trainer": 13,
+    }
+    for field, default in DEFAULT_IDX.items():
+        if field not in col_idx:
+            col_idx[field] = default
+
+    def _td(tds: list, field: str) -> str:
+        i = col_idx.get(field, -1)
+        if 0 <= i < len(tds):
+            return tds[i].get_text(strip=True)
+        return ""
 
     rows = []
     for tr in result_table.select("tr")[1:]:
         tds = tr.select("td")
-        if len(tds) < 10:
+        if len(tds) < 8:
             continue
 
         row = dict(race_info)
 
-        # db.netkeiba.com の race_table_01 カラム順（2024年現在）:
-        # 0:着順 1:枠番 2:馬番 3:馬名 4:性齢 5:斤量 6:騎手 7:タイム
-        # 8:着差 9:単勝 10:人気 11:馬体重 12:(空) 13:調教師 ...
-
-        row["finish_position"] = tds[0].get_text(strip=True)
-        row["frame_number"]    = tds[1].get_text(strip=True)
-        row["horse_number"]    = tds[2].get_text(strip=True)
+        row["finish_position"] = _td(tds, "finish_position")
+        row["frame_number"]    = _td(tds, "frame_number")
+        row["horse_number"]    = _td(tds, "horse_number")
 
         # 馬名 + horse_id
-        horse_el = tds[3].select_one("a")
+        hi = col_idx.get("horse_name", 3)
+        horse_el = tds[hi].select_one("a") if hi < len(tds) else None
         row["horse_name"] = (horse_el.get_text(strip=True) if horse_el
-                             else tds[3].get_text(strip=True))
+                             else _td(tds, "horse_name"))
         horse_href = horse_el.get("href", "") if horse_el else ""
         m = re.search(r"/horse/(\w+)", horse_href)
         row["horse_id"] = m.group(1) if m else ""
 
-        # 性齢
-        row["sex_age"] = tds[4].get_text(strip=True)
-
-        # 斤量
-        row["weight_carried"] = tds[5].get_text(strip=True)
+        row["sex_age"]        = _td(tds, "sex_age")
+        row["weight_carried"] = _td(tds, "weight_carried")
 
         # 騎手 + jockey_id
-        jockey_el = tds[6].select_one("a")
+        ji = col_idx.get("jockey", 6)
+        jockey_el = tds[ji].select_one("a") if ji < len(tds) else None
         row["jockey"] = (jockey_el.get_text(strip=True) if jockey_el
-                         else tds[6].get_text(strip=True))
+                         else _td(tds, "jockey"))
         jockey_href = jockey_el.get("href", "") if jockey_el else ""
-        m = re.search(r"/jockey/result/recent/(\w+)", jockey_href) or re.search(r"/jockey/(\w+)", jockey_href)
+        m = (re.search(r"/jockey/result/recent/(\w+)", jockey_href)
+             or re.search(r"/jockey/(\w+)", jockey_href))
         row["jockey_id"] = m.group(1) if m else ""
 
-        # タイム
-        row["time"] = tds[7].get_text(strip=True)
-
-        # 着差
-        row["margin"] = tds[8].get_text(strip=True)
-
-        # 単勝オッズ・人気（カラム位置が変わることがあるため複数パターン対応）
-        if len(tds) >= 12:
-            row["odds"]       = tds[9].get_text(strip=True)
-            row["popularity"] = tds[10].get_text(strip=True)
-        else:
-            row["odds"]       = ""
-            row["popularity"] = ""
+        row["time"]       = _td(tds, "time")
+        row["margin"]     = _td(tds, "margin")
+        row["odds"]       = _td(tds, "odds")
+        row["popularity"] = _td(tds, "popularity")
 
         # 馬体重（例: "480(-4)"）
-        weight_col = tds[11] if len(tds) > 11 else None
-        weight_text = weight_col.get_text(strip=True) if weight_col else ""
+        weight_text = _td(tds, "horse_weight")
         m = re.match(r"(\d+)\(([+-]?\d+)\)", weight_text)
         if m:
             row["horse_weight"]      = int(m.group(1))
@@ -315,22 +396,18 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
             row["horse_weight"]      = None
             row["horse_weight_diff"] = None
 
-        # 上がり3ハロン（カラム9番目あたり、テーブル構造により異なる）
-        # db.netkeiba のレース結果テーブルには上がりタイムが含まれることがある
-        row["last_3f"] = ""
+        # 上がり3ハロン
+        row["last_3f"] = _td(tds, "last_3f")
 
-        # 調教師 + trainer_id（カラム位置: 通常13番目前後）
-        trainer_col = tds[13] if len(tds) > 13 else None
-        if trainer_col:
-            trainer_el = trainer_col.select_one("a")
-            row["trainer"] = (trainer_el.get_text(strip=True) if trainer_el
-                              else trainer_col.get_text(strip=True))
-            trainer_href = trainer_el.get("href", "") if trainer_el else ""
-            m = re.search(r"/trainer/result/recent/(\w+)", trainer_href) or re.search(r"/trainer/(\w+)", trainer_href)
-            row["trainer_id"] = m.group(1) if m else ""
-        else:
-            row["trainer"]    = ""
-            row["trainer_id"] = ""
+        # 調教師 + trainer_id
+        ti = col_idx.get("trainer", 13)
+        trainer_el = tds[ti].select_one("a") if ti < len(tds) else None
+        row["trainer"] = (trainer_el.get_text(strip=True) if trainer_el
+                          else _td(tds, "trainer"))
+        trainer_href = trainer_el.get("href", "") if trainer_el else ""
+        m = (re.search(r"/trainer/result/recent/(\w+)", trainer_href)
+             or re.search(r"/trainer/(\w+)", trainer_href))
+        row["trainer_id"] = m.group(1) if m else ""
 
         # 目的変数: 3着以内フラグ
         try:
