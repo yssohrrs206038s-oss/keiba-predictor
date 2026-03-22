@@ -156,8 +156,13 @@ def scrape_race_ids_for_date(kaisai_date: str, session: requests.Session) -> lis
 
 # ── Step 3: 個別レース結果を取得 ──────────────────────────────────
 def _parse_course_distance(text: str, race_info: dict) -> None:
-    """テキストからコース種別・距離・天候・馬場状態をrace_infoに抽出する"""
-    # コース種別・距離: "芝・右2000m" / "ダート・右1800m" / "障害3390m" 等
+    """テキストからコース種別・距離・天候・馬場状態をrace_infoに抽出する。
+
+    netkeibaではコース種別がimg alt属性に、距離がテキストに分かれて
+    いることがある。この関数はテキスト部分のみを担当し、img alt は
+    _fill_from_img_alts() で補完する。
+    """
+    # コース種別＋距離が同一テキスト内にある場合: "芝・右2000m" / "ダート1800m" 等
     m = re.search(r"(芝|ダート?|障)[^\d]*(\d{3,4})m", text)
     if m:
         raw_type = m.group(1)
@@ -168,24 +173,57 @@ def _parse_course_distance(text: str, race_info: dict) -> None:
         else:
             race_info["course_type"] = "芝"
         race_info["distance"] = int(m.group(2))
+    elif race_info["distance"] is None:
+        # コース種別がimg alt等に分離されている場合: 距離数字だけ取得する
+        # 例: <img alt="芝"> 2000m → get_text()で "2000m" のみ残る
+        m = re.search(r"\b(\d{3,4})m\b", text)
+        if m:
+            race_info["distance"] = int(m.group(1))
 
     # 天候（書式: "天候:晴" / "天候：晴" / "天候 : 晴"）
     # 全角コロン・半角コロン・スペース有無すべて対応
-    m = re.search(r"天候\s*[:/：]\s*([^\s/　/]+)", text)
-    if m:
-        race_info["weather"] = m.group(1).strip()
+    if race_info["weather"] is None:
+        m = re.search(r"天候\s*[:/：]\s*([^\s/　\xa0]+)", text)
+        if m:
+            val = m.group(1).strip()
+            if val:  # \xa0 (NBSP) は除外
+                race_info["weather"] = val
 
     # 馬場状態の取得（2パターンに対応）
     # パターン1（旧/共通）: "馬場:良" / "馬場 : 稍重" / "馬場：重"
-    m = re.search(r"馬場\s*[:/：]\s*([^\s/　/]+)", text)
-    if m:
-        race_info["track_condition"] = m.group(1).strip()
-    else:
-        # パターン2（新フォーマット）: "芝:良" / "芝：不良" / "ダ:稍重" など
-        # 表層種別ラベルが直接馬場状態の接頭辞になっている場合
-        m = re.search(r"(?:芝|ダート?|ダ)\s*[:/：]\s*(良|稍重|重|不良)", text)
+    if race_info["track_condition"] is None:
+        m = re.search(r"馬場\s*[:/：]\s*([^\s/　\xa0]+)", text)
         if m:
-            race_info["track_condition"] = m.group(1).strip()
+            val = m.group(1).strip()
+            if val:
+                race_info["track_condition"] = val
+        if race_info["track_condition"] is None:
+            # パターン2（新フォーマット）: "芝:良" / "芝：不良" / "ダ:稍重" など
+            m = re.search(r"(?:芝|ダート?|ダ)\s*[:/：]\s*(良|稍重|重|不良)", text)
+            if m:
+                race_info["track_condition"] = m.group(1).strip()
+
+
+def _fill_from_img_alts(el, race_info: dict) -> None:
+    """要素内の <img alt="..."> からコース種別・天候・馬場状態を補完する。
+
+    netkeibaでは 芝/ダート/天候/馬場 をアイコン画像で表示しており、
+    サーバーサイドHTMLでも alt 属性に値が記載されている。
+    """
+    COURSE_TYPES  = {"芝", "ダート", "障害"}
+    WEATHERS      = {"晴", "曇", "小雨", "雨", "雪", "小雪"}
+    TRACK_CONDS   = {"良", "稍重", "重", "不良"}
+
+    for img in el.select("img[alt]"):
+        alt = img.get("alt", "").strip()
+        if not alt:
+            continue
+        if alt in COURSE_TYPES and race_info["course_type"] is None:
+            race_info["course_type"] = alt
+        elif alt in WEATHERS and race_info["weather"] is None:
+            race_info["weather"] = alt
+        elif alt in TRACK_CONDS and race_info["track_condition"] is None:
+            race_info["track_condition"] = alt
 
 
 def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.DataFrame]:
@@ -238,74 +276,49 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
     )
     race_info["race_name"] = name_el.get_text(strip=True) if name_el else ""
 
-    # ── コース・距離・天候・馬場（複数セレクタでフォールバック） ──
-    # 優先順: RaceData01 → p.smalltxt → data_intro内テキスト → ページ全体
+    # ── コース・距離・天候・馬場（複数セレクタ＋img alt でフォールバック） ──
+    # netkeibaのHTML構造は頻繁に変わるため、複数の方法で取得を試みる:
+    #   1. テキスト抽出 (_parse_course_distance)
+    #   2. img alt 抽出 (_fill_from_img_alts) ← コース種別/天候/馬場はアイコン画像が多い
+    #   3. data_intro 内 p 要素を個別に解析
+    #   4. RaceData01 の span 要素を個別に解析
+    #   5. 最終手段: ページ全文から距離だけ抽出
     meta_candidates = [
         soup.select_one("div.RaceData01"),
+        soup.select_one("div.data_intro p.smalltxt"),  # data_intro内のp優先
         soup.select_one("p.smalltxt"),
         soup.select_one("div.data_intro"),
         soup.select_one("div.race_head_inner"),
         soup.select_one("div.RaceMainColumn"),
     ]
-    found_meta = False
     for el in meta_candidates:
         if el is None:
             continue
-        text = el.get_text(" ", strip=True)  # スペース区切りで結合
+        text = el.get_text(" ", strip=True)
         logger.info(f"  [meta selector={el.name}.{' '.join(el.get('class', []))}] {text[:120]!r}")
-        if not found_meta:
-            _parse_course_distance(text, race_info)
-            if race_info["distance"] is not None:
-                found_meta = True
+        _parse_course_distance(text, race_info)
+        _fill_from_img_alts(el, race_info)
 
-    # ── RaceData01 の <span> 要素を個別解析（新レイアウト対応） ──
-    # 新レイアウトでは各情報が個別の <span> に分かれていることがある
-    # 例: <span>芝2000m</span><span>天候：晴</span><span>芝：良</span>
+    # ── RaceData01 の <span> を個別解析（新レイアウト対応） ──────
     race_data01 = soup.select_one("div.RaceData01")
     if race_data01:
         for span in race_data01.select("span"):
-            span_text = span.get_text(strip=True)
-            if not span_text:
-                continue
-            # distance/course_type が未取得なら span 単体でも試みる
-            if race_info["distance"] is None:
-                _parse_course_distance(span_text, race_info)
-            # weather が未取得
-            if race_info["weather"] is None:
-                m = re.search(r"天候\s*[:/：]\s*([^\s/　]+)", span_text)
-                if m:
-                    race_info["weather"] = m.group(1).strip()
-            # track_condition が未取得
-            if race_info["track_condition"] is None:
-                m = re.search(r"馬場\s*[:/：]\s*([^\s/　]+)", span_text)
-                if not m:
-                    m = re.search(r"(?:芝|ダート?|ダ)\s*[:/：]\s*(良|稍重|重|不良)", span_text)
-                if m:
-                    race_info["track_condition"] = m.group(1).strip()
+            _parse_course_distance(span.get_text(strip=True), race_info)
+            _fill_from_img_alts(span, race_info)
 
-    if not found_meta and race_info["distance"] is None:
-        # 最終手段: ページ内の全テキストから検索
+    # ── 距離が取れなければページ全文から (\d{3,4})m を探す ────────
+    if race_info["distance"] is None:
         all_text = soup.get_text(" ", strip=True)
         _parse_course_distance(all_text, race_info)
+        _fill_from_img_alts(soup, race_info)
         if race_info["distance"] is None:
             logger.warning(f"  [distance] NOT FOUND for {race_id}")
 
-    # ── race_date: HTMLからも取得を試みる（上書き可） ─────────────
-    date_candidates = [
-        soup.select_one("div.RaceData02"),
-        soup.select_one("p.smalltxt"),
-        soup.select_one("div.data_intro"),
-    ]
-    for el in date_candidates:
-        if el is None:
-            continue
-        text = el.get_text()
-        m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", text)
-        if m:
-            race_info["race_date"] = (
-                f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
-            )
-            break
+    # ── race_date: race_idの先頭8桁を正として使用（HTML上書き禁止） ──
+    # HTMLには "1970年01月01日"（Unixエポックのプレースホルダー）が
+    # 埋め込まれていることがあり、上書きすると誤った日付になる。
+    # race_id の先頭8桁は常に正確な日付を含むため、それを優先する。
+    # （race_dateはすでに上部で race_id から設定済み）
 
     logger.info(
         f"  [race_info] {race_id}: date={race_info['race_date']} "
