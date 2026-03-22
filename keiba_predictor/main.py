@@ -85,6 +85,9 @@ def cmd_all(args: argparse.Namespace) -> None:
 
 
 def cmd_notify(args: argparse.Namespace) -> None:
+    if getattr(args, "debug", False):
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.debug("デバッグモード有効")
     from keiba_predictor.discord_notify import run_predict_notify, run_result_notify
     webhook = getattr(args, "webhook_url", None)
     if args.mode == "predict":
@@ -160,6 +163,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_notify.add_argument(
         "--webhook-url", dest="webhook_url",
         help="Discord Webhook URL（未指定時は環境変数 DISCORD_WEBHOOK_URL を使用）"
+    )
+    p_notify.add_argument(
+        "--debug", action="store_true",
+        help="デバッグログを有効化（詳細なスクレイピングログを出力）"
     )
     p_notify.set_defaults(func=cmd_notify)
 

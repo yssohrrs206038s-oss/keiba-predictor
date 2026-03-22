@@ -91,38 +91,77 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
     found: list[dict] = []
     seen:  set[str]   = set()
 
-    for kaisai_date in _weekend_dates():
-        soup = _get(f"{RACE_LIST_URL}?kaisai_date={kaisai_date}", session)
+    dates = _weekend_dates()
+    logger.info(f"検索対象日付: {dates[0]} (土) / {dates[1]} (日)")
+
+    for kaisai_date in dates:
+        url = f"{RACE_LIST_URL}?kaisai_date={kaisai_date}"
+        logger.info(f"取得中: {url}")
+        soup = _get(url, session)
         if soup is None:
-            logger.warning(f"race_list_sub 取得失敗: {kaisai_date}")
+            logger.warning(f"  race_list_sub 取得失敗: {kaisai_date} (ネットワークエラー)")
             continue
 
-        for a in soup.select("a[href*='race_id=']"):
+        all_links = soup.select("a[href*='race_id=']")
+        logger.info(f"  {kaisai_date}: {len(all_links)} レースリンク発見")
+
+        for a in all_links:
             m = re.search(r"race_id=(\d{12})", a.get("href", ""))
             if not m:
                 continue
             race_id = m.group(1)
             if race_id in seen:
                 continue
+            seen.add(race_id)
 
-            name_el   = a.select_one(".RaceName, .RaceList_ItemTitle, span")
-            race_name = name_el.get_text(strip=True) if name_el else a.get_text(strip=True)
+            # レース名: Race_Name → RaceName → RaceList_ItemTitle → 全テキスト
+            name_el = (
+                a.select_one(".Race_Name")
+                or a.select_one(".RaceName")
+                or a.select_one(".RaceList_ItemTitle")
+            )
+            full_text = a.get_text(" ", strip=True)
+            race_name = name_el.get_text(strip=True) if name_el else full_text
 
-            is_grade = bool(GRADE_RE.search(race_name))
+            # ─── 重賞判定（4段階） ─────────────────────────────
+            # 1. レース名または全テキストに (G1/G2/G3/GⅠ/GⅡ/GⅢ) が含まれるか
+            is_grade = bool(GRADE_RE.search(race_name)) or bool(GRADE_RE.search(full_text))
+
+            # 2. <a> 自身のクラスに isGrade / Grade が含まれるか
             if not is_grade:
                 cls = " ".join(a.get("class", []))
                 is_grade = "isGrade" in cls or "Grade" in cls
 
+            # 3. 祖先要素（<li>/<div>）のクラスを確認
+            #    netkeiba は <li class="RaceList_DataItem isGrade isGradeG3"> に付く
+            if not is_grade:
+                node = a.parent
+                while node and node.name not in ("body", "html", None):
+                    pcls = " ".join(node.get("class", []))
+                    if "isGrade" in pcls or "Grade" in pcls:
+                        is_grade = True
+                        break
+                    node = node.parent
+
+            # 4. グレードアイコン span （"G1" "G2" "G3" "GⅠ" 等）が子に存在するか
+            if not is_grade:
+                for span in a.select("span"):
+                    if re.search(r"^G[Ⅰ-Ⅲ1-3]$", span.get_text(strip=True)):
+                        is_grade = True
+                        break
+
+            logger.debug(f"    {race_id} [{race_name!r}] grade={is_grade}")
+
             if is_grade:
-                seen.add(race_id)
                 found.append({
                     "race_id":   race_id,
                     "race_name": race_name,
                     "race_date": f"{kaisai_date[:4]}-{kaisai_date[4:6]}-{kaisai_date[6:8]}",
                 })
-                logger.info(f"  重賞: {race_name} ({race_id})")
+                logger.info(f"  ★重賞: {race_name} ({race_id})")
         _sleep()
 
+    logger.info(f"重賞合計: {len(found)} レース")
     return found
 
 
@@ -448,7 +487,22 @@ def run_predict_notify(
     logger.info("週末重賞を検索中...")
     grade_races = scrape_grade_race_ids(session)
     if not grade_races:
-        send_discord(webhook_url, "🏇 今週末の重賞レース情報が取得できませんでした。")
+        dates = _weekend_dates()
+        sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
+        sun = f"{dates[1][:4]}-{dates[1][4:6]}-{dates[1][6:]}"
+        msg = (
+            f"🏇 今週末（{sat} / {sun}）の重賞レース情報が取得できませんでした。\n"
+            "以下のいずれかが原因の可能性があります:\n"
+            "• netkeibaへのアクセス失敗（ネットワーク/レート制限）\n"
+            "• 今週末に重賞レースがない\n"
+            "• HTMLの構造変更によりレース名が取得できていない\n\n"
+            "デバッグ用ログ確認:\n"
+            "```\n"
+            "python -m keiba_predictor.main notify --mode predict --debug\n"
+            "```"
+        )
+        logger.warning(f"重賞レース0件: {sat} / {sun}")
+        send_discord(webhook_url, msg)
         return
 
     # 前提ファイル確認
@@ -518,7 +572,15 @@ def run_result_notify(
     logger.info("今週末の重賞を検索中...")
     grade_races = scrape_grade_race_ids(session)
     if not grade_races:
-        send_discord(webhook_url, "🏆 今週末の重賞レース情報が取得できませんでした。")
+        dates = _weekend_dates()
+        sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
+        sun = f"{dates[1][:4]}-{dates[1][4:6]}-{dates[1][6:]}"
+        msg = (
+            f"🏆 今週末（{sat} / {sun}）の重賞レース情報が取得できませんでした。\n"
+            "netkeibaへのアクセス失敗または重賞レースなしの可能性があります。"
+        )
+        logger.warning(msg)
+        send_discord(webhook_url, msg)
         return
 
     dates_str = " / ".join(sorted({r["race_date"] for r in grade_races}))
