@@ -491,13 +491,13 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
         (result_df["prob_top3"] >= 0.15)
     ]
     if not ana_hidden.empty:
-        for _, row in ana_hidden.iterrows():
-            num  = int(row["horse_number"]) if pd.notna(row.get("horse_number")) else 0
-            name = str(row.get("horse_name", ""))
-            ev   = row["ev_score"]
-            pop  = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
-            odds = row.get("odds", "-")
-            lines.append(f"★穴馬注目 {num}番{name} EV{ev:.2f}（{pop}人気 {odds}倍）")
+        row  = ana_hidden.nlargest(1, "ev_score").iloc[0]
+        num  = int(row["horse_number"]) if pd.notna(row.get("horse_number")) else 0
+        name = str(row.get("horse_name", ""))
+        ev   = row["ev_score"]
+        pop  = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
+        odds = row.get("odds", "-")
+        lines.append(f"★穴馬注目 {num}番{name} EV{ev:.2f}（{pop}人気 {odds}倍）")
         lines.append("")
 
     # ── ⚠危険な人気馬（1行にまとめ） ──────────────────────
