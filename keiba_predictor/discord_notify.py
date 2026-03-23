@@ -483,8 +483,10 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
 
     lines.append(sep)
 
-    # ── ★EV+推奨馬（1行にまとめ） ───────────────────────────
-    ev_plus = result_df[
+    # ── ★EV+推奨馬（TOP5内のみ） ────────────────────────────
+    top5_idx = result_df.head(5).index
+    ev_plus = result_df.loc[
+        result_df.index.isin(top5_idx) &
         (result_df["ev_score"].fillna(0) >= 1.2) &
         (result_df["prob_top3"] >= 0.25)
     ]
