@@ -214,20 +214,21 @@ def format_prediction(result_df: pd.DataFrame, race_name: str = "") -> str:
 
     lines.append(sep)
 
-    # ── ★EV+推奨馬（TOP5内のみ） ────────────────────────────
+    # ── ★穴馬注目（TOP5外・EV≥3.0・確率≥15%） ──────────────
     top5_idx = result_df.head(5).index
-    ev_plus = result_df.loc[
-        result_df.index.isin(top5_idx) &
-        (result_df["ev_score"].fillna(0) >= 1.2) &
-        (result_df["prob_top3"] >= 0.25)
+    ana_hidden = result_df.loc[
+        ~result_df.index.isin(top5_idx) &
+        (result_df["ev_score"].fillna(0) >= 3.0) &
+        (result_df["prob_top3"] >= 0.15)
     ]
-    if not ev_plus.empty:
-        parts = [
-            f"{int(r['horse_number'])}番{r.get('horse_name','')}"
-            for _, r in ev_plus.iterrows()
-            if pd.notna(r.get("horse_number"))
-        ]
-        lines.append("★EV+ " + " / ".join(parts))
+    if not ana_hidden.empty:
+        for _, row in ana_hidden.iterrows():
+            num  = int(row["horse_number"]) if pd.notna(row.get("horse_number")) else 0
+            name = str(row.get("horse_name", ""))
+            ev   = row["ev_score"]
+            pop  = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
+            odds = row.get("odds", "-")
+            lines.append(f"★穴馬注目 {num}番{name} EV{ev:.2f}（{pop}人気 {odds}倍）")
         lines.append("")
 
     # ── ⚠危険な人気馬（1行） ────────────────────────────────
