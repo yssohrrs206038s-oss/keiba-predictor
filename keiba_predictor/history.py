@@ -345,6 +345,19 @@ def format_summary_message(
 # note 用週次レポート生成
 # ══════════════════════════════════════════════════════════════
 
+def _load_pred_cache() -> dict:
+    """predictions_cache.json を読む（なければ空 dict）。"""
+    import json
+    cache_path = DATA_DIR / "predictions_cache.json"
+    if not cache_path.exists():
+        return {}
+    try:
+        with open(cache_path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
 def build_weekly_report(week_date: str, output_path: Optional[Path] = None) -> str:
     """
     指定週のレポートを Markdown 文字列で返し、ファイルにも保存する。
@@ -356,32 +369,36 @@ def build_weekly_report(week_date: str, output_path: Optional[Path] = None) -> s
     week_end    = target_date + timedelta(days=(6 - target_date.weekday()))  # 次の日曜
     week_start  = week_end - timedelta(days=6)
 
-    df = load_history()
+    df      = load_history()
+    cache   = _load_pred_cache()
     w_stats = weekly_summary(df, week_end)
     c_stats = cumulative_summary(df)
     streak  = hit_streak(df)
 
     # 当週のレース
-    mask = (df["date"].dt.date >= week_start) & (df["date"].dt.date <= week_end)
+    mask    = (df["date"].dt.date >= week_start) & (df["date"].dt.date <= week_end)
     week_df = df[mask].copy()
 
     lines: list[str] = []
 
-    # タイトル
+    # ── タイトル ────────────────────────────────────────────
     lines += [
-        f"# 競馬AI予想 週次レポート",
+        "# KEIBA EDGE 週次レポート",
         f"**{week_start.strftime('%Y年%m月%d日')}〜{week_end.strftime('%m月%d日')}**",
+        "",
+        "> *KEIBA EDGE 独自の期待値分析・危険馬判定搭載*",
         "",
         "---",
         "",
     ]
 
-    # レース別結果
+    # ── レース別結果 ─────────────────────────────────────────
     if week_df.empty:
         lines.append("> この週のレース記録はありません。")
     else:
         lines += ["## 各重賞の予想と結果", ""]
         for _, row in week_df.iterrows():
+            race_id  = str(row["race_id"])
             hit_icon = "✅" if row["fukusho_hit"] else "❌"
             lines += [
                 f"### {hit_icon} {row['race_name']}  `{row['race_grade']}`  "
@@ -405,33 +422,76 @@ def build_weekly_report(week_date: str, output_path: Optional[Path] = None) -> s
                 "",
             ]
 
+            # KEIBA EDGE 独自分析: EV・危険馬（キャッシュから取得）
+            race_cache = cache.get(race_id, {})
+
+            ev_top3 = race_cache.get("ev_top3", [])
+            if ev_top3:
+                lines += [
+                    "**📊 KEIBA EDGE 独自分析 ─ 期待値（EV）分析**",
+                    "",
+                    "| 馬番 | 馬名 | 確率 | オッズ | 期待値 | 評価 |",
+                    "|:----:|:-----|-----:|------:|------:|:----:|",
+                ]
+                for e in ev_top3:
+                    ev    = e.get("ev_score", 0)
+                    prob  = e.get("prob", 0) * 100
+                    odds  = e.get("odds", 0)
+                    mark  = "★ **EV+**" if ev >= 1.0 else "−"
+                    lines.append(
+                        f"| {e.get('horse_number','-')}番 "
+                        f"| {e.get('horse_name','')} "
+                        f"| {prob:.1f}% "
+                        f"| {odds:.1f}倍 "
+                        f"| **{ev:.2f}** "
+                        f"| {mark} |"
+                    )
+                lines.append("")
+
+            dangerous = race_cache.get("dangerous_horses", [])
+            if dangerous:
+                lines += [
+                    "**⚠️ KEIBA EDGE 独自分析 ─ 危険な人気馬**",
+                    "",
+                ]
+                for d in dangerous:
+                    num  = d.get("horse_number", "-")
+                    name = d.get("horse_name", "")
+                    pop  = d.get("popularity", "?")
+                    lines.append(f"- ⚠️ **{num}番 {name}**（{pop}番人気）")
+                    for rsn in d.get("reasons", []):
+                        lines.append(f"  - {rsn}")
+                lines.append("")
+
             # 買い目結果
-            bet_lines = []
+            bet_lines: list[str] = []
             umaren_icon = "✅" if row["umaren_hit"] else "❌"
             bet_lines.append(
                 f"- 馬連: {umaren_icon}"
-                + (f" → ¥{int(row['umaren_payout']):,}" if row["umaren_hit"] else "")
+                + (f" → **¥{int(row['umaren_payout']):,}**" if row["umaren_hit"] else "")
             )
             wide_icon = "✅" if row["wide_hit"] else "❌"
             bet_lines.append(
                 f"- ワイド: {wide_icon}"
-                + (f" → ¥{int(row['wide_payout']):,}" if row["wide_hit"] else "")
+                + (f" → **¥{int(row['wide_payout']):,}**" if row["wide_hit"] else "")
             )
             sanren_icon = "✅" if row["sanrenpuku_hit"] else "❌"
             bet_lines.append(
                 f"- 3連複: {sanren_icon}"
-                + (f" → ¥{int(row['sanrenpuku_payout']):,}" if row["sanrenpuku_hit"] else "")
+                + (f" → **¥{int(row['sanrenpuku_payout']):,}**" if row["sanrenpuku_hit"] else "")
             )
 
             bet_spent  = int(row["bet_total"])
             bet_return = int(row["return_total"])
             profit     = bet_return - bet_spent
             profit_str = f"+¥{profit:,}" if profit >= 0 else f"¥{profit:,}"
-            bet_lines.append(f"- 収支: ¥{bet_spent:,} 投資 → ¥{bet_return:,} 回収 ({profit_str})")
+            bet_lines.append(
+                f"- 収支: ¥{bet_spent:,} 投資 → ¥{bet_return:,} 回収 （{profit_str}）"
+            )
 
             lines += ["**推奨買い目 結果**", ""] + bet_lines + ["", "---", ""]
 
-    # 週次収支
+    # ── 今週の総収支 ─────────────────────────────────────────
     lines += [
         "## 今週の総収支",
         "",
@@ -464,7 +524,7 @@ def build_weekly_report(week_date: str, output_path: Optional[Path] = None) -> s
         "",
         "---",
         "",
-        "*このレポートは競馬AI予測システムにより自動生成されました。*",
+        "*このレポートは KEIBA EDGE AI 予測システムにより自動生成されました。*",
     ]
 
     report_text = "\n".join(lines)
