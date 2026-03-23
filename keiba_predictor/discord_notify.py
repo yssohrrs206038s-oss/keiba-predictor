@@ -503,51 +503,22 @@ def _fmt_result(race_name: str, race_date: str,
 
         lines.append(f"  {mark} {pname}({pnum}番, {prob:.1f}%)  {hit}")
 
-    # 買い目的中判定
+    # 買い目的中判定（module-level 関数を使用）
     predicted_nums = pred.get("predicted_top3_nums", [])
     lines += ["", "■ 買い目結果"]
 
-    def _check_umaren() -> tuple[bool, str]:
-        if len(predicted_nums) < 2 or len(actual_top3_nums) < 2:
-            return False, ""
-        p1, p2 = predicted_nums[0], predicted_nums[1]
-        a1, a2 = actual_top3_nums[0], actual_top3_nums[1]
-        hit = {p1, p2} == {a1, a2}
-        combo = f"{p1}-{p2}"
-        pay = _get_payout(payouts, "馬連", combo)
-        return hit, pay
-
-    def _check_wide_pairs() -> list[tuple[str, bool, str]]:
-        results = []
-        if len(predicted_nums) < 2 or len(actual_top3_nums) < 3:
-            return results
-        for a, b in combinations(predicted_nums[:3], 2):
-            hit = a in actual_top3_nums and b in actual_top3_nums
-            combo = f"{a}-{b}"
-            pay = _get_payout(payouts, "ワイド", combo)
-            results.append((combo, hit, pay))
-        return results
-
-    def _check_sanrenpuku() -> tuple[bool, str]:
-        if len(predicted_nums) < 3 or len(actual_top3_nums) < 3:
-            return False, ""
-        hit = set(predicted_nums[:3]) == set(actual_top3_nums[:3])
-        combo = "-".join(str(n) for n in sorted(predicted_nums[:3]))
-        pay = _get_payout(payouts, "三連複", combo)
-        return hit, pay
-
-    umaren_hit, umaren_pay = _check_umaren()
+    umaren_hit, umaren_pay = _check_umaren_raw(predicted_nums, actual_top3_nums, payouts)
     if len(predicted_nums) >= 2:
         mark = "✅ 的中" if umaren_hit else "❌ ハズレ"
         lines.append(f"  馬連 {predicted_nums[0]}-{predicted_nums[1]}: {mark}"
                      + (f"  {umaren_pay}" if umaren_pay else ""))
 
-    for combo, hit, pay in _check_wide_pairs():
+    for combo, hit, pay in _check_wide_pairs_raw(predicted_nums, actual_top3_nums, payouts):
         mark = "✅ 的中" if hit else "❌ ハズレ"
         lines.append(f"  ワイド {combo}: {mark}"
                      + (f"  {pay}" if pay else ""))
 
-    sanren_hit, sanren_pay = _check_sanrenpuku()
+    sanren_hit, sanren_pay = _check_sanrenpuku_raw(predicted_nums, actual_top3_nums, payouts)
     if len(predicted_nums) >= 3:
         mark = "✅ 的中" if sanren_hit else "❌ ハズレ"
         lines.append(f"  三連複 {'-'.join(str(n) for n in predicted_nums[:3])}: {mark}"
@@ -569,13 +540,61 @@ def _fmt_result(race_name: str, race_date: str,
 def _get_payout(payouts: dict, bet_type: str, combo: str) -> str:
     """払戻金辞書から指定の組み合わせ・金額を文字列で返す。"""
     for entry in payouts.get(bet_type, []):
-        # combo 内の馬番をセットで比較（順序不問）
         e_nums = set(re.findall(r"\d+", entry["combo"]))
         c_nums = set(re.findall(r"\d+", combo))
         if e_nums == c_nums:
             amt = entry["amount"]
             return f"¥{amt:,}" if amt else ""
     return ""
+
+
+# ── 買い目判定（module-level: history.py からも呼び出せる） ────────────
+
+def _check_umaren_raw(
+    predicted_nums: list[int],
+    actual_top3_nums: list[int],
+    payouts: dict,
+) -> tuple[bool, str]:
+    """馬連的中判定。(hit, pay_str) を返す。"""
+    if len(predicted_nums) < 2 or len(actual_top3_nums) < 2:
+        return False, ""
+    p1, p2 = predicted_nums[0], predicted_nums[1]
+    a1, a2 = actual_top3_nums[0], actual_top3_nums[1]
+    hit   = {p1, p2} == {a1, a2}
+    combo = f"{p1}-{p2}"
+    pay   = _get_payout(payouts, "馬連", combo)
+    return hit, pay
+
+
+def _check_wide_pairs_raw(
+    predicted_nums: list[int],
+    actual_top3_nums: list[int],
+    payouts: dict,
+) -> list[tuple[str, bool, str]]:
+    """ワイド全組み合わせ判定。[(combo, hit, pay_str), ...] を返す。"""
+    results = []
+    if len(predicted_nums) < 2 or len(actual_top3_nums) < 3:
+        return results
+    for a, b in combinations(predicted_nums[:3], 2):
+        hit   = a in actual_top3_nums and b in actual_top3_nums
+        combo = f"{a}-{b}"
+        pay   = _get_payout(payouts, "ワイド", combo)
+        results.append((combo, hit, pay))
+    return results
+
+
+def _check_sanrenpuku_raw(
+    predicted_nums: list[int],
+    actual_top3_nums: list[int],
+    payouts: dict,
+) -> tuple[bool, str]:
+    """3連複的中判定。(hit, pay_str) を返す。"""
+    if len(predicted_nums) < 3 or len(actual_top3_nums) < 3:
+        return False, ""
+    hit   = set(predicted_nums[:3]) == set(actual_top3_nums[:3])
+    combo = "-".join(str(n) for n in sorted(predicted_nums[:3]))
+    pay   = _get_payout(payouts, "三連複", combo)
+    return hit, pay
 
 
 # ══════════════════════════════════════════════════════════════
@@ -702,12 +721,18 @@ def run_result_notify(
     send_discord(webhook_url,
         f"🏆 **今週末の重賞結果** ({dates_str})  全{len(grade_races)}レース")
 
+    from keiba_predictor.scraper.netkeiba_scraper import scrape_race_result
+    from keiba_predictor.history import (
+        record_result, load_history,
+        weekly_summary, cumulative_summary, hit_streak, format_summary_message,
+    )
+    from datetime import date as _date
+
     notified = 0
     for race in grade_races:
         race_id, race_name, race_date = race["race_id"], race["race_name"], race["race_date"]
 
         # 結果スクレイピング
-        from keiba_predictor.scraper.netkeiba_scraper import scrape_race_result
         actual_df = scrape_race_result(race_id, session)
         if actual_df is None or actual_df.empty:
             send_discord(webhook_url, f"⚠️ **{race_name}** の結果が取得できませんでした。")
@@ -728,7 +753,26 @@ def run_result_notify(
             notified += 1
             logger.info(f"  送信: {race_name}")
 
+        # 的中実績を CSV に記録
+        try:
+            record_result(race_id, race_name, race_date, pred, actual_df, payouts)
+        except Exception as e:
+            logger.warning(f"  [history] 記録失敗 ({race_name}): {e}")
+
     send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース結果送信完了")
+
+    # 週次・累計サマリーを Discord に送信
+    try:
+        today   = _date.today()
+        hist_df = load_history()
+        w_stats = weekly_summary(hist_df, today)
+        c_stats = cumulative_summary(hist_df)
+        streak  = hit_streak(hist_df)
+        if w_stats["n_races"] > 0:
+            summary_msg = format_summary_message(w_stats, c_stats, streak)
+            send_discord(webhook_url, summary_msg)
+    except Exception as e:
+        logger.warning(f"  [history] サマリー送信失敗: {e}")
 
 
 # ══════════════════════════════════════════════════════════════

@@ -22,6 +22,9 @@
 
     # 7. 全ステップを一括実行
     python -m keiba_predictor.main all --start 2023-01 --end 2023-12
+
+    # 8. 週次レポート生成（note 用 Markdown）
+    python -m keiba_predictor.main report --week 2026-03-29
 """
 
 import argparse
@@ -82,6 +85,17 @@ def cmd_all(args: argparse.Namespace) -> None:
     cmd_clean(args)
     cmd_features(args)
     cmd_train(args)
+
+
+def cmd_report(args: argparse.Namespace) -> None:
+    """週次レポートを Markdown 形式で生成する。"""
+    from keiba_predictor.history import build_weekly_report
+    from pathlib import Path as _Path
+
+    output = _Path(args.output) if args.output else None
+    report_text = build_weekly_report(args.week, output_path=output)
+    # 保存先をログに出力（print で標準出力にも）
+    print(report_text[:200] + "\n…（レポート生成完了）")
 
 
 def cmd_notify(args: argparse.Namespace) -> None:
@@ -153,6 +167,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_all.add_argument("--end", metavar="YYYY-MM", help="取得終了年月")
     p_all.add_argument("--cv-splits", type=int, default=5)
     p_all.set_defaults(func=cmd_all)
+
+    # ── report ─────────────────────────────────────────────
+    p_report = sub.add_parser("report", help="週次レポートを Markdown で生成")
+    p_report.add_argument(
+        "--week", required=True, metavar="YYYY-MM-DD",
+        help="レポート対象週に含まれる日付 (例: 2026-03-29)",
+    )
+    p_report.add_argument(
+        "--output", metavar="PATH",
+        help="出力先ファイルパス（省略時: data/reports/report_YYYYMMDD.md）",
+    )
+    p_report.set_defaults(func=cmd_report)
 
     # ── notify ─────────────────────────────────────────────
     p_notify = sub.add_parser("notify", help="Discord 週末重賞通知")
