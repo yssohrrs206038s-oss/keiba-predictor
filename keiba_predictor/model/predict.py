@@ -36,8 +36,7 @@ def calc_ev_and_flags(result_df: pd.DataFrame) -> pd.DataFrame:
 
     危険馬の条件（5番人気以内の馬が対象）:
       1. AI 3着以内確率 < 40% かつ 3番人気以内
-      2. 前走比距離変化 ≥ 200m
-      3. 1〜2番人気 かつ 前走5着以下
+      2. 1〜2番人気 かつ 前走5着以下
     """
     df = result_df.copy()
 
@@ -48,13 +47,10 @@ def calc_ev_and_flags(result_df: pd.DataFrame) -> pd.DataFrame:
     def _reasons(row: pd.Series) -> list[str]:
         pop   = pd.to_numeric(row.get("popularity"),      errors="coerce")
         pfp   = pd.to_numeric(row.get("prev_finish_pos"), errors="coerce")
-        ddiff = abs(pd.to_numeric(row.get("dist_diff_prev", 0), errors="coerce") or 0)
         prob  = float(row["prob_top3"])
         out: list[str] = []
         if pd.notna(pop) and pop <= 3 and prob < 0.40:
             out.append(f"AI確率{prob*100:.0f}%（3番人気以内なのに低い）")
-        if pd.notna(ddiff) and ddiff >= 200:
-            out.append(f"前走比距離±{int(ddiff)}m変化")
         if pd.notna(pop) and pop <= 2 and pd.notna(pfp) and pfp >= 5:
             out.append(f"1〜2番人気だが前走{int(pfp)}着")
         return out
@@ -153,7 +149,7 @@ def format_prediction(result_df: pd.DataFrame, race_name: str = "") -> str:
     def _lbl(row: pd.Series) -> str:
         n   = int(row.get("horse_number", 0)) if pd.notna(row.get("horse_number")) else 0
         ev  = row.get("ev_score")
-        ev_part = f"  EV={'★' if (pd.notna(ev) and ev >= 1.0) else ''}{ev:.2f}" if pd.notna(ev) else ""
+        ev_part = f"  EV={'★' if (pd.notna(ev) and ev >= 1.2 and row['prob_top3'] >= 0.25) else ''}{ev:.2f}" if pd.notna(ev) else ""
         return f"[{n}番] {row.get('horse_name','?')} ({row['prob_top3']*100:.1f}%{ev_part})"
 
     lines.append(f"  ◎ 本命: {_lbl(result_df.iloc[0])}")
@@ -173,9 +169,12 @@ def format_prediction(result_df: pd.DataFrame, race_name: str = "") -> str:
         lines.append(f"  △ 穴馬: {_lbl(ana)}")
 
     # ── EV+ 推奨馬 ──────────────────────────────────────────
-    ev_plus = result_df[result_df["ev_score"].fillna(0) >= 1.0]
+    ev_plus = result_df[
+        (result_df["ev_score"].fillna(0) >= 1.2) &
+        (result_df["prob_top3"] >= 0.25)
+    ]
     if not ev_plus.empty:
-        lines += ["", "■ ★ EV+推奨馬（期待値 1.0 以上 ─ 買う価値あり）"]
+        lines += ["", "■ ★ EV+推奨馬（確率25%以上 かつ 期待値1.2以上 ─ 買う価値あり）"]
         for _, row in ev_plus.iterrows():
             num  = int(row["horse_number"]) if pd.notna(row.get("horse_number")) else 0
             name = str(row.get("horse_name", ""))
