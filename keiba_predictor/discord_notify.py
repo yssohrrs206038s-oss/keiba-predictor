@@ -43,7 +43,7 @@ PRED_CACHE = DATA_DIR / "predictions_cache.json"   # 予想キャッシュ
 # 重賞判定 (G1/G2/G3 を含む括弧表記)
 GRADE_RE = re.compile(r"\(G[Ⅰ-Ⅲ1-3]\)|\(GI{1,3}\)")
 
-MARK = {"honmei": "◎", "taikou": "○", "ana": "△"}
+MARK = {"honmei": "◎", "taikou": "○", "ana": "△", "hoshi": "☆"}
 
 
 # ══════════════════════════════════════════════════════════════
@@ -420,16 +420,15 @@ def scrape_payouts(race_id: str, session: requests.Session) -> dict:
 
 def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
                  course_info: str = "") -> str:
-    """金曜予想メッセージを生成する（KEIBA EDGE 期待値・危険馬分析付き）。"""
-    # EV・危険フラグがなければここで付与
+    """金曜予想メッセージを生成する（コンパクト版）。"""
     if "ev_score" not in result_df.columns:
         result_df = calc_ev_and_flags(result_df)
 
-    header_extra = (f"  {course_info}" if course_info else "")
-    lines = [f"```\n🏇 {race_name}  {race_date}{header_extra}"]
-    lines.append("=" * 50)
+    sep = "─" * 30
+    header_extra = f"  {course_info}" if course_info else ""
+    lines = [f"```\n🏇 {race_name}  {race_date}{header_extra}", sep]
 
-    # ── 穴馬インデックス ────────────────────────────────────
+    # ── 穴馬インデックス（2位以降でオッズ10倍以上の最上位） ──
     ana_ridx: Optional[int] = None
     try:
         odds_ser = pd.to_numeric(result_df["odds"], errors="coerce")
@@ -439,80 +438,103 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
     except Exception:
         pass
 
-    mark_map = {0: MARK["honmei"], 1: MARK["taikou"]}
+    # ── 印割り当て (◎○△☆ / 5位以降は空白) ─────────────────
+    # 0:◎ 1:○  ana_ridx:△  未割当の3位:☆  それ以外:空白
+    rank_marks: dict[int, str] = {}
+    hoshi_done = False
+    for rank, (ridx, _) in enumerate(result_df.head(5).iterrows()):
+        if rank == 0:
+            rank_marks[ridx] = MARK["honmei"]
+        elif rank == 1:
+            rank_marks[ridx] = MARK["taikou"]
+        elif ridx == ana_ridx:
+            rank_marks[ridx] = MARK["ana"]
+        elif not hoshi_done:
+            rank_marks[ridx] = MARK["hoshi"]
+            hoshi_done = True
+        else:
+            rank_marks[ridx] = " "
+    # ana_ridx が rank 2 以外に割り当てられた場合、rank 2 はまだ ☆ か空白
+    # → rank_marks に入っていない ridx は空白
+    if ana_ridx is not None and ana_ridx in rank_marks:
+        # rank 2 に印が未割当なら ☆ を追加
+        for rank, (ridx, _) in enumerate(result_df.head(5).iterrows()):
+            if rank >= 2 and ridx not in rank_marks:
+                if not hoshi_done:
+                    rank_marks[ridx] = MARK["hoshi"]
+                    hoshi_done = True
+                else:
+                    rank_marks[ridx] = " "
 
-    # ── TOP5 確率 + 期待値 ──────────────────────────────────
-    lines.append("■ KEIBA EDGE 分析  TOP5")
-    lines.append(f"  {'印':1}  {'馬番':>3}  {'馬名':<10}  {'確率':>5}  {'期待値':>5}  {'人気':>2}")
-    lines.append("  " + "-" * 44)
-    for rank, (ridx, row) in enumerate(result_df.head(5).iterrows()):
-        mark = mark_map.get(rank, "")
-        if ridx == ana_ridx:
-            mark = MARK["ana"]
+    # ── TOP5 一行表示 ────────────────────────────────────────
+    for _, (ridx, row) in enumerate(result_df.head(5).iterrows()):
+        mark  = rank_marks.get(ridx, " ")
         num   = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "-"
         name  = str(row.get("horse_name", "-"))[:10]
         prob  = row["prob_top3"] * 100
         pop   = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
+        odds  = row.get("odds", "-")
         ev    = row.get("ev_score")
-        ev_str = f"{ev:.2f}" if pd.notna(ev) else "  -  "
-        ev_flag    = "★" if (pd.notna(ev) and ev >= 1.0) else " "
-        danger_flag = "⚠" if row.get("is_dangerous", False) else " "
+        ev_str = f"EV{ev:.2f}" if pd.notna(ev) else "      "
+        warn  = " ⚠" if row.get("is_dangerous", False) else ""
         lines.append(
-            f"  {mark or ' ':1}  {num:>3}番  {name:<10}  {prob:>5.1f}%"
-            f"  {ev_flag}{ev_str:<5}  {pop}人気{danger_flag}"
+            f"{mark} {num:>2}番 {name:<10} {prob:>5.1f}%  {ev_str}  {pop:>2}人気 {str(odds):>5}倍{warn}"
         )
 
-    # ── 予想印 ──────────────────────────────────────────────
-    lines += ["", "■ 予想印"]
+    lines.append(sep)
 
-    def _lbl(r: pd.Series) -> str:
-        n  = int(r["horse_number"]) if pd.notna(r.get("horse_number")) else 0
-        ev = r.get("ev_score")
-        ev_part = f"  EV={ev:.2f}" if pd.notna(ev) else ""
-        return f"{n}番 {r.get('horse_name','?')} ({r['prob_top3']*100:.1f}%{ev_part})"
-
-    lines.append(f"  {MARK['honmei']} 本命: {_lbl(result_df.iloc[0])}")
-    if len(result_df) >= 2:
-        lines.append(f"  {MARK['taikou']} 対抗: {_lbl(result_df.iloc[1])}")
-    ana_row = (
-        result_df.loc[ana_ridx] if ana_ridx is not None
-        else (result_df.iloc[2] if len(result_df) >= 3 else None)
-    )
-    if ana_row is not None:
-        lines.append(f"  {MARK['ana']} 穴馬: {_lbl(ana_row)}")
-
-    # ── EV+（プラス期待値）馬 ───────────────────────────────
-    ev_plus = result_df[result_df["ev_score"].fillna(0) >= 1.0]
+    # ── ★EV+推奨馬（1行にまとめ） ───────────────────────────
+    ev_plus = result_df[
+        (result_df["ev_score"].fillna(0) >= 1.2) &
+        (result_df["prob_top3"] >= 0.25)
+    ]
     if not ev_plus.empty:
-        lines += ["", "■ ★ EV+（プラス期待値）推奨馬"]
+        parts = []
         for _, row in ev_plus.iterrows():
             num  = int(row["horse_number"]) if pd.notna(row.get("horse_number")) else 0
             name = str(row.get("horse_name", ""))
-            ev   = row["ev_score"]
-            prob = row["prob_top3"] * 100
-            odds = row.get("odds", "?")
-            lines.append(
-                f"  ★ {num}番 {name:<10}  EV={ev:.2f}"
-                f"  ({prob:.1f}% × {odds}倍)"
-            )
+            parts.append(f"{num}番{name}")
+        lines.append("★EV+ " + " / ".join(parts))
+        lines.append("")
 
-    # ── 危険な人気馬 ────────────────────────────────────────
+    # ── ⚠危険な人気馬（1行にまとめ） ──────────────────────
     danger_df = result_df[result_df["is_dangerous"]]
     if not danger_df.empty:
-        lines += ["", "■ ⚠ 危険な人気馬"]
         for _, row in danger_df.iterrows():
-            num  = int(row["horse_number"]) if pd.notna(row.get("horse_number")) else 0
-            name = str(row.get("horse_name", ""))
-            pop  = row.get("popularity", "?")
+            num     = int(row["horse_number"]) if pd.notna(row.get("horse_number")) else 0
+            name    = str(row.get("horse_name", ""))
             reasons = row.get("danger_reasons", [])
-            lines.append(f"  ⚠ {num}番 {name}（{pop}番人気）")
-            for rsn in reasons:
-                lines.append(f"      → {rsn}")
+            # 理由を短縮（最初のもののみ）
+            short = reasons[0].split("（")[0] if reasons else "要注意"
+            lines.append(f"⚠危険 {num}番{name}（{short}）")
+        lines.append("")
 
-    # ── 推奨買い目（2パターン） ────────────────────────────────
-    lines += format_buy_patterns(result_df)
+    # ── 推奨買い目（2パターン、1行コンパクト） ───────────────
+    prob_nums: list[int] = [
+        int(r["horse_number"])
+        for _, r in result_df.head(3).iterrows()
+        if pd.notna(r.get("horse_number"))
+    ]
+    ev_nums: list[int] = (
+        result_df[result_df["ev_score"].notna()]
+        .nlargest(3, "ev_score")["horse_number"]
+        .dropna().apply(int).tolist()
+    ) if "ev_score" in result_df.columns else []
+    if not ev_nums:
+        ev_nums = prob_nums
 
-    lines.append("```")
+    def _buy_line(nums: list[int]) -> str:
+        pairs = " / ".join(f"{a}-{b}" for a, b in combinations(nums, 2)) if len(nums) >= 2 else ""
+        sanren = f"  3連複:{nums[0]}-{nums[1]}-{nums[2]}" if len(nums) >= 3 else ""
+        return f"{pairs}{sanren}"
+
+    if set(prob_nums) == set(ev_nums):
+        lines.append(f"【安定重視】{_buy_line(prob_nums)}")
+    else:
+        lines.append(f"【安定重視】{_buy_line(prob_nums)}")
+        lines.append(f"【期待値重視】{_buy_line(ev_nums)}")
+
+    lines += [sep, "```"]
     return "\n".join(lines)
 
 
