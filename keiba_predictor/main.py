@@ -130,11 +130,24 @@ def cmd_report(args: argparse.Namespace) -> None:
 
 
 def cmd_notify(args: argparse.Namespace) -> None:
+    import os
     if getattr(args, "debug", False):
         logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("デバッグモード有効")
+
+    # --webhook-url 未指定時は環境変数にフォールバック（GitHub Actions 対応）
+    webhook = getattr(args, "webhook_url", None) or os.environ.get("DISCORD_WEBHOOK_URL")
+
+    if not webhook:
+        logger.error(
+            "Discord Webhook URL が未設定です。"
+            "--webhook-url オプションまたは環境変数 DISCORD_WEBHOOK_URL を設定してください。"
+        )
+        sys.exit(1)
+
+    logger.info(f"Webhook URL: {'設定済み (***' + webhook[-6:] + ')' if webhook else '未設定'}")
+
     from keiba_predictor.discord_notify import run_predict_notify, run_result_notify
-    webhook = getattr(args, "webhook_url", None)
     if args.mode == "predict":
         run_predict_notify(webhook_url=webhook)
     else:

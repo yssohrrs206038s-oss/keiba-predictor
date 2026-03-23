@@ -5,6 +5,10 @@ on:
     - cron: '0 0 * * 5'  # 毎週金曜 0:00 UTC = JST 9:00
   workflow_dispatch:       # 手動実行ボタンも有効化
 
+# ジョブ全体で DISCORD_WEBHOOK_URL を参照できるようにする
+env:
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
 jobs:
   predict:
     runs-on: ubuntu-latest
@@ -13,6 +17,16 @@ jobs:
       - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
 
+      # ── 早期バリデーション ────────────────────────────────────
+      - name: Discord Webhook URL を確認
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "::error::DISCORD_WEBHOOK_URL が設定されていません。"
+            echo "::error::GitHub リポジトリの Settings > Secrets > Actions で登録してください。"
+            exit 1
+          fi
+          echo "✅ DISCORD_WEBHOOK_URL: 設定済み (末尾6桁: ...${DISCORD_WEBHOOK_URL: -6})"
+
       - name: Python 3.11 をセットアップ
         uses: actions/setup-python@v5
         with:
@@ -20,7 +34,9 @@ jobs:
           cache: 'pip'
 
       - name: 依存パッケージをインストール
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          echo "✅ pip install 完了"
 
       # ── データ収集（直近3ヶ月）────────────────────────────────
       - name: スクレイピング（直近3ヶ月）
@@ -33,9 +49,10 @@ jobs:
             START_MONTH=$((START_MONTH + 12))
             START_YEAR=$((YEAR - 1))
           fi
-          python -m keiba_predictor.main scrape \
-            --start "${START_YEAR}-$(printf '%02d' $START_MONTH)" \
-            --end "${YEAR}-$(printf '%02d' $MONTH)"
+          START="${START_YEAR}-$(printf '%02d' $START_MONTH)"
+          END="${YEAR}-$(printf '%02d' $MONTH)"
+          echo "📅 スクレイピング期間: $START ～ $END"
+          python -m keiba_predictor.main scrape --start "$START" --end "$END"
 
       - name: データクリーニング
         run: python -m keiba_predictor.main clean
@@ -46,18 +63,38 @@ jobs:
       - name: モデル学習
         run: python -m keiba_predictor.main train
 
-      # ── Discord 予想通知 ───────────────────────────────────────
+      # ── Discord 予想通知（デバッグモード有効）────────────────
       - name: Discord に予想を送信
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python -m keiba_predictor.main notify --mode predict
+        run: |
+          echo "📤 Discord 予想通知を送信中..."
+          python -m keiba_predictor.main notify --mode predict --debug
+          echo "✅ notify コマンド終了"
 
-      # ── 予想キャッシュをリポジトリに保存（日曜の結果通知で使用）──
+      # ── 予想キャッシュをリポジトリに保存 ────────────────────
       - name: 予想キャッシュをコミット
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
-          git diff --staged --quiet || \
+          if git diff --staged --quiet; then
+            echo "ℹ️ キャッシュに変更なし（コミットスキップ）"
+          else
             git commit -m "chore: 金曜予想キャッシュを更新 [skip ci]"
-          git push || true
+            git push
+            echo "✅ キャッシュをコミット・プッシュ完了"
+          fi
+
+      # ── エラー時の Discord 通知 ──────────────────────────────
+      - name: ❌ エラーを Discord に通知
+        if: failure()
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "Webhook URL 未設定のため Discord 通知をスキップ"
+            exit 0
+          fi
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"⚠️ **金曜予想ワークフローが失敗しました**\nログ: ${RUN_URL}\"}" \
+            && echo "Discord エラー通知送信済み" \
+            || echo "Discord エラー通知の送信に失敗"
