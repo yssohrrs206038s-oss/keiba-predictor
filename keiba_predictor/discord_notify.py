@@ -31,7 +31,7 @@ import requests
 from keiba_predictor.scraper.netkeiba_scraper import (
     _get, _sleep, RACE_RESULT_URL,
 )
-from keiba_predictor.model.predict import load_model, predict_race
+from keiba_predictor.model.predict import load_model, predict_race, calc_ev_and_flags
 
 logger = logging.getLogger(__name__)
 
@@ -47,46 +47,6 @@ MARK = {"honmei": "◎", "taikou": "○", "ana": "△"}
 
 
 # ══════════════════════════════════════════════════════════════
-# KEIBA EDGE 独自分析: 期待値・危険馬
-# ══════════════════════════════════════════════════════════════
-
-def _calc_ev_and_flags(result_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    result_df に期待値スコアと危険フラグを付与して返す。
-
-    追加列:
-      ev_score       : float  (prob_top3 × odds)
-      is_dangerous   : bool
-      danger_reasons : list[str]  (危険と判断した理由)
-    """
-    df = result_df.copy()
-
-    # 期待値: 3着以内確率 × オッズ
-    odds_num = pd.to_numeric(df["odds"], errors="coerce")
-    df["ev_score"] = df["prob_top3"] * odds_num
-
-    def _reasons(row: pd.Series) -> list[str]:
-        pop   = pd.to_numeric(row.get("popularity"),      errors="coerce")
-        pfp   = pd.to_numeric(row.get("prev_finish_pos"), errors="coerce")
-        ddiff = abs(pd.to_numeric(row.get("dist_diff_prev", 0), errors="coerce") or 0)
-        prob  = float(row["prob_top3"])
-        out: list[str] = []
-        # 条件1: AI確率40%未満なのに3番人気以内
-        if pd.notna(pop) and pop <= 3 and prob < 0.40:
-            out.append(f"AI確率{prob*100:.0f}%（3番人気以内なのに低い）")
-        # 条件2: 前走から距離200m以上変化
-        if pd.notna(ddiff) and ddiff >= 200:
-            out.append(f"前走比距離±{int(ddiff)}m変化")
-        # 条件3: 1〜2番人気かつ前走5着以下
-        if pd.notna(pop) and pop <= 2 and pd.notna(pfp) and pfp >= 5:
-            out.append(f"1〜2番人気だが前走{int(pfp)}着")
-        return out
-
-    df["danger_reasons"] = df.apply(_reasons, axis=1)
-    df["is_dangerous"]   = df["danger_reasons"].apply(bool)
-    return df
-
-
 # ══════════════════════════════════════════════════════════════
 # Discord 送信
 # ══════════════════════════════════════════════════════════════
@@ -372,7 +332,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
 
     # EV・危険馬データ（_calc_ev_and_flags 済みならそのまま使う）
     if "ev_score" not in result_df.columns:
-        result_df = _calc_ev_and_flags(result_df)
+        result_df = calc_ev_and_flags(result_df)
 
     ev_top3: list[dict] = []
     for _, r in result_df[result_df["ev_score"].notna()].nlargest(3, "ev_score").iterrows():
@@ -463,7 +423,7 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
     """金曜予想メッセージを生成する（KEIBA EDGE 期待値・危険馬分析付き）。"""
     # EV・危険フラグがなければここで付与
     if "ev_score" not in result_df.columns:
-        result_df = _calc_ev_and_flags(result_df)
+        result_df = calc_ev_and_flags(result_df)
 
     header_extra = (f"  {course_info}" if course_info else "")
     lines = [f"```\n🏇 {race_name}  {race_date}{header_extra}"]
@@ -801,7 +761,7 @@ def run_predict_notify(
                 course_info = f"{ct}{int(dst)}m"
 
         result = predict_race(race_df, model_bundle)
-        result = _calc_ev_and_flags(result)     # EV・危険フラグを付与
+        result = calc_ev_and_flags(result)     # EV・危険フラグを付与
         _store_prediction(race_id, race_name, race_date, result)
 
         msg = _fmt_predict(result, race_name, race_date, course_info)
