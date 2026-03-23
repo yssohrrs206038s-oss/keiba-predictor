@@ -327,6 +327,70 @@ def predict_upcoming(
     return result
 
 
+def predict_live(
+    race_id: str,
+    notify: bool = False,
+    webhook_url: Optional[str] = None,
+    model_path: Optional[Path] = None,
+    cleaned_path: Optional[Path] = None,
+) -> pd.DataFrame:
+    """
+    出馬表をリアルタイムでスクレイピングして予測する。
+
+    過去CSVにないレースや未来レースでも利用可能。
+    過去成績がない馬はデータセット中央値で補完する。
+
+    Args:
+        race_id      : netkeibaのレースID
+        notify       : True のとき Discord に予測結果を送信
+        webhook_url  : Discord Webhook URL（notify=True 時に使用）
+        model_path   : モデルファイルパス
+        cleaned_path : 過去成績クリーニング済みCSVのパス
+
+    Returns:
+        予測結果DataFrame
+    """
+    from keiba_predictor.scraper.shutuba_scraper import scrape_shutuba
+    from keiba_predictor.features.live_features import build_live_features
+
+    # 出馬表を取得
+    shutuba_info = scrape_shutuba(race_id)
+    if shutuba_info is None:
+        raise ValueError(f"出馬表の取得に失敗しました: race_id={race_id}")
+
+    horses_df = shutuba_info["horses"]
+    if horses_df.empty:
+        raise ValueError(f"出馬表に馬が見つかりませんでした: race_id={race_id}")
+
+    # 特徴量を生成
+    race_df = build_live_features(shutuba_info, cleaned_path=cleaned_path)
+    if race_df.empty:
+        raise ValueError("特徴量の生成に失敗しました")
+
+    # 予測
+    model_bundle = load_model(model_path)
+    result = predict_race(race_df, model_bundle)
+    result = calc_ev_and_flags(result)
+
+    race_name   = shutuba_info["race_name"]
+    course_info = shutuba_info["course_info"]
+
+    msg = format_prediction(result, race_name=f"{race_name}  {course_info}")
+    print(msg)
+
+    if notify:
+        import os
+        from keiba_predictor.discord_notify import send_discord
+        url = webhook_url or os.environ.get("DISCORD_WEBHOOK_URL", "")
+        if not url:
+            logger.error("--webhook-url または環境変数 DISCORD_WEBHOOK_URL を指定してください")
+        else:
+            ok = send_discord(url, f"```\n{msg}\n```")
+            logger.info("Discord 送信完了" if ok else "Discord 送信失敗")
+
+    return result
+
+
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

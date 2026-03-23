@@ -20,8 +20,11 @@
     # 6. 特定レースを予測
     python -m keiba_predictor.main predict --race-id 202305050811
 
-    # 6b. 予測して Discord にも送信
-    python -m keiba_predictor.main predict --race-id 202305050811 --notify --webhook-url https://discord.com/api/webhooks/...
+    # 6b. 出馬表からリアルタイム予測（CSV不要）
+    python -m keiba_predictor.main predict --race-id 202305050811 --live
+
+    # 6c. リアルタイム予測して Discord にも送信
+    python -m keiba_predictor.main predict --race-id 202305050811 --live --notify --webhook-url https://discord.com/api/webhooks/...
 
     # 7. 全ステップを一括実行
     python -m keiba_predictor.main all --start 2023-01 --end 2023-12
@@ -78,24 +81,33 @@ def cmd_train(args: argparse.Namespace) -> None:
 
 
 def cmd_predict(args: argparse.Namespace) -> None:
-    from keiba_predictor.model.predict import predict_from_csv, format_prediction, calc_ev_and_flags
-    result = predict_from_csv(args.race_id)
+    webhook = getattr(args, "webhook_url", None)
+    notify  = getattr(args, "notify", False)
 
-    if getattr(args, "notify", False):
-        from keiba_predictor.discord_notify import send_discord
+    if getattr(args, "live", False):
+        # ── ライブモード: 出馬表をスクレイピングして予測 ──────
+        from keiba_predictor.model.predict import predict_live
+        predict_live(
+            race_id=args.race_id,
+            notify=notify,
+            webhook_url=webhook,
+        )
+    else:
+        # ── 通常モード: featured_races.csv から予測 ───────────
+        from keiba_predictor.model.predict import predict_from_csv, format_prediction, calc_ev_and_flags
         import os
-        webhook = getattr(args, "webhook_url", None) or os.environ.get("DISCORD_WEBHOOK_URL")
-        if not webhook:
-            logger.error("--webhook-url または環境変数 DISCORD_WEBHOOK_URL を指定してください")
-            return
-        result = calc_ev_and_flags(result)
-        race_name = result["race_name"].iloc[0] if "race_name" in result.columns else args.race_id
-        msg = format_prediction(result, race_name=race_name)
-        ok = send_discord(webhook, msg)
-        if ok:
-            logger.info("Discord への送信が完了しました")
-        else:
-            logger.error("Discord への送信に失敗しました")
+        result = predict_from_csv(args.race_id)
+        if notify:
+            from keiba_predictor.discord_notify import send_discord
+            url = webhook or os.environ.get("DISCORD_WEBHOOK_URL")
+            if not url:
+                logger.error("--webhook-url または環境変数 DISCORD_WEBHOOK_URL を指定してください")
+                return
+            result = calc_ev_and_flags(result)
+            race_name = result["race_name"].iloc[0] if "race_name" in result.columns else args.race_id
+            msg = format_prediction(result, race_name=race_name)
+            ok = send_discord(url, msg)
+            logger.info("Discord への送信が完了しました" if ok else "Discord への送信に失敗しました")
 
 
 def cmd_all(args: argparse.Namespace) -> None:
@@ -177,6 +189,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_pred.add_argument(
         "--race-id", required=True,
         help="netkeibaのレースID (例: 202305050811)"
+    )
+    p_pred.add_argument(
+        "--live", action="store_true",
+        help="出馬表をリアルタイムでスクレイピングして予測（CSV不要）"
     )
     p_pred.add_argument(
         "--notify", action="store_true",
