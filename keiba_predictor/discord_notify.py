@@ -31,7 +31,7 @@ import requests
 from keiba_predictor.scraper.netkeiba_scraper import (
     _get, _sleep, RACE_RESULT_URL,
 )
-from keiba_predictor.model.predict import load_model, predict_race, calc_ev_and_flags
+from keiba_predictor.model.predict import load_model, predict_race, calc_ev_and_flags, format_buy_patterns
 
 logger = logging.getLogger(__name__)
 
@@ -509,30 +509,8 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
             for rsn in reasons:
                 lines.append(f"      → {rsn}")
 
-    # ── EV 上位買い目（EV 高い組み合わせ優先） ───────────────
-    ev_sorted_nums = (
-        result_df[result_df["ev_score"].notna()]
-        .nlargest(3, "ev_score")["horse_number"]
-        .dropna()
-        .apply(int)
-        .tolist()
-    )
-    top3_prob_nums: list[int] = []
-    for _, r in result_df.head(3).iterrows():
-        v = r.get("horse_number")
-        if pd.notna(v):
-            top3_prob_nums.append(int(v))
-
-    # 買い目は EV 上位3頭を基本とし、EV 未計算時は確率上位3頭
-    buy_nums = ev_sorted_nums if ev_sorted_nums else top3_prob_nums
-
-    lines += ["", "■ 推奨買い目（EV重視）"]
-    if len(buy_nums) >= 2:
-        pairs_str = " / ".join(f"{a}-{b}" for a, b in combinations(buy_nums, 2))
-        lines.append(f"  馬連  : {pairs_str}")
-        lines.append(f"  ワイド: {pairs_str}")
-    if len(buy_nums) >= 3:
-        lines.append(f"  三連複: {buy_nums[0]}-{buy_nums[1]}-{buy_nums[2]}")
+    # ── 推奨買い目（2パターン） ────────────────────────────────
+    lines += format_buy_patterns(result_df)
 
     lines.append("```")
     return "\n".join(lines)

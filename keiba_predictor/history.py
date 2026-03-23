@@ -19,6 +19,7 @@ results_history.csv スキーマ:
 import logging
 import re
 from datetime import date, timedelta
+from itertools import combinations
 from pathlib import Path
 from typing import Optional
 
@@ -461,6 +462,42 @@ def build_weekly_report(week_date: str, output_path: Optional[Path] = None) -> s
                     lines.append(f"- ⚠️ **{num}番 {name}**（{pop}番人気）")
                     for rsn in d.get("reasons", []):
                         lines.append(f"  - {rsn}")
+                lines.append("")
+
+            # 推奨買い目（2パターン）
+            prob_nums: list[int] = [
+                n for n in race_cache.get("predicted_top3_nums", []) if n is not None
+            ]
+            ev_nums: list[int] = [
+                e["horse_number"]
+                for e in race_cache.get("ev_top3", [])
+                if e.get("horse_number") is not None
+            ]
+            if not ev_nums:
+                ev_nums = prob_nums
+            if prob_nums:
+                lines.append("**推奨買い目（予想時点）**")
+                lines.append("")
+
+                def _md_combo(nums: list[int]) -> list[str]:
+                    out: list[str] = []
+                    if len(nums) >= 2:
+                        out.append("馬連 / ワイド:")
+                        for a, b in combinations(nums, 2):
+                            out.append(f"- {a}-{b}")
+                    if len(nums) >= 3:
+                        out.append(f"三連複: {nums[0]}-{nums[1]}-{nums[2]}")
+                    return out
+
+                if set(prob_nums) == set(ev_nums):
+                    lines.append("【安定重視】確率TOP3で堅く")
+                    lines += _md_combo(prob_nums)
+                else:
+                    lines.append("【安定重視】確率TOP3で堅く")
+                    lines += _md_combo(prob_nums)
+                    lines.append("")
+                    lines.append("【期待値重視】EV上位3頭で配当狙い")
+                    lines += _md_combo(ev_nums)
                 lines.append("")
 
             # 買い目結果

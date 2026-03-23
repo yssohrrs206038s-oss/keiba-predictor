@@ -60,6 +60,48 @@ def calc_ev_and_flags(result_df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def format_buy_patterns(result_df: pd.DataFrame, indent: str = "  ") -> list[str]:
+    """
+    推奨買い目を2パターン（安定重視 / 期待値重視）で生成して行リストで返す。
+
+    - 確率TOP3 と EV上位3頭が同じ馬番セットなら1パターンのみ表示。
+    - result_df は prob_top3 降順でソート済みであること（predict_race の返り値）。
+    """
+    prob_nums: list[int] = [
+        int(r["horse_number"])
+        for _, r in result_df.head(3).iterrows()
+        if pd.notna(r.get("horse_number"))
+    ]
+    ev_nums: list[int] = (
+        result_df[result_df["ev_score"].notna()]
+        .nlargest(3, "ev_score")["horse_number"]
+        .dropna().apply(int).tolist()
+    ) if "ev_score" in result_df.columns else []
+    if not ev_nums:
+        ev_nums = prob_nums
+
+    def _combo(nums: list[int]) -> list[str]:
+        out: list[str] = []
+        if len(nums) >= 2:
+            out.append(f"{indent}馬連 / ワイド:")
+            for a, b in combinations(nums, 2):
+                out.append(f"{indent}  {a}-{b}")
+        if len(nums) >= 3:
+            out.append(f"{indent}三連複: {nums[0]}-{nums[1]}-{nums[2]}")
+        return out
+
+    lines = ["", "■ 推奨買い目"]
+    if set(prob_nums) == set(ev_nums):
+        lines.append(f"{indent}【安定重視】確率TOP3で堅く")
+        lines += _combo(prob_nums)
+    else:
+        lines.append(f"{indent}【安定重視】確率TOP3で堅く")
+        lines += _combo(prob_nums)
+        lines.append(f"{indent}【期待値重視】EV上位3頭で配当狙い")
+        lines += _combo(ev_nums)
+    return lines
+
+
 def load_model(model_path: Path | None = None) -> dict:
     """学習済みモデルをロードする。"""
     if model_path is None:
@@ -196,28 +238,8 @@ def format_prediction(result_df: pd.DataFrame, race_name: str = "") -> str:
             for rsn in reasons:
                 lines.append(f"       → {rsn}")
 
-    # ── 推奨買い目（EV 上位優先） ───────────────────────────
-    lines += ["", "■ 推奨買い目（EV重視）"]
-
-    buy_nums: list[int] = (
-        result_df[result_df["ev_score"].notna()]
-        .nlargest(3, "ev_score")["horse_number"]
-        .dropna().apply(int).tolist()
-    )
-    if not buy_nums:
-        buy_nums = [
-            int(r["horse_number"])
-            for _, r in result_df.head(3).iterrows()
-            if pd.notna(r.get("horse_number"))
-        ]
-
-    if len(buy_nums) >= 2:
-        pairs = list(combinations(buy_nums, 2))
-        lines.append(f"  馬連 / ワイド (EV上位3頭ボックス):")
-        for a, b in pairs:
-            lines.append(f"    {a}-{b}")
-    if len(buy_nums) >= 3:
-        lines.append(f"  三連複: {buy_nums[0]}-{buy_nums[1]}-{buy_nums[2]}")
+    # ── 推奨買い目（2パターン） ────────────────────────────────
+    lines += format_buy_patterns(result_df)
 
     lines.append(sep)
     return "\n".join(lines)
