@@ -12,11 +12,14 @@
   - 枠番・馬番
   - 性別・年齢
   - 上がり3ハロン
+  - [追加] 同コース・同距離帯の複勝率
+  - [追加] レース格エンコード
+  - [追加] 騎手×馬コンビ複勝率
 """
 
 import logging
+import re
 from pathlib import Path
-from datetime import timedelta
 
 import pandas as pd
 import numpy as np
@@ -55,6 +58,11 @@ FEATURE_COLS = [
     "days_since_last_race",# 前走からの日数
     "prev_finish_pos",     # 前走着順
     "prev_odds",           # 前走オッズ
+    # [追加特徴量]
+    "horse_course_fukusho_rate",  # 同コース（芝/ダート）過去複勝率
+    "horse_dist_fukusho_rate",    # 同距離帯（±200m）過去複勝率
+    "race_grade_enc",             # レース格 G1=6 … 未勝利=0
+    "jockey_horse_fukusho_rate",  # 騎手×馬コンビ複勝率
 ]
 
 
@@ -171,6 +179,103 @@ def add_prev_race_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# ── レース格マッピング ────────────────────────────────────────────
+# race_name に含まれる文字列でマッチングする順序に注意（上位優先）
+_GRADE_PATTERNS: list[tuple[re.Pattern, int]] = [
+    (re.compile(r"[（(]G\s*[1Ⅰ][）)]|[（(]GI[）)]", re.I), 6),
+    (re.compile(r"[（(]G\s*[2Ⅱ][）)]|[（(]GII[）)]", re.I), 5),
+    (re.compile(r"[（(]G\s*[3Ⅲ][）)]|[（(]GIII[）)]", re.I), 4),
+    (re.compile(r"[（(]L[）)]|オープン|（OP）|\(OP\)", re.I),  3),
+    (re.compile(r"3勝クラス|1600万"),                          2),
+    (re.compile(r"2勝クラス|1000万|900万"),                    1),
+    # 1勝クラス・未勝利・新馬・500万 → デフォルト 0
+]
+
+
+def _encode_race_grade(name) -> int:
+    """race_name 文字列からレース格を数値に変換する。"""
+    if not isinstance(name, str):
+        return 0
+    for pat, val in _GRADE_PATTERNS:
+        if pat.search(name):
+            return val
+    return 0
+
+
+def add_race_grade_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """race_name からレース格を数値エンコードして race_grade_enc 列を追加する。
+
+    G1=6, G2=5, G3=4, L/OP=3, 3勝=2, 2勝=1, 1勝/未勝利=0
+    """
+    df["race_grade_enc"] = df["race_name"].map(_encode_race_grade).astype(int)
+    logger.info(
+        "race_grade_enc 分布: "
+        + str(df["race_grade_enc"].value_counts().sort_index().to_dict())
+    )
+    return df
+
+
+def add_horse_course_dist_features(df: pd.DataFrame) -> pd.DataFrame:
+    """馬の同コース・同距離帯（400m幅）での過去複勝率を追加する。
+
+    距離帯は distance // 400 * 400 によるビン（±200m 相当）。
+    当該レース自身は含めない（leakage防止）。
+    """
+    df = df.sort_values(["horse_id", "race_date"]).reset_index(drop=True)
+
+    # 同コース（芝/ダート）複勝率
+    logger.info("馬の同コース複勝率を計算中...")
+    df["horse_course_fukusho_rate"] = (
+        df.groupby(["horse_id", "course_type_enc"], group_keys=False)["top3"]
+        .transform(lambda x: x.shift(1).expanding().mean())
+    )
+
+    # 同距離帯複勝率（400m幅ビン ≒ ±200m）
+    logger.info("馬の同距離帯複勝率を計算中...")
+    df["_dist_band"] = (df["distance"] // 400) * 400
+    df["horse_dist_fukusho_rate"] = (
+        df.groupby(["horse_id", "_dist_band"], group_keys=False)["top3"]
+        .transform(lambda x: x.shift(1).expanding().mean())
+    )
+    df = df.drop(columns=["_dist_band"])
+
+    return df
+
+
+def add_jockey_horse_features(df: pd.DataFrame) -> pd.DataFrame:
+    """騎手×馬コンビの過去複勝率を追加する。
+
+    過去の乗り鞍が 3 回未満の場合は jockey_fukusho_rate で補完する。
+    jockey_fukusho_rate が NaN のときはさらに NaN のまま残す。
+    """
+    logger.info("騎手×馬コンビ複勝率を計算中...")
+
+    df = df.sort_values("race_date").reset_index(drop=True)
+    result = pd.Series(np.nan, index=df.index, dtype=float)
+
+    # (horse_id, jockey_id) ペアごとに時系列累積複勝率を計算
+    for (_, _), group in df.groupby(["horse_id", "jockey_id"], sort=False):
+        group = group.sort_values("race_date")
+        idxs = group.index.tolist()
+        top3s = pd.to_numeric(group["top3"], errors="coerce").values
+
+        for i, idx in enumerate(idxs):
+            past = top3s[:i]
+            valid = past[~np.isnan(past)]
+            if len(valid) >= 3:
+                result[idx] = valid.mean()
+            else:
+                # サンプル不足 → 騎手全体複勝率で補完
+                result[idx] = (
+                    df.at[idx, "jockey_fukusho_rate"]
+                    if "jockey_fukusho_rate" in df.columns
+                    else np.nan
+                )
+
+    df["jockey_horse_fukusho_rate"] = result
+    return df
+
+
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     クリーニング済みDataFrameにすべての特徴量を追加して返す。
@@ -179,8 +284,11 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.copy()
     df = add_past_time_features(df)
-    df = add_win_rate_features(df)
+    df = add_win_rate_features(df)          # jockey_fukusho_rate を先に生成
     df = add_prev_race_features(df)
+    df = add_race_grade_feature(df)
+    df = add_horse_course_dist_features(df)
+    df = add_jockey_horse_features(df)      # jockey_fukusho_rate に依存するため最後
 
     # 存在しない特徴量列を NaN で補完
     for col in FEATURE_COLS:
