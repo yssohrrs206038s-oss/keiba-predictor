@@ -151,13 +151,25 @@ def predict_race(
     return result
 
 
-def format_prediction(result_df: pd.DataFrame, race_name: str = "") -> str:
+def format_prediction(
+    result_df: pd.DataFrame,
+    race_name: str = "",
+    ai_comments: Optional[dict] = None,
+) -> str:
     """
     予測結果をコンパクトなテキスト形式で返す（CLI・Discord 共通）。
     TOP5 + EV/危険馬サマリ + 買い目2パターン。
+
+    Args:
+        result_df  : predict_race() + calc_ev_and_flags() 済みの DataFrame
+        race_name  : 表示用レース名
+        ai_comments: {"馬番(str)": "解説テキスト"} — generate_comments() の返り値
     """
     if "ev_score" not in result_df.columns:
         result_df = calc_ev_and_flags(result_df)
+
+    if ai_comments is None:
+        ai_comments = {}
 
     sep    = "─" * 32
     header = f"🏇 【KEIBA EDGE】{race_name}" if race_name else "🏇 【KEIBA EDGE 予測結果】"
@@ -211,6 +223,9 @@ def format_prediction(result_df: pd.DataFrame, race_name: str = "") -> str:
         lines.append(
             f"{mark} {num:>2}番 {name:<10} {prob:>5.1f}%  {ev_str}  {pop:>2}人気 {str(odds):>5}倍{warn}"
         )
+        comment = ai_comments.get(num, "")
+        if comment:
+            lines.append(f"  📝 {comment}")
 
     lines.append(sep)
 
@@ -240,6 +255,9 @@ def format_prediction(result_df: pd.DataFrame, race_name: str = "") -> str:
             reasons = row.get("danger_reasons", [])
             short   = reasons[0].split("（")[0] if reasons else "要注意"
             lines.append(f"⚠危険 {num}番{name}（{short}）")
+            comment = ai_comments.get(str(num), "")
+            if comment:
+                lines.append(f"  📝 {comment}")
         lines.append("")
 
     # ── 推奨買い目（2パターン、1行コンパクト） ───────────────
@@ -298,9 +316,12 @@ def predict_from_csv(
 
     model_bundle = load_model(model_path)
     result = predict_race(race_df, model_bundle)
+    result = calc_ev_and_flags(result)
 
     race_name = race_df["race_name"].iloc[0] if "race_name" in race_df.columns else race_id
-    print(format_prediction(result, race_name=race_name))
+    from keiba_predictor.ai_comment import generate_comments
+    ai_comments = generate_comments(result, race_name=race_name)
+    print(format_prediction(result, race_name=race_name, ai_comments=ai_comments))
     return result
 
 
@@ -375,7 +396,9 @@ def predict_live(
     race_name   = shutuba_info["race_name"]
     course_info = shutuba_info["course_info"]
 
-    msg = format_prediction(result, race_name=f"{race_name}  {course_info}")
+    from keiba_predictor.ai_comment import generate_comments
+    ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
+    msg = format_prediction(result, race_name=f"{race_name}  {course_info}", ai_comments=ai_comments)
     print(msg)
 
     if notify:

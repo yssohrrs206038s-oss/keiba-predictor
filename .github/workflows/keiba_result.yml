@@ -5,9 +5,10 @@ on:
     - cron: '0 8 * * 0'  # 毎週日曜 8:00 UTC = JST 17:00
   workflow_dispatch:       # 手動実行ボタンも有効化
 
-# ジョブ全体で DISCORD_WEBHOOK_URL を参照できるようにする
+# ジョブ全体で環境変数を参照できるようにする
 env:
   DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
 jobs:
   result:

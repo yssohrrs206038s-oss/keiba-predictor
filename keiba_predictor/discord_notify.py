@@ -424,6 +424,9 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
     if "ev_score" not in result_df.columns:
         result_df = calc_ev_and_flags(result_df)
 
+    from keiba_predictor.ai_comment import generate_comments
+    ai_comments = generate_comments(result_df, race_name=race_name, course_info=course_info)
+
     sep = "─" * 30
     header_extra = f"  {course_info}" if course_info else ""
     lines = [f"```\n🏇 {race_name}  {race_date}{header_extra}", sep]
@@ -480,6 +483,9 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
         lines.append(
             f"{mark} {num:>2}番 {name:<10} {prob:>5.1f}%  {ev_str}  {pop:>2}人気 {str(odds):>5}倍{warn}"
         )
+        comment = ai_comments.get(num, "")
+        if comment:
+            lines.append(f"  📝 {comment}")
 
     lines.append(sep)
 
@@ -510,6 +516,9 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
             # 理由を短縮（最初のもののみ）
             short = reasons[0].split("（")[0] if reasons else "要注意"
             lines.append(f"⚠危険 {num}番{name}（{short}）")
+            comment = ai_comments.get(str(num), "")
+            if comment:
+                lines.append(f"  📝 {comment}")
         lines.append("")
 
     # ── 推奨買い目（2パターン、1行コンパクト） ───────────────
