@@ -1,0 +1,63 @@
+name: 金曜予想通知
+
+on:
+  schedule:
+    - cron: '0 0 * * 5'  # 毎週金曜 0:00 UTC = JST 9:00
+  workflow_dispatch:       # 手動実行ボタンも有効化
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements.txt
+
+      # ── データ収集（直近3ヶ月）────────────────────────────────
+      - name: スクレイピング（直近3ヶ月）
+        run: |
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          START_MONTH=$((MONTH - 3))
+          START_YEAR=$YEAR
+          if [ $START_MONTH -le 0 ]; then
+            START_MONTH=$((START_MONTH + 12))
+            START_YEAR=$((YEAR - 1))
+          fi
+          python -m keiba_predictor.main scrape \
+            --start "${START_YEAR}-$(printf '%02d' $START_MONTH)" \
+            --end "${YEAR}-$(printf '%02d' $MONTH)"
+
+      - name: データクリーニング
+        run: python -m keiba_predictor.main clean
+
+      - name: 特徴量エンジニアリング
+        run: python -m keiba_predictor.main features
+
+      - name: モデル学習
+        run: python -m keiba_predictor.main train
+
+      # ── Discord 予想通知 ───────────────────────────────────────
+      - name: Discord に予想を送信
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -m keiba_predictor.main notify --mode predict
+
+      # ── 予想キャッシュをリポジトリに保存（日曜の結果通知で使用）──
+      - name: 予想キャッシュをコミット
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
+          git diff --staged --quiet || \
+            git commit -m "chore: 金曜予想キャッシュを更新 [skip ci]"
+          git push || true
