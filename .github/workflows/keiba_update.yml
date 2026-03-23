@@ -1,0 +1,141 @@
+name: 水曜データ更新・学習
+
+on:
+  schedule:
+    - cron: '0 0 * * 3'  # 毎週水曜 0:00 UTC = JST 9:00
+  workflow_dispatch:       # 手動実行ボタンも有効化
+
+env:
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      # ── 早期バリデーション ────────────────────────────────────
+      - name: Discord Webhook URL を確認
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "::error::DISCORD_WEBHOOK_URL が設定されていません。"
+            exit 1
+          fi
+          echo "✅ DISCORD_WEBHOOK_URL: 設定済み (末尾6桁: ...${DISCORD_WEBHOOK_URL: -6})"
+
+      - name: Python 3.11 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存パッケージをインストール
+        run: |
+          pip install -r requirements.txt
+          echo "✅ pip install 完了"
+
+      # ── データ収集・学習パイプライン ─────────────────────────
+      - name: スクレイピング（2024-01 ～ 2026-12）
+        run: |
+          echo "📅 スクレイピング開始: 2024-01 ～ 2026-12"
+          python -m keiba_predictor.main scrape --start 2024-01 --end 2026-12
+
+      - name: データクリーニング
+        run: |
+          python -m keiba_predictor.main clean
+          echo "✅ クリーニング完了"
+
+      - name: 特徴量エンジニアリング
+        run: |
+          python -m keiba_predictor.main features
+          echo "✅ 特徴量生成完了"
+
+      - name: モデル学習
+        run: |
+          python -m keiba_predictor.main train
+          echo "✅ 学習完了"
+
+      # ── 学習メトリクスを取得して環境変数に保存 ──────────────
+      - name: モデルメトリクスを取得
+        run: |
+          python -c "
+          import pickle, os, sys
+          model_path = 'keiba_predictor/model/xgb_model.pkl'
+          try:
+              with open(model_path, 'rb') as f:
+                  bundle = pickle.load(f)
+              auc      = bundle.get('cv_auc_mean',      0.0)
+              fukusho  = bundle.get('cv_fukusho_mean',  0.0)
+              print(f'AUC: {auc:.4f}  複勝的中率: {fukusho*100:.1f}%')
+              with open(os.environ['GITHUB_ENV'], 'a') as env_file:
+                  env_file.write(f'MODEL_AUC={auc:.4f}\n')
+                  env_file.write(f'MODEL_FUKUSHO={fukusho*100:.1f}\n')
+          except Exception as e:
+              print(f'メトリクス取得エラー: {e}', file=sys.stderr)
+              with open(os.environ['GITHUB_ENV'], 'a') as env_file:
+                  env_file.write('MODEL_AUC=N/A\n')
+                  env_file.write('MODEL_FUKUSHO=N/A\n')
+          "
+
+      # ── 成果物をリポジトリにコミット ─────────────────────────
+      - name: モデル・CSVをコミット
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 大きなファイルをステージング（存在する場合のみ）
+          git add keiba_predictor/model/xgb_model.pkl          2>/dev/null || true
+          git add keiba_predictor/data/cleaned_races.csv       2>/dev/null || true
+          git add keiba_predictor/data/featured_races.csv      2>/dev/null || true
+
+          if git diff --staged --quiet; then
+            echo "ℹ️ 変更なし（コミットスキップ）"
+          else
+            git commit -m "chore: 水曜データ更新 AUC=${MODEL_AUC} 複勝=${MODEL_FUKUSHO}% [skip ci]"
+            git push
+            echo "✅ コミット・プッシュ完了"
+          fi
+
+      # ── Discord に完了通知 ────────────────────────────────────
+      - name: ✅ 完了を Discord に通知
+        run: |
+          NEXT_FRIDAY=$(date -d "next friday" "+%Y-%m-%d" 2>/dev/null || \
+                        python3 -c "
+          from datetime import date, timedelta
+          today = date.today()
+          days = (4 - today.weekday()) % 7 or 7
+          print(today + timedelta(days=days))
+          ")
+          PAYLOAD=$(python3 -c "
+          import json
+          msg = (
+              '\`\`\`\n'
+              '✅ KEIBA EDGE データ更新完了\n'
+              'AUC: ${MODEL_AUC} / 複勝的中率: ${MODEL_FUKUSHO}%\n'
+              '次回予想: 金曜9時\n'
+              '\`\`\`'
+          )
+          print(json.dumps({'content': msg}))
+          ")
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            && echo "✅ Discord 通知送信完了" \
+            || echo "::warning::Discord 通知の送信に失敗しました"
+
+      # ── エラー時の Discord 通知 ──────────────────────────────
+      - name: ❌ エラーを Discord に通知
+        if: failure()
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "Webhook URL 未設定のため Discord 通知をスキップ"
+            exit 0
+          fi
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"⚠️ **水曜データ更新ワークフローが失敗しました**\nログ: ${RUN_URL}\"}" \
+            && echo "Discord エラー通知送信済み" \
+            || echo "Discord エラー通知の送信に失敗"
