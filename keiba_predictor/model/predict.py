@@ -62,43 +62,37 @@ def calc_ev_and_flags(result_df: pd.DataFrame) -> pd.DataFrame:
 
 def format_buy_patterns(result_df: pd.DataFrame, indent: str = "  ") -> list[str]:
     """
-    推奨買い目を2パターン（安定重視 / 期待値重視）で生成して行リストで返す。
+    推奨買い目を生成して行リストで返す。
 
-    - 確率TOP3 と EV上位3頭が同じ馬番セットなら1パターンのみ表示。
-    - result_df は prob_top3 降順でソート済みであること（predict_race の返り値）。
+    - 複勝: ◎本命1頭（1点）
+    - 馬連: ◎ → ○☆△への流し（3点）
+    - 3連複: ◎軸 × ○☆△4番手5番手の5頭流し（10点）
+    合計14点
     """
-    prob_nums: list[int] = [
+    top6 = result_df.head(6)
+    nums = [
         int(r["horse_number"])
-        for _, r in result_df.head(3).iterrows()
+        for _, r in top6.iterrows()
         if pd.notna(r.get("horse_number"))
     ]
-    ev_nums: list[int] = (
-        result_df[result_df["ev_score"].notna()]
-        .nlargest(3, "ev_score")["horse_number"]
-        .dropna().apply(int).tolist()
-    ) if "ev_score" in result_df.columns else []
-    if not ev_nums:
-        ev_nums = prob_nums
+    if len(nums) < 2:
+        return []
 
-    def _combo(nums: list[int]) -> list[str]:
-        out: list[str] = []
-        if len(nums) >= 2:
-            out.append(f"{indent}馬連 / ワイド:")
-            for a, b in combinations(nums, 2):
-                out.append(f"{indent}  {a}-{b}")
-        if len(nums) >= 3:
-            out.append(f"{indent}三連複: {nums[0]}-{nums[1]}-{nums[2]}")
-        return out
+    axis      = nums[0]
+    umaren    = nums[1:4]           # ○☆△ (3頭)
+    sanren    = nums[1:6]           # ○☆△4番手5番手 (最大5頭)
 
-    lines = ["", "■ 推奨買い目"]
-    if set(prob_nums) == set(ev_nums):
-        lines.append(f"{indent}【安定重視】確率TOP3で堅く")
-        lines += _combo(prob_nums)
-    else:
-        lines.append(f"{indent}【安定重視】確率TOP3で堅く")
-        lines += _combo(prob_nums)
-        lines.append(f"{indent}【期待値重視】EV上位3頭で配当狙い")
-        lines += _combo(ev_nums)
+    fukusho_name = str(top6.iloc[0].get("horse_name", "")) if len(top6) >= 1 else ""
+    umaren_str   = " / ".join(f"{axis}-{n}" for n in umaren) if umaren else ""
+    sanren_str   = "/".join(str(n) for n in sanren)
+
+    lines = [
+        "",
+        f"■ 推奨買い目（14点）",
+        f"{indent}複勝:  {axis}番（{fukusho_name}）",
+        f"{indent}馬連:  {umaren_str}",
+        f"{indent}3連複: 軸{axis}番 × {sanren_str}",
+    ]
     return lines
 
 
@@ -265,30 +259,24 @@ def format_prediction(
                     lines.append(f"  📝 {comment}")
         lines.append("")
 
-    # ── 推奨買い目（2パターン、1行コンパクト） ───────────────
-    prob_nums: list[int] = [
+    # ── 推奨買い目（複勝1点＋馬連3点＋3連複10点＝14点） ────────
+    top6 = result_df.head(6)
+    buy_nums = [
         int(r["horse_number"])
-        for _, r in result_df.head(3).iterrows()
+        for _, r in top6.iterrows()
         if pd.notna(r.get("horse_number"))
     ]
-    ev_nums: list[int] = (
-        result_df[result_df["ev_score"].notna()]
-        .nlargest(3, "ev_score")["horse_number"]
-        .dropna().apply(int).tolist()
-    ) if "ev_score" in result_df.columns else []
-    if not ev_nums:
-        ev_nums = prob_nums
-
-    def _buy_line(nums: list[int]) -> str:
-        pairs  = " / ".join(f"{a}-{b}" for a, b in combinations(nums, 2)) if len(nums) >= 2 else ""
-        sanren = f"  3連複:{nums[0]}-{nums[1]}-{nums[2]}" if len(nums) >= 3 else ""
-        return f"{pairs}{sanren}"
-
-    if set(prob_nums) == set(ev_nums):
-        lines.append(f"【安定重視】{_buy_line(prob_nums)}")
-    else:
-        lines.append(f"【安定重視】{_buy_line(prob_nums)}")
-        lines.append(f"【期待値重視】{_buy_line(ev_nums)}")
+    if len(buy_nums) >= 2:
+        axis         = buy_nums[0]
+        umaren_flow  = buy_nums[1:4]
+        sanren_flow  = buy_nums[1:6]
+        axis_name    = str(top6.iloc[0].get("horse_name", ""))
+        umaren_str   = " / ".join(f"{axis}-{n}" for n in umaren_flow)
+        sanren_str   = "/".join(str(n) for n in sanren_flow)
+        lines.append(f"■ 推奨買い目（14点）")
+        lines.append(f"  複勝:  {axis}番（{axis_name}）")
+        lines.append(f"  馬連:  {umaren_str}")
+        lines.append(f"  3連複: 軸{axis}番 × {sanren_str}")
 
     lines.append(sep)
     return "\n".join(lines)

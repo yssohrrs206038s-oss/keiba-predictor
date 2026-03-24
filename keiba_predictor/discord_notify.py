@@ -31,7 +31,7 @@ import requests
 from keiba_predictor.scraper.netkeiba_scraper import (
     _get, _sleep, RACE_RESULT_URL,
 )
-from keiba_predictor.model.predict import load_model, predict_race, calc_ev_and_flags, format_buy_patterns, format_prediction
+from keiba_predictor.model.predict import load_model, predict_race, calc_ev_and_flags, format_prediction
 from keiba_predictor.ai_comment import generate_comments
 
 logger = logging.getLogger(__name__)
