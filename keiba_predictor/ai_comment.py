@@ -27,7 +27,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 # ── 使用するモデル ─────────────────────────────────────────────
-MODEL_ID = "claude-opus-4-6"
+MODEL_ID = "claude-haiku-4-5-20251001"
 
 # ── 1頭あたりの最大解説文字数（Discord の行幅に合わせて調整） ──
 MAX_COMMENT_LEN = 80
