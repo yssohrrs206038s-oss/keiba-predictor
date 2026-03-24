@@ -405,20 +405,13 @@ def predict_live(
 
     if notify:
         import os
-        from keiba_predictor.discord_notify import send_discord, _fmt_predict
+        from keiba_predictor.discord_notify import send_discord
         url = webhook_url or os.environ.get("DISCORD_WEBHOOK_URL", "")
         if not url:
             logger.error("--webhook-url または環境変数 DISCORD_WEBHOOK_URL を指定してください")
         else:
-            # Discord 送信は _fmt_predict() を使い 2 分割メッセージで統一
-            # generate_comments() はすでに呼び済みの ai_comments を渡す
-            race_date = shutuba_info.get("race_date", "")
-            msgs = _fmt_predict(
-                result, race_name, race_date, course_info,
-                ai_comments=ai_comments,
-            )
-            ok = all(send_discord(url, m) for m in msgs)
-            logger.info(f"Discord 送信{'完了' if ok else '失敗'} ({len(msgs)}通)")
+            ok = send_discord(url, msg)
+            logger.info(f"Discord 送信{'完了' if ok else '失敗'}")
 
     return result
 
