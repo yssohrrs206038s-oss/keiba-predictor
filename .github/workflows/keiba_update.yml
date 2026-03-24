@@ -6,7 +6,7 @@ on:
   workflow_dispatch:       # 手動実行ボタンも有効化
 
 env:
-  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_UPDATE }}
 
 jobs:
   update:
