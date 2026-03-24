@@ -432,9 +432,19 @@ def _code_block(lines: list[str]) -> str:
     return "```\n" + "\n".join(lines) + "\n```"
 
 
-def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
-                 course_info: str = "") -> list[str]:
+def _fmt_predict(
+    result_df: pd.DataFrame,
+    race_name: str,
+    race_date: str,
+    course_info: str = "",
+    ai_comments: Optional[dict] = None,
+) -> list[str]:
     """金曜予想メッセージを生成する。
+
+    Args:
+        ai_comments: generate_comments() の返り値。
+                     None の場合は内部で generate_comments() を呼び出す。
+                     呼び出し側で事前に生成して渡すことを推奨（predict.py と統一）。
 
     Returns:
         Discord に送信する文字列のリスト（1通目: ヘッダー+TOP5+解説、
@@ -443,22 +453,24 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
     if "ev_score" not in result_df.columns:
         result_df = calc_ev_and_flags(result_df)
 
-    from keiba_predictor.ai_comment import generate_comments
-    logger.info(f"[_fmt_predict] generate_comments() 呼び出し開始: race={race_name!r}")
-    ai_comments = generate_comments(
-        result_df,
-        race_name=race_name,
-        course_info=course_info,
-        verbose=True,   # INFO レベルで進捗を logger 経由出力
-    )
+    # ai_comments が渡されなかった場合のみ内部で生成する
+    if ai_comments is None:
+        from keiba_predictor.ai_comment import generate_comments
+        logger.info(f"[_fmt_predict] generate_comments() 呼び出し: race={race_name!r}")
+        ai_comments = generate_comments(
+            result_df,
+            race_name=race_name,
+            course_info=course_info,
+        )
+
     logger.info(
-        f"[_fmt_predict] generate_comments() 完了: "
-        f"{len(ai_comments)}頭分 keys={sorted(ai_comments.keys())}"
+        f"[_fmt_predict] AI解説: {len(ai_comments)}頭分 "
+        f"keys={sorted(ai_comments.keys())}"
     )
     if not ai_comments:
         logger.warning(
-            "[_fmt_predict] AI解説が空です。"
-            "ANTHROPIC_API_KEY の設定・anthropic パッケージの有無を確認してください。"
+            "[_fmt_predict] AI解説が空 — "
+            "ANTHROPIC_API_KEY が設定されているか確認してください"
         )
 
     sep = "─" * 30
@@ -840,7 +852,25 @@ def run_predict_notify(
         result = calc_ev_and_flags(result)     # EV・危険フラグを付与
         _store_prediction(race_id, race_name, race_date, result)
 
-        msgs = _fmt_predict(result, race_name, race_date, course_info)
+        # generate_comments() をここで呼び出して _fmt_predict() に渡す
+        # → predict.py の format_prediction(ai_comments=...) と同じ設計に統一
+        from keiba_predictor.ai_comment import generate_comments
+        logger.info(f"  AI解説生成: {race_name}")
+        ai_comments = generate_comments(
+            result, race_name=race_name, course_info=course_info
+        )
+        logger.info(
+            f"  AI解説完了: {len(ai_comments)}頭分 "
+            f"keys={sorted(ai_comments.keys())}"
+        )
+        if not ai_comments:
+            logger.warning(
+                f"  AI解説が空 ({race_name}) — "
+                "ANTHROPIC_API_KEY が設定されているか確認してください"
+            )
+
+        msgs = _fmt_predict(result, race_name, race_date, course_info,
+                            ai_comments=ai_comments)
         ok = all(send_discord(webhook_url, m) for m in msgs)
         if ok:
             notified += 1
