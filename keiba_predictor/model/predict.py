@@ -257,9 +257,12 @@ def format_prediction(
             reasons = row.get("danger_reasons", [])
             short   = reasons[0].split("（")[0] if reasons else "要注意"
             lines.append(f"⚠危険 {num}番{name}（{short}）")
-            comment = ai_comments.get(str(num), "")
-            if comment:
-                lines.append(f"  📝 {comment}")
+            # 解説はTOP5内の危険馬のみ表示
+            row_idx = row.name
+            if row_idx in top5_idx:
+                comment = ai_comments.get(str(num), "")
+                if comment:
+                    lines.append(f"  📝 {comment}")
         lines.append("")
 
     # ── 推奨買い目（2パターン、1行コンパクト） ───────────────
