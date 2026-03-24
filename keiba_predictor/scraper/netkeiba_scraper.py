@@ -745,20 +745,44 @@ def scrape_nar_race_ids_for_date(kaisai_date: str, session: requests.Session) ->
     return race_ids
 
 
-def scrape_nar_race_result(race_id: str, session: requests.Session) -> Optional[pd.DataFrame]:
+def scrape_nar_race_result(
+    race_id: str,
+    session: requests.Session,
+    kaisai_date: Optional[str] = None,
+) -> Optional[pd.DataFrame]:
     """
     nar.netkeiba.com/race/result.html?race_id={race_id} から
     地方競馬のレース結果を取得してDataFrameで返す。
+
+    NAR の race_id は YYYY + 開催回数(2桁) + 開催日目(2桁) + 競馬場コード(2桁) + レース番号(2桁)
+    の形式であり、[4:6] は月ではなく開催回数のため race_id から日付を直接算出できない。
+    kaisai_date（カレンダーから取得した YYYYMMDD 文字列）を受け取って race_date に使用する。
     """
     url = f"{NAR_RESULT_URL}?race_id={race_id}"
     soup = _get(url, session, encoding="UTF-8")
     if soup is None:
         return None
 
+    # kaisai_date (YYYYMMDD) → "YYYY-MM-DD"
+    if kaisai_date and len(kaisai_date) == 8:
+        race_date = f"{kaisai_date[:4]}-{kaisai_date[4:6]}-{kaisai_date[6:8]}"
+    else:
+        # HTMLからページ内の日付を探す（フォールバック）
+        race_date = None
+        for sel in ["div.RaceData02 span", "span.RaceData", "p.smalltxt"]:
+            el = soup.select_one(sel)
+            if el:
+                dm = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", el.get_text())
+                if dm:
+                    race_date = f"{dm.group(1)}-{int(dm.group(2)):02d}-{int(dm.group(3)):02d}"
+                    break
+        if race_date is None:
+            logger.warning(f"[NAR] race_date not resolved for {race_id}, kaisai_date={kaisai_date}")
+
     race_info: dict = {
         "race_id":         race_id,
         "race_name":       "",
-        "race_date":       _race_id_to_date(race_id),
+        "race_date":       race_date,
         "course_type":     None,
         "distance":        None,
         "weather":         None,
@@ -810,13 +834,30 @@ def scrape_nar_race_result(race_id: str, session: requests.Session) -> Optional[
         f"dist={race_info['distance']}"
     )
 
-    # ── 着順テーブル（JRAと同じ構造を想定） ──────────────────
+    # ── 着順テーブル ──────────────────────────────────────────
+    # NAR ページのテーブルクラスは JRA と異なる場合があるため複数セレクタを試みる
     result_table = (
         soup.select_one("table.race_table_01")
         or soup.select_one("table.nk_tb_common")
+        or soup.select_one("table.ResultTableWrap")
+        or soup.select_one("table#ResultTableBody")
+        or soup.select_one("div#ResultTableWrap table")
+        or soup.select_one("div.RaceTableWrap table")
+        or soup.select_one("div.result_table_wrapper table")
     )
+    # 上記で見つからない場合: 「着順」列ヘッダを持つ任意のテーブルを探す
+    if result_table is None:
+        for tbl in soup.select("table"):
+            headers_text = tbl.get_text()
+            if "着順" in headers_text and "馬名" in headers_text:
+                result_table = tbl
+                logger.info(f"[NAR] Table found by header keyword: class={tbl.get('class')}")
+                break
     if result_table is None:
         logger.warning(f"[NAR] Result table not found: {race_id}")
+        # デバッグ用: ページ内の全テーブルを記録
+        all_tables = soup.select("table")
+        logger.warning(f"[NAR] Tables on page: {[t.get('class') for t in all_tables]}")
         return None
 
     HEADER_ALIASES: dict[str, list[str]] = {
@@ -990,7 +1031,7 @@ def scrape_nar_races(
                     continue
 
                 logger.info(f"    [NAR] Scraping: {race_id}")
-                df = scrape_nar_race_result(race_id, session)
+                df = scrape_nar_race_result(race_id, session, kaisai_date=kaisai_date)
                 if df is not None and not df.empty:
                     all_dfs.append(df)
                     existing_ids.add(race_id)
