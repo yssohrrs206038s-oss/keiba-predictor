@@ -437,14 +437,8 @@ def _fmt_predict(
     race_name: str,
     race_date: str,
     course_info: str = "",
-    ai_comments: Optional[dict] = None,
 ) -> list[str]:
     """金曜予想メッセージを生成する。
-
-    Args:
-        ai_comments: generate_comments() の返り値。
-                     None の場合は内部で generate_comments() を呼び出す。
-                     呼び出し側で事前に生成して渡すことを推奨（predict.py と統一）。
 
     Returns:
         Discord に送信する文字列のリスト（1通目: ヘッダー+TOP5+解説、
@@ -453,25 +447,17 @@ def _fmt_predict(
     if "ev_score" not in result_df.columns:
         result_df = calc_ev_and_flags(result_df)
 
-    # ai_comments が渡されなかった場合のみ内部で生成する
-    if ai_comments is None:
-        from keiba_predictor.ai_comment import generate_comments
-        logger.info(f"[_fmt_predict] generate_comments() 呼び出し: race={race_name!r}")
-        ai_comments = generate_comments(
-            result_df,
-            race_name=race_name,
-            course_info=course_info,
-        )
-
-    logger.info(
-        f"[_fmt_predict] AI解説: {len(ai_comments)}頭分 "
-        f"keys={sorted(ai_comments.keys())}"
+    # ── AI解説を生成（常にここで呼ぶ） ──────────────────────
+    from keiba_predictor.ai_comment import generate_comments
+    print(f"[_fmt_predict] generate_comments() 呼び出し中: race={race_name!r}", flush=True)
+    ai_comments = generate_comments(
+        result_df,
+        race_name=race_name,
+        course_info=course_info,
     )
+    print(f"[_fmt_predict] generate_comments() 完了: {len(ai_comments)}頭分 keys={sorted(ai_comments.keys())}", flush=True)
     if not ai_comments:
-        logger.warning(
-            "[_fmt_predict] AI解説が空 — "
-            "ANTHROPIC_API_KEY が設定されているか確認してください"
-        )
+        print("[_fmt_predict] AI解説が空 — ANTHROPIC_API_KEY が設定されているか確認してください", flush=True)
 
     sep = "─" * 30
     header_extra = f"  {course_info}" if course_info else ""
@@ -614,14 +600,13 @@ def _fmt_predict(
     if len(msg2) > _DISCORD_LIMIT:
         msg2 = _code_block([l for l in msg2_lines if not l.startswith("  📝")])
 
-    # 送信前の全文確認ログ（DEBUG レベル）
-    logger.debug(f"[_fmt_predict] msg1 ({len(msg1)}文字):\n{msg1}")
-    logger.debug(f"[_fmt_predict] msg2 ({len(msg2)}文字):\n{msg2}")
-    logger.info(
-        f"[_fmt_predict] メッセージ生成完了: "
-        f"1通目={len(msg1)}文字 2通目={len(msg2)}文字 "
-        f"AI解説={'あり' if ai_comments else 'なし'}"
-    )
+    # 送信前の全文確認（print で標準出力へ）
+    print(f"\n{'='*50}", flush=True)
+    print(f"[送信内容確認] {race_name}  1通目 ({len(msg1)}文字):", flush=True)
+    print(msg1, flush=True)
+    print(f"\n[送信内容確認] {race_name}  2通目 ({len(msg2)}文字):", flush=True)
+    print(msg2, flush=True)
+    print(f"{'='*50}\n", flush=True)
 
     return [msg1, msg2]
 
@@ -852,25 +837,7 @@ def run_predict_notify(
         result = calc_ev_and_flags(result)     # EV・危険フラグを付与
         _store_prediction(race_id, race_name, race_date, result)
 
-        # generate_comments() をここで呼び出して _fmt_predict() に渡す
-        # → predict.py の format_prediction(ai_comments=...) と同じ設計に統一
-        from keiba_predictor.ai_comment import generate_comments
-        logger.info(f"  AI解説生成: {race_name}")
-        ai_comments = generate_comments(
-            result, race_name=race_name, course_info=course_info
-        )
-        logger.info(
-            f"  AI解説完了: {len(ai_comments)}頭分 "
-            f"keys={sorted(ai_comments.keys())}"
-        )
-        if not ai_comments:
-            logger.warning(
-                f"  AI解説が空 ({race_name}) — "
-                "ANTHROPIC_API_KEY が設定されているか確認してください"
-            )
-
-        msgs = _fmt_predict(result, race_name, race_date, course_info,
-                            ai_comments=ai_comments)
+        msgs = _fmt_predict(result, race_name, race_date, course_info)
         ok = all(send_discord(webhook_url, m) for m in msgs)
         if ok:
             notified += 1
