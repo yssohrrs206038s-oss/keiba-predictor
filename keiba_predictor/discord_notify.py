@@ -577,38 +577,19 @@ def run_predict_notify(
     webhook_url: Optional[str] = None,
     featured_path: Optional[Path] = None,
     model_path: Optional[Path] = None,
+    test_race_id: Optional[str] = None,
 ) -> None:
-    """週末重賞を予想して Discord に送信し、結果をキャッシュに保存する。"""
+    """週末重賞を予想して Discord に送信し、結果をキャッシュに保存する。
+
+    Args:
+        test_race_id: 指定時は週末重賞検索をスキップして該当race_idのみテスト送信する。
+    """
     webhook_url = _resolve_webhook(webhook_url)
 
     if featured_path is None:
         featured_path = DATA_DIR / "featured_races.csv"
     if model_path is None:
         model_path = MODEL_PATH
-
-    session = requests.Session()
-
-    # 重賞レース取得
-    logger.info("週末重賞を検索中...")
-    grade_races = scrape_grade_race_ids(session)
-    if not grade_races:
-        dates = _weekend_dates()
-        sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
-        sun = f"{dates[1][:4]}-{dates[1][4:6]}-{dates[1][6:]}"
-        msg = (
-            f"🏇 今週末（{sat} / {sun}）の重賞レース情報が取得できませんでした。\n"
-            "以下のいずれかが原因の可能性があります:\n"
-            "• netkeibaへのアクセス失敗（ネットワーク/レート制限）\n"
-            "• 今週末に重賞レースがない\n"
-            "• HTMLの構造変更によりレース名が取得できていない\n\n"
-            "デバッグ用ログ確認:\n"
-            "```\n"
-            "python -m keiba_predictor.main notify --mode predict --debug\n"
-            "```"
-        )
-        logger.warning(f"重賞レース0件: {sat} / {sun}")
-        send_discord(webhook_url, msg)
-        return
 
     # 前提ファイル確認
     if not featured_path.exists():
@@ -625,10 +606,40 @@ def run_predict_notify(
     model_bundle = load_model(model_path)
     df_all = pd.read_csv(featured_path, encoding="utf-8-sig")
 
-    # ヘッダー
-    dates_str = " / ".join(sorted({r["race_date"] for r in grade_races}))
-    send_discord(webhook_url,
-        f"🏇 **今週末の重賞予想** ({dates_str})  全{len(grade_races)}レース")
+    # --test-race-id が指定された場合は重賞検索をスキップ
+    if test_race_id:
+        race_name = str(test_race_id)
+        race_df = df_all[df_all["race_id"].astype(str) == test_race_id].copy()
+        if not race_df.empty and "race_name" in race_df.columns:
+            race_name = race_df["race_name"].iloc[0]
+        grade_races = [{"race_id": test_race_id, "race_name": race_name, "race_date": "（テスト）"}]
+        logger.info(f"テストモード: race_id={test_race_id} race_name={race_name}")
+        send_discord(webhook_url, f"🧪 **テスト送信** race_id={test_race_id}  {race_name}")
+    else:
+        session = requests.Session()
+        logger.info("週末重賞を検索中...")
+        grade_races = scrape_grade_race_ids(session)
+        if not grade_races:
+            dates = _weekend_dates()
+            sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
+            sun = f"{dates[1][:4]}-{dates[1][4:6]}-{dates[1][6:]}"
+            msg = (
+                f"🏇 今週末（{sat} / {sun}）の重賞レース情報が取得できませんでした。\n"
+                "以下のいずれかが原因の可能性があります:\n"
+                "• netkeibaへのアクセス失敗（ネットワーク/レート制限）\n"
+                "• 今週末に重賞レースがない\n"
+                "• HTMLの構造変更によりレース名が取得できていない\n\n"
+                "デバッグ用ログ確認:\n"
+                "```\n"
+                "python -m keiba_predictor.main notify --mode predict --debug\n"
+                "```"
+            )
+            logger.warning(f"重賞レース0件: {sat} / {sun}")
+            send_discord(webhook_url, msg)
+            return
+        dates_str = " / ".join(sorted({r["race_date"] for r in grade_races}))
+        send_discord(webhook_url,
+            f"🏇 **今週末の重賞予想** ({dates_str})  全{len(grade_races)}レース")
 
     notified = 0
     for race in grade_races:
