@@ -293,6 +293,8 @@ def predict_from_csv(
     race_id: str,
     featured_path: Optional[Path] = None,
     model_path: Optional[Path] = None,
+    notify: bool = False,
+    webhook_url: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     featured_races.csv から指定 race_id のレースを抽出して予測する。
@@ -301,6 +303,8 @@ def predict_from_csv(
         race_id:       予測対象のレースID
         featured_path: 特徴量付きCSVのパス
         model_path:    モデルファイルパス
+        notify:        True のとき Discord に予測結果を送信
+        webhook_url:   Discord Webhook URL（notify=True 時に使用）
 
     Returns:
         予測結果DataFrame
@@ -320,8 +324,20 @@ def predict_from_csv(
 
     race_name = race_df["race_name"].iloc[0] if "race_name" in race_df.columns else race_id
     from keiba_predictor.ai_comment import generate_comments
-    ai_comments = generate_comments(result, race_name=race_name)
-    print(format_prediction(result, race_name=race_name, ai_comments=ai_comments))
+    ai_comments = generate_comments(result, race_name=race_name)  # 1回だけ生成
+    msg = format_prediction(result, race_name=race_name, ai_comments=ai_comments)  # 1回だけ生成
+    print(msg)  # ターミナル表示
+
+    if notify:
+        import os
+        from keiba_predictor.discord_notify import send_discord
+        url = webhook_url or os.environ.get("DISCORD_WEBHOOK_URL", "")
+        if not url:
+            logger.error("--webhook-url または環境変数 DISCORD_WEBHOOK_URL を指定してください")
+        else:
+            ok = send_discord(url, msg)  # 同じmsgをDiscordにも送信
+            logger.info(f"Discord 送信{'完了' if ok else '失敗'}")
+
     return result
 
 
