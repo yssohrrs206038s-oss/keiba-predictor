@@ -59,12 +59,16 @@ def send_discord(webhook_url: str, content: str) -> bool:
     chunks = [content[i : i + 1900] for i in range(0, len(content), 1900)]
     ok = True
     for idx, chunk in enumerate(chunks):
-        # 送信直前にメッセージ全文をデバッグログへ出力
-        logger.debug(
-            f"[Discord送信 chunk {idx + 1}/{len(chunks)}] {len(chunk)}文字:\n{chunk}"
-        )
+        print(f"[Discord送信] chunk {idx + 1}/{len(chunks)} ({len(chunk)}文字):\n{chunk}", flush=True)
         try:
-            r = requests.post(webhook_url, json={"content": chunk}, timeout=15)
+            # ensure_ascii=False で絵文字(📝等)をUTF-8のまま送信
+            payload = json.dumps({"content": chunk}, ensure_ascii=False).encode("utf-8")
+            r = requests.post(
+                webhook_url,
+                data=payload,
+                headers={"Content-Type": "application/json; charset=utf-8"},
+                timeout=15,
+            )
             if r.status_code not in (200, 204):
                 logger.error(f"Discord 送信失敗: {r.status_code} {r.text[:200]}")
                 ok = False
