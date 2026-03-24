@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 
 def cmd_scrape(args: argparse.Namespace) -> None:
-    from keiba_predictor.scraper.netkeiba_scraper import scrape_races
+    from keiba_predictor.scraper.netkeiba_scraper import scrape_races, scrape_nar_races
 
     if args.start and args.end:
         sy, sm = map(int, args.start.split("-"))
@@ -60,7 +60,12 @@ def cmd_scrape(args: argparse.Namespace) -> None:
 
     logger.info(f"スクレイピング開始: {sy}-{sm:02d} ~ {ey}-{em:02d}")
     df = scrape_races(sy, sm, ey, em)
-    logger.info(f"取得完了: {len(df)} rows")
+    logger.info(f"JRA 取得完了: {len(df)} rows")
+
+    if getattr(args, "nar", False):
+        logger.info(f"[NAR] 地方競馬スクレイピング開始: {sy}-{sm:02d} ~ {ey}-{em:02d}")
+        nar_df = scrape_nar_races(sy, sm, ey, em)
+        logger.info(f"NAR 取得完了: {len(nar_df)} rows")
 
 
 def cmd_clean(args: argparse.Namespace) -> None:
@@ -166,6 +171,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_scrape.add_argument(
         "--month", type=int,
         help="単月取得時の月"
+    )
+    p_scrape.add_argument(
+        "--nar", action="store_true",
+        help="地方競馬（NAR）のデータも追加取得する"
     )
     p_scrape.set_defaults(func=cmd_scrape)
 

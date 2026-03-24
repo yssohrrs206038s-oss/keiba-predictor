@@ -201,8 +201,8 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
                 if race_id in seen:
                     continue
 
-                # JRA競馬場コード（7〜8文字目）が01〜10のみ対象
-                venue_code = int(race_id[6:8]) if race_id[6:8].isdigit() else 99
+                # JRA競馬場コード（9〜10文字目, 0-indexed [8:10]）が01〜10のみ対象
+                venue_code = int(race_id[8:10]) if race_id[8:10].isdigit() else 99
                 if venue_code > 10:
                     logger.debug(f"    {race_id} スキップ（地方競馬 venue={venue_code}）")
                     continue

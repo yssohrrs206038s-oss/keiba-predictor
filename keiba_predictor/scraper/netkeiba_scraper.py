@@ -43,6 +43,19 @@ VENUE_CODE_MAP: dict[str, str] = {
     "09": "阪神", "10": "小倉",
 }
 
+# ── NAR（地方競馬）URL定数・競馬場コードマッピング ───────────────
+NAR_TOP_URL      = "https://nar.netkeiba.com"
+NAR_CALENDAR_URL = NAR_TOP_URL + "/top/calendar.html"
+NAR_RACE_LIST_URL = NAR_TOP_URL + "/top/race_list_sub.html"
+NAR_RESULT_URL   = NAR_TOP_URL + "/race/result.html"
+
+NAR_VENUE_CODE_MAP: dict[str, str] = {
+    "11": "帯広",   "12": "門別",   "21": "盛岡",   "22": "水沢",
+    "23": "浦和",   "24": "船橋",   "25": "大井",   "26": "川崎",
+    "27": "金沢",   "28": "笠松",   "29": "名古屋", "30": "園田",
+    "31": "姫路",   "32": "高知",   "33": "佐賀",
+}
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -412,9 +425,10 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
     # race_id = YYYYMMDDVVRRNN（12桁）の先頭8桁が日付。
     race_info["race_date"] = _race_id_to_date(race_id)
 
-    # ── 競馬場名をrace_idから設定 ────────────────────────────────
+    # ── 競馬場名・リーグをrace_idから設定 ───────────────────────
     venue_code = race_id[8:10] if len(race_id) >= 10 else ""
-    race_info["venue"] = VENUE_CODE_MAP.get(venue_code, venue_code)
+    race_info["venue"]  = VENUE_CODE_MAP.get(venue_code, venue_code)
+    race_info["league"] = "JRA"
 
     logger.info(
         f"  [race_info] {race_id}: date={race_info['race_date']} "
@@ -674,6 +688,330 @@ def scrape_races(
 
     combined.to_csv(output_path, index=False, encoding="utf-8-sig")
     logger.info(f"保存完了: {output_path} ({len(combined)} rows)")
+    return combined
+
+
+# ── NAR（地方競馬）スクレイピング ────────────────────────────────
+
+def scrape_nar_kaisai_dates(year: int, month: int, session: requests.Session) -> list[str]:
+    """NAR カレンダーページから指定年月の開催日リストを返す。"""
+    url = f"{NAR_CALENDAR_URL}?year={year}&month={month}"
+    soup = _get(url, session, encoding="UTF-8")
+    if soup is None:
+        return []
+
+    dates: list[str] = []
+    for a in soup.select("a[href*='kaisai_date=']"):
+        href = a.get("href", "")
+        m = re.search(r"kaisai_date=(\d{8})", href)
+        if m:
+            d = m.group(1)
+            if d not in dates:
+                dates.append(d)
+
+    logger.info(f"  [NAR] カレンダー取得: {year}年{month}月 -> {len(dates)}開催日")
+    _sleep()
+    return dates
+
+
+def scrape_nar_race_ids_for_date(kaisai_date: str, session: requests.Session) -> list[str]:
+    """NAR の1開催日のレースID一覧を取得する。"""
+    url = f"{NAR_RACE_LIST_URL}?kaisai_date={kaisai_date}"
+    soup = _get(url, session, encoding="UTF-8")
+    if soup is None:
+        return []
+
+    race_ids: list[str] = []
+
+    for a in soup.select("li.RaceList_DataItem a"):
+        href = a.get("href", "")
+        m = re.search(r"race_id=(\d{12})", href)
+        if m:
+            rid = m.group(1)
+            if rid not in race_ids:
+                race_ids.append(rid)
+
+    if not race_ids:
+        for a in soup.select("a[href*='race_id=']"):
+            href = a.get("href", "")
+            m = re.search(r"race_id=(\d{12})", href)
+            if m:
+                rid = m.group(1)
+                if rid not in race_ids:
+                    race_ids.append(rid)
+
+    logger.info(f"    [NAR] {kaisai_date}: {len(race_ids)} races")
+    _sleep()
+    return race_ids
+
+
+def scrape_nar_race_result(race_id: str, session: requests.Session) -> Optional[pd.DataFrame]:
+    """
+    nar.netkeiba.com/race/result.html?race_id={race_id} から
+    地方競馬のレース結果を取得してDataFrameで返す。
+    """
+    url = f"{NAR_RESULT_URL}?race_id={race_id}"
+    soup = _get(url, session, encoding="UTF-8")
+    if soup is None:
+        return None
+
+    race_info: dict = {
+        "race_id":         race_id,
+        "race_name":       "",
+        "race_date":       _race_id_to_date(race_id),
+        "course_type":     None,
+        "distance":        None,
+        "weather":         None,
+        "track_condition": None,
+    }
+
+    # ── レース名 ──────────────────────────────────────────────
+    name_el = (
+        soup.select_one("h1.RaceName")
+        or soup.select_one("div.race_head_inner h1")
+        or soup.select_one("div.RaceMainColumn h1")
+        or soup.select_one("h2.RaceName")
+    )
+    race_info["race_name"] = name_el.get_text(strip=True) if name_el else ""
+
+    # ── コース・距離・天候・馬場 ────────────────────────────
+    meta_candidates = [
+        soup.select_one("div.RaceData01"),
+        soup.select_one("div.data_intro p.smalltxt"),
+        soup.select_one("p.smalltxt"),
+        soup.select_one("div.data_intro"),
+        soup.select_one("div.race_head_inner"),
+    ]
+    for el in meta_candidates:
+        if el is None:
+            continue
+        text = el.get_text(" ", strip=True)
+        _parse_course_distance(text, race_info)
+        _fill_from_img_alts(el, race_info)
+
+    race_data01 = soup.select_one("div.RaceData01")
+    if race_data01:
+        for span in race_data01.select("span"):
+            _parse_course_distance(span.get_text(strip=True), race_info)
+            _fill_from_img_alts(span, race_info)
+
+    if race_info["distance"] is None:
+        all_text = soup.get_text(" ", strip=True)
+        _parse_course_distance(all_text, race_info)
+
+    # ── 競馬場名・リーグ ────────────────────────────────────
+    venue_code = race_id[8:10] if len(race_id) >= 10 else ""
+    race_info["venue"]  = NAR_VENUE_CODE_MAP.get(venue_code, venue_code)
+    race_info["league"] = "NAR"
+
+    logger.info(
+        f"  [NAR race_info] {race_id}: date={race_info['race_date']} "
+        f"venue={race_info['venue']} course={race_info['course_type']} "
+        f"dist={race_info['distance']}"
+    )
+
+    # ── 着順テーブル（JRAと同じ構造を想定） ──────────────────
+    result_table = (
+        soup.select_one("table.race_table_01")
+        or soup.select_one("table.nk_tb_common")
+    )
+    if result_table is None:
+        logger.warning(f"[NAR] Result table not found: {race_id}")
+        return None
+
+    HEADER_ALIASES: dict[str, list[str]] = {
+        "finish_position": ["着順"],
+        "frame_number":    ["枠番", "枠"],
+        "horse_number":    ["馬番"],
+        "horse_name":      ["馬名"],
+        "sex_age":         ["性齢"],
+        "weight_carried":  ["斤量"],
+        "jockey":          ["騎手"],
+        "time":            ["タイム", "走破タイム"],
+        "margin":          ["着差"],
+        "odds":            ["単勝"],
+        "popularity":      ["人気"],
+        "horse_weight":    ["馬体重"],
+        "last_3f":         ["上り", "上がり", "上り3F", "上がり3F"],
+        "trainer":         ["調教師", "厩舎"],
+    }
+
+    header_row = (
+        result_table.select_one("thead tr")
+        or result_table.select_one("tr")
+    )
+    raw_headers = []
+    if header_row:
+        raw_headers = [th.get_text(strip=True) for th in header_row.select("th")]
+        if not raw_headers:
+            raw_headers = [td.get_text(strip=True) for td in header_row.select("td")]
+
+    col_idx: dict[str, int] = {}
+    for field, aliases in HEADER_ALIASES.items():
+        for alias in aliases:
+            for i, h in enumerate(raw_headers):
+                if alias in h:
+                    col_idx[field] = i
+                    break
+            if field in col_idx:
+                break
+
+    DEFAULT_IDX = {
+        "finish_position": 0, "frame_number": 1, "horse_number": 2,
+        "horse_name": 3, "sex_age": 4, "weight_carried": 5,
+        "jockey": 6, "time": 7, "margin": 8,
+        "last_3f": 10, "odds": 11, "popularity": 12,
+        "horse_weight": 13, "trainer": 14,
+    }
+    for field, default in DEFAULT_IDX.items():
+        if field not in col_idx:
+            col_idx[field] = default
+
+    def _td(tds: list, field: str) -> str:
+        i = col_idx.get(field, -1)
+        if 0 <= i < len(tds):
+            return tds[i].get_text(strip=True)
+        return ""
+
+    rows = []
+    for tr in result_table.select("tr")[1:]:
+        tds = tr.select("td")
+        if len(tds) < 8:
+            continue
+
+        row = dict(race_info)
+        row["finish_position"] = _td(tds, "finish_position")
+        row["frame_number"]    = _td(tds, "frame_number")
+        row["horse_number"]    = _td(tds, "horse_number")
+
+        hi = col_idx.get("horse_name", 3)
+        horse_el = tds[hi].select_one("a") if hi < len(tds) else None
+        row["horse_name"] = horse_el.get_text(strip=True) if horse_el else _td(tds, "horse_name")
+        horse_href = horse_el.get("href", "") if horse_el else ""
+        m = re.search(r"/horse/(\w+)", horse_href)
+        row["horse_id"] = m.group(1) if m else ""
+
+        row["sex_age"]        = _td(tds, "sex_age")
+        row["weight_carried"] = _td(tds, "weight_carried")
+
+        ji = col_idx.get("jockey", 6)
+        jockey_el = tds[ji].select_one("a") if ji < len(tds) else None
+        row["jockey"] = jockey_el.get_text(strip=True) if jockey_el else _td(tds, "jockey")
+        jockey_href = jockey_el.get("href", "") if jockey_el else ""
+        m = (re.search(r"/jockey/result/recent/(\w+)", jockey_href)
+             or re.search(r"/jockey/(\w+)", jockey_href))
+        row["jockey_id"] = m.group(1) if m else ""
+
+        row["time"]       = _td(tds, "time")
+        row["margin"]     = _td(tds, "margin")
+        row["odds"]       = _td(tds, "odds")
+        row["popularity"] = _td(tds, "popularity")
+
+        weight_text = _td(tds, "horse_weight")
+        wm = re.match(r"(\d+)\(([+-]?\d+)\)", weight_text)
+        if wm:
+            row["horse_weight"]      = int(wm.group(1))
+            row["horse_weight_diff"] = int(wm.group(2))
+        else:
+            row["horse_weight"]      = None
+            row["horse_weight_diff"] = None
+
+        row["last_3f"] = _td(tds, "last_3f")
+
+        ti = col_idx.get("trainer", 13)
+        trainer_el = tds[ti].select_one("a") if ti < len(tds) else None
+        row["trainer"] = trainer_el.get_text(strip=True) if trainer_el else _td(tds, "trainer")
+        trainer_href = trainer_el.get("href", "") if trainer_el else ""
+        m = (re.search(r"/trainer/result/recent/(\w+)", trainer_href)
+             or re.search(r"/trainer/(\w+)", trainer_href))
+        row["trainer_id"] = m.group(1) if m else ""
+
+        try:
+            pos = int(row["finish_position"])
+            row["top3"] = 1 if pos <= 3 else 0
+        except (ValueError, TypeError):
+            row["top3"] = None
+
+        rows.append(row)
+
+    _sleep()
+    return pd.DataFrame(rows) if rows else None
+
+
+def scrape_nar_races(
+    start_year: int,
+    start_month: int,
+    end_year: int,
+    end_month: int,
+    output_path: Optional[Path] = None,
+) -> pd.DataFrame:
+    """
+    指定期間の地方競馬レース結果をすべて取得してCSVに追記保存する。
+
+    JRAデータと同じraw_races.csvに追記し、league列で区別する。
+    """
+    if output_path is None:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        output_path = DATA_DIR / "raw_races.csv"
+
+    session = requests.Session()
+    all_dfs: list[pd.DataFrame] = []
+
+    existing_ids: set = set()
+    if output_path.exists():
+        try:
+            existing_df = pd.read_csv(output_path, usecols=["race_id"])
+            existing_ids = set(existing_df["race_id"].astype(str))
+            logger.info(f"[NAR] 既存データ: {len(existing_ids)} レース")
+        except Exception:
+            pass
+
+    cur = datetime(start_year, start_month, 1)
+    end = datetime(end_year, end_month, 1)
+    months: list[tuple[int, int]] = []
+    while cur <= end:
+        months.append((cur.year, cur.month))
+        cur = cur.replace(month=cur.month + 1) if cur.month < 12 else cur.replace(year=cur.year + 1, month=1)
+
+    for year, month in months:
+        logger.info(f"=== [NAR] {year}年{month}月 取得開始 ===")
+
+        kaisai_dates = scrape_nar_kaisai_dates(year, month, session)
+        if not kaisai_dates:
+            logger.warning(f"  [NAR] 開催日なし: {year}年{month}月")
+            continue
+
+        for kaisai_date in kaisai_dates:
+            day_race_ids = scrape_nar_race_ids_for_date(kaisai_date, session)
+
+            for race_id in day_race_ids:
+                if race_id in existing_ids:
+                    logger.debug(f"    [NAR] SKIP (already exists): {race_id}")
+                    continue
+
+                logger.info(f"    [NAR] Scraping: {race_id}")
+                df = scrape_nar_race_result(race_id, session)
+                if df is not None and not df.empty:
+                    all_dfs.append(df)
+                    existing_ids.add(race_id)
+
+    if not all_dfs:
+        logger.warning("[NAR] 新規取得データがありませんでした")
+        if output_path.exists():
+            return pd.read_csv(output_path)
+        return pd.DataFrame()
+
+    new_df = pd.concat(all_dfs, ignore_index=True)
+
+    if output_path.exists():
+        existing_df = pd.read_csv(output_path)
+        combined = pd.concat([existing_df, new_df], ignore_index=True)
+        combined.drop_duplicates(subset=["race_id", "horse_name"], inplace=True)
+    else:
+        combined = new_df
+
+    combined.to_csv(output_path, index=False, encoding="utf-8-sig")
+    logger.info(f"[NAR] 保存完了: {output_path} ({len(combined)} rows)")
     return combined
 
 
