@@ -32,6 +32,7 @@ from keiba_predictor.scraper.netkeiba_scraper import (
     _get, _sleep, RACE_RESULT_URL,
 )
 from keiba_predictor.model.predict import load_model, predict_race, calc_ev_and_flags, format_buy_patterns, format_prediction
+from keiba_predictor.ai_comment import generate_comments
 
 logger = logging.getLogger(__name__)
 
@@ -649,17 +650,22 @@ def run_predict_notify(
                 course_info = f"{ct}{int(dst)}m"
 
         result = predict_race(race_df, model_bundle)
-        result = calc_ev_and_flags(result)     # EV・危険フラグを付与
+        result = calc_ev_and_flags(result)
         _store_prediction(race_id, race_name, race_date, result)
 
-        from keiba_predictor.ai_comment import generate_comments
+        # ① generate_comments() で解説を生成（1回だけ）
         ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
+        print(f"[AI解説] {race_name}: {len(ai_comments)}頭分 keys={sorted(ai_comments.keys())}", flush=True)
+
+        # ② format_prediction() でメッセージを生成（ai_comments を渡す）
         msg = format_prediction(result, race_name=race_name, ai_comments=ai_comments)
-        print(f"\n{'='*50}\n[送信内容確認] {race_name}\n{msg}\n{'='*50}\n", flush=True)
+        print(msg, flush=True)
+
+        # ③ 同じ msg を Discord に送信
         ok = send_discord(webhook_url, msg)
         if ok:
             notified += 1
-            logger.info(f"  送信: {race_name}")
+            logger.info(f"  送信完了: {race_name}")
 
     send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース送信完了")
 

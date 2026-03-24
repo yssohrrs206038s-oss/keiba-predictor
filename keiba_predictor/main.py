@@ -94,20 +94,8 @@ def cmd_predict(args: argparse.Namespace) -> None:
         )
     else:
         # ── 通常モード: featured_races.csv から予測 ───────────
-        from keiba_predictor.model.predict import predict_from_csv, format_prediction, calc_ev_and_flags
-        import os
-        result = predict_from_csv(args.race_id)
-        if notify:
-            from keiba_predictor.discord_notify import send_discord
-            url = webhook or os.environ.get("DISCORD_WEBHOOK_URL")
-            if not url:
-                logger.error("--webhook-url または環境変数 DISCORD_WEBHOOK_URL を指定してください")
-                return
-            result = calc_ev_and_flags(result)
-            race_name = result["race_name"].iloc[0] if "race_name" in result.columns else args.race_id
-            msg = format_prediction(result, race_name=race_name)
-            ok = send_discord(url, msg)
-            logger.info("Discord への送信が完了しました" if ok else "Discord への送信に失敗しました")
+        from keiba_predictor.model.predict import predict_from_csv
+        predict_from_csv(args.race_id, notify=notify, webhook_url=webhook)
 
 
 def cmd_all(args: argparse.Namespace) -> None:
