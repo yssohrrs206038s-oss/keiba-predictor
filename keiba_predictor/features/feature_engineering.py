@@ -312,6 +312,8 @@ def load_and_build(
         output_path = DATA_DIR / "featured_races.csv"
 
     df = pd.read_csv(cleaned_path, encoding="utf-8-sig", parse_dates=["race_date"])
+    if "league" in df.columns:
+        logger.info(f"  [cleaned] league分布: {df['league'].value_counts(dropna=False).to_dict()}")
     df = build_features(df)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

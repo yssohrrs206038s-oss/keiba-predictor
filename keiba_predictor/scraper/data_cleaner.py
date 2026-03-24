@@ -194,6 +194,30 @@ def clean_raw_data(raw_df: pd.DataFrame) -> pd.DataFrame:
     df["frame_number"] = pd.to_numeric(_ensure_col(df, "frame_number"), errors="coerce").astype("Int64")
     df["horse_number"] = pd.to_numeric(_ensure_col(df, "horse_number"), errors="coerce").astype("Int64")
 
+    # ── league 列の補完（race_id の競馬場コードから判定） ─────
+    # 旧来データ（league列追加前にスクレイピング済み）は league=NaN のため
+    # race_id[8:10] の競馬場コードで JRA/NAR を補完する。
+    # JRA: 01〜10 / NAR: 11〜33
+    if "race_id" in df.columns:
+        if "league" not in df.columns:
+            df["league"] = pd.NA
+        missing_league = df["league"].isna()
+        if missing_league.any():
+            venue_code = df.loc[missing_league, "race_id"].astype(str).str[8:10]
+            derived = venue_code.apply(
+                lambda v: "JRA" if v.isdigit() and 1 <= int(v) <= 10 else
+                          "NAR" if v.isdigit() and int(v) >= 11 else pd.NA
+            )
+            df.loc[missing_league, "league"] = derived
+            n_jra = (derived == "JRA").sum()
+            n_nar = (derived == "NAR").sum()
+            logger.info(f"league補完: JRA={n_jra}行, NAR={n_nar}行 (race_idから判定)")
+
+    # ── league 分布を表示 ─────────────────────────────────────
+    if "league" in df.columns:
+        counts = df["league"].value_counts(dropna=False)
+        logger.info(f"league分布: {counts.to_dict()}")
+
     # ── 欠損カラムの補足レポート ─────────────────────────────
     missing = [c for c in ["distance", "course_type", "weather", "track_condition", "race_date"]
                if c not in df.columns or df[c].isna().all()]
@@ -224,6 +248,8 @@ def load_and_clean(raw_path: Path | None = None, output_path: Path | None = None
 
     df_raw = pd.read_csv(raw_path, encoding="utf-8-sig")
     logger.info(f"生データ読み込み: {len(df_raw)} rows")
+    if "league" in df_raw.columns:
+        logger.info(f"  [raw] league分布: {df_raw['league'].value_counts(dropna=False).to_dict()}")
 
     df_clean = clean_raw_data(df_raw)
 
