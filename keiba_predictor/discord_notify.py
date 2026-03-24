@@ -58,12 +58,18 @@ def send_discord(webhook_url: str, content: str) -> bool:
         return False
     chunks = [content[i : i + 1900] for i in range(0, len(content), 1900)]
     ok = True
-    for chunk in chunks:
+    for idx, chunk in enumerate(chunks):
+        # 送信直前にメッセージ全文をデバッグログへ出力
+        logger.debug(
+            f"[Discord送信 chunk {idx + 1}/{len(chunks)}] {len(chunk)}文字:\n{chunk}"
+        )
         try:
             r = requests.post(webhook_url, json={"content": chunk}, timeout=15)
             if r.status_code not in (200, 204):
                 logger.error(f"Discord 送信失敗: {r.status_code} {r.text[:200]}")
                 ok = False
+            else:
+                logger.info(f"  Discord 送信OK chunk {idx + 1}/{len(chunks)} ({len(chunk)}文字)")
         except requests.RequestException as e:
             logger.error(f"Discord 送信エラー: {e}")
             ok = False
@@ -438,7 +444,22 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
         result_df = calc_ev_and_flags(result_df)
 
     from keiba_predictor.ai_comment import generate_comments
-    ai_comments = generate_comments(result_df, race_name=race_name, course_info=course_info)
+    logger.info(f"[_fmt_predict] generate_comments() 呼び出し開始: race={race_name!r}")
+    ai_comments = generate_comments(
+        result_df,
+        race_name=race_name,
+        course_info=course_info,
+        verbose=True,   # INFO レベルで進捗を logger 経由出力
+    )
+    logger.info(
+        f"[_fmt_predict] generate_comments() 完了: "
+        f"{len(ai_comments)}頭分 keys={sorted(ai_comments.keys())}"
+    )
+    if not ai_comments:
+        logger.warning(
+            "[_fmt_predict] AI解説が空です。"
+            "ANTHROPIC_API_KEY の設定・anthropic パッケージの有無を確認してください。"
+        )
 
     sep = "─" * 30
     header_extra = f"  {course_info}" if course_info else ""
@@ -580,6 +601,15 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
     # 安全チェック: 万一 2通目も超過していれば解説行を除去
     if len(msg2) > _DISCORD_LIMIT:
         msg2 = _code_block([l for l in msg2_lines if not l.startswith("  📝")])
+
+    # 送信前の全文確認ログ（DEBUG レベル）
+    logger.debug(f"[_fmt_predict] msg1 ({len(msg1)}文字):\n{msg1}")
+    logger.debug(f"[_fmt_predict] msg2 ({len(msg2)}文字):\n{msg2}")
+    logger.info(
+        f"[_fmt_predict] メッセージ生成完了: "
+        f"1通目={len(msg1)}文字 2通目={len(msg2)}文字 "
+        f"AI解説={'あり' if ai_comments else 'なし'}"
+    )
 
     return [msg1, msg2]
 
