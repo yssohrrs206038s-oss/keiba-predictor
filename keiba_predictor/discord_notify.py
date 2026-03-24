@@ -418,9 +418,22 @@ def scrape_payouts(race_id: str, session: requests.Session) -> dict:
 # メッセージフォーマット
 # ══════════════════════════════════════════════════════════════
 
+_DISCORD_LIMIT = 1900  # 安全マージン込み（Discord上限2000）
+
+
+def _code_block(lines: list[str]) -> str:
+    """行リストを Discord コードブロックで囲んだ文字列を返す。"""
+    return "```\n" + "\n".join(lines) + "\n```"
+
+
 def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
-                 course_info: str = "") -> str:
-    """金曜予想メッセージを生成する（コンパクト版）。"""
+                 course_info: str = "") -> list[str]:
+    """金曜予想メッセージを生成する。
+
+    Returns:
+        Discord に送信する文字列のリスト（1通目: ヘッダー+TOP5+解説、
+        2通目: 穴馬+危険馬+買い目）。各メッセージは 1900 文字以内。
+    """
     if "ev_score" not in result_df.columns:
         result_df = calc_ev_and_flags(result_df)
 
@@ -429,7 +442,6 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
 
     sep = "─" * 30
     header_extra = f"  {course_info}" if course_info else ""
-    lines = [f"```\n🏇 {race_name}  {race_date}{header_extra}", sep]
 
     # ── 穴馬インデックス（2位以降でオッズ10倍以上の最上位） ──
     ana_ridx: Optional[int] = None
@@ -442,7 +454,6 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
         pass
 
     # ── 印割り当て (◎○△☆ / 5位以降は空白) ─────────────────
-    # 0:◎ 1:○  ana_ridx:△  未割当の3位:☆  それ以外:空白
     rank_marks: dict[int, str] = {}
     hoshi_done = False
     for rank, (ridx, _) in enumerate(result_df.head(5).iterrows()):
@@ -457,10 +468,7 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
             hoshi_done = True
         else:
             rank_marks[ridx] = " "
-    # ana_ridx が rank 2 以外に割り当てられた場合、rank 2 はまだ ☆ か空白
-    # → rank_marks に入っていない ridx は空白
     if ana_ridx is not None and ana_ridx in rank_marks:
-        # rank 2 に印が未割当なら ☆ を追加
         for rank, (ridx, _) in enumerate(result_df.head(5).iterrows()):
             if rank >= 2 and ridx not in rank_marks:
                 if not hoshi_done:
@@ -469,25 +477,42 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
                 else:
                     rank_marks[ridx] = " "
 
-    # ── TOP5 一行表示 ────────────────────────────────────────
+    # ══════════════════════════════════════════════════════════
+    # 1通目: ヘッダー ＋ TOP5 ＋ AI解説
+    # ══════════════════════════════════════════════════════════
+    msg1_lines = [f"🏇 {race_name}  {race_date}{header_extra}", sep]
+
     for _, (ridx, row) in enumerate(result_df.head(5).iterrows()):
-        mark  = rank_marks.get(ridx, " ")
-        num   = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "-"
-        name  = str(row.get("horse_name", "-"))[:10]
-        prob  = row["prob_top3"] * 100
-        pop   = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
-        odds  = row.get("odds", "-")
-        ev    = row.get("ev_score")
+        mark   = rank_marks.get(ridx, " ")
+        num    = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "-"
+        name   = str(row.get("horse_name", "-"))[:10]
+        prob   = row["prob_top3"] * 100
+        pop    = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
+        odds   = row.get("odds", "-")
+        ev     = row.get("ev_score")
         ev_str = f"EV{ev:.2f}" if pd.notna(ev) else "      "
-        warn  = " ⚠" if row.get("is_dangerous", False) else ""
-        lines.append(
+        warn   = " ⚠" if row.get("is_dangerous", False) else ""
+        msg1_lines.append(
             f"{mark} {num:>2}番 {name:<10} {prob:>5.1f}%  {ev_str}  {pop:>2}人気 {str(odds):>5}倍{warn}"
         )
         comment = ai_comments.get(num, "")
         if comment:
-            lines.append(f"  📝 {comment}")
+            msg1_lines.append(f"  📝 {comment[:40]}")
 
-    lines.append(sep)
+    msg1_lines.append(sep)
+
+    # 文字数チェック: コードブロック込みで超過する場合は解説行を除去
+    msg1 = _code_block(msg1_lines)
+    if len(msg1) > _DISCORD_LIMIT:
+        msg1_lines_no_comment = [
+            l for l in msg1_lines if not l.startswith("  📝")
+        ]
+        msg1 = _code_block(msg1_lines_no_comment)
+
+    # ══════════════════════════════════════════════════════════
+    # 2通目: 穴馬注目 ＋ 危険馬 ＋ 買い目
+    # ══════════════════════════════════════════════════════════
+    msg2_lines: list[str] = []
 
     # ── ★穴馬注目（TOP5外・EV≥3.0・確率≥15%） ──────────────
     top5_idx = result_df.head(5).index
@@ -503,23 +528,25 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
         ev   = row["ev_score"]
         pop  = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
         odds = row.get("odds", "-")
-        lines.append(f"★穴馬注目 {num}番{name} EV{ev:.2f}（{pop}人気 {odds}倍）")
-        lines.append("")
+        msg2_lines.append(f"★穴馬注目 {num}番{name} EV{ev:.2f}（{pop}人気 {odds}倍）")
+        ana_c = ai_comments.get(str(num), "")
+        if ana_c:
+            msg2_lines.append(f"  📝 {ana_c[:40]}")
+        msg2_lines.append("")
 
-    # ── ⚠危険な人気馬（1行にまとめ） ──────────────────────
+    # ── ⚠危険な人気馬 ──────────────────────────────────────
     danger_df = result_df[result_df["is_dangerous"]]
     if not danger_df.empty:
         for _, row in danger_df.iterrows():
             num     = int(row["horse_number"]) if pd.notna(row.get("horse_number")) else 0
             name    = str(row.get("horse_name", ""))
             reasons = row.get("danger_reasons", [])
-            # 理由を短縮（最初のもののみ）
-            short = reasons[0].split("（")[0] if reasons else "要注意"
-            lines.append(f"⚠危険 {num}番{name}（{short}）")
+            short   = reasons[0].split("（")[0] if reasons else "要注意"
+            msg2_lines.append(f"⚠危険 {num}番{name}（{short}）")
             comment = ai_comments.get(str(num), "")
             if comment:
-                lines.append(f"  📝 {comment}")
-        lines.append("")
+                msg2_lines.append(f"  📝 {comment[:40]}")
+        msg2_lines.append("")
 
     # ── 推奨買い目（2パターン、1行コンパクト） ───────────────
     prob_nums: list[int] = [
@@ -536,18 +563,25 @@ def _fmt_predict(result_df: pd.DataFrame, race_name: str, race_date: str,
         ev_nums = prob_nums
 
     def _buy_line(nums: list[int]) -> str:
-        pairs = " / ".join(f"{a}-{b}" for a, b in combinations(nums, 2)) if len(nums) >= 2 else ""
+        pairs  = " / ".join(f"{a}-{b}" for a, b in combinations(nums, 2)) if len(nums) >= 2 else ""
         sanren = f"  3連複:{nums[0]}-{nums[1]}-{nums[2]}" if len(nums) >= 3 else ""
         return f"{pairs}{sanren}"
 
     if set(prob_nums) == set(ev_nums):
-        lines.append(f"【安定重視】{_buy_line(prob_nums)}")
+        msg2_lines.append(f"【安定重視】{_buy_line(prob_nums)}")
     else:
-        lines.append(f"【安定重視】{_buy_line(prob_nums)}")
-        lines.append(f"【期待値重視】{_buy_line(ev_nums)}")
+        msg2_lines.append(f"【安定重視】{_buy_line(prob_nums)}")
+        msg2_lines.append(f"【期待値重視】{_buy_line(ev_nums)}")
 
-    lines += [sep, "```"]
-    return "\n".join(lines)
+    msg2_lines.append(sep)
+
+    msg2 = _code_block(msg2_lines)
+
+    # 安全チェック: 万一 2通目も超過していれば解説行を除去
+    if len(msg2) > _DISCORD_LIMIT:
+        msg2 = _code_block([l for l in msg2_lines if not l.startswith("  📝")])
+
+    return [msg1, msg2]
 
 
 def _fmt_result(race_name: str, race_date: str,
@@ -776,10 +810,11 @@ def run_predict_notify(
         result = calc_ev_and_flags(result)     # EV・危険フラグを付与
         _store_prediction(race_id, race_name, race_date, result)
 
-        msg = _fmt_predict(result, race_name, race_date, course_info)
-        if send_discord(webhook_url, msg):
+        msgs = _fmt_predict(result, race_name, race_date, course_info)
+        ok = all(send_discord(webhook_url, m) for m in msgs)
+        if ok:
             notified += 1
-            logger.info(f"  送信: {race_name}")
+            logger.info(f"  送信: {race_name} ({len(msgs)}通)")
 
     send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース送信完了")
 
