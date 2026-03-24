@@ -223,9 +223,11 @@ def format_prediction(
         lines.append(
             f"{mark} {num:>2}番 {name:<10} {prob:>5.1f}%  {ev_str}  {pop:>2}人気 {str(odds):>5}倍{warn}"
         )
-        comment = ai_comments.get(num, "")
-        if comment:
-            lines.append(f"  📝 {comment}")
+        # 📝解説は ◎○☆ のみ表示（△穴馬・5番手は省略）
+        if mark in ("◎", "○", "☆"):
+            comment = ai_comments.get(num, "")
+            if comment:
+                lines.append(f"  📝 {comment}")
 
     lines.append(sep)
 
