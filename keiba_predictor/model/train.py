@@ -94,6 +94,7 @@ def train(
     model_path: Path | None = None,
     params: dict | None = None,
     n_splits: int = 5,
+    league: str = "jra",
 ) -> xgb.XGBClassifier:
     """
     特徴量付きCSVを読み込んで XGBoost モデルを学習する。
@@ -103,6 +104,7 @@ def train(
         model_path:    モデル保存先
         params:        XGBoost ハイパーパラメータ（省略時はデフォルト）
         n_splits:      TimeSeriesSplit の分割数
+        league:        学習対象リーグ ("jra" / "nar" / "all")
 
     Returns:
         学習済み XGBClassifier
@@ -118,6 +120,23 @@ def train(
     df = pd.read_csv(featured_path, encoding="utf-8-sig", parse_dates=["race_date"])
     df = df.dropna(subset=["top3"]).reset_index(drop=True)
     df = df.sort_values("race_date").reset_index(drop=True)
+
+    # ── JRA/NAR データ件数を表示 ──────────────────────────────
+    if "league" in df.columns:
+        counts = df["league"].value_counts()
+        for lg, cnt in counts.items():
+            logger.info(f"  {lg}: {cnt} rows")
+        logger.info(f"  合計: {len(df)} rows")
+    else:
+        logger.info(f"  合計: {len(df)} rows (league列なし)")
+
+    # ── リーグフィルタ ────────────────────────────────────────
+    if league.lower() != "all" and "league" in df.columns:
+        before = len(df)
+        df = df[df["league"].str.upper() == league.upper()].reset_index(drop=True)
+        logger.info(f"リーグフィルタ ({league.upper()}): {before} → {len(df)} rows")
+    elif league.lower() != "all" and "league" not in df.columns:
+        logger.warning("league列が存在しないためフィルタをスキップします")
 
     logger.info(f"学習データ: {len(df)} rows, 期間: {df['race_date'].min()} ~ {df['race_date'].max()}")
 

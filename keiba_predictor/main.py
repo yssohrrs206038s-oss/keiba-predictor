@@ -82,7 +82,7 @@ def cmd_features(args: argparse.Namespace) -> None:
 
 def cmd_train(args: argparse.Namespace) -> None:
     from keiba_predictor.model.train import train
-    train(n_splits=args.cv_splits)
+    train(n_splits=args.cv_splits, league=getattr(args, "league", "jra"))
 
 
 def cmd_predict(args: argparse.Namespace) -> None:
@@ -191,6 +191,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_train.add_argument(
         "--cv-splits", type=int, default=5,
         help="TimeSeriesSplit の分割数 (デフォルト: 5)"
+    )
+    p_train.add_argument(
+        "--league", choices=["jra", "nar", "all"], default="jra",
+        help="学習対象リーグ: jra=JRAのみ(デフォルト) / nar=NARのみ / all=全データ"
     )
     p_train.set_defaults(func=cmd_train)
 
