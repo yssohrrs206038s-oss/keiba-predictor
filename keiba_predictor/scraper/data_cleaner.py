@@ -194,24 +194,27 @@ def clean_raw_data(raw_df: pd.DataFrame) -> pd.DataFrame:
     df["frame_number"] = pd.to_numeric(_ensure_col(df, "frame_number"), errors="coerce").astype("Int64")
     df["horse_number"] = pd.to_numeric(_ensure_col(df, "horse_number"), errors="coerce").astype("Int64")
 
-    # ── league 列の補完（race_id の競馬場コードから判定） ─────
-    # 旧来データ（league列追加前にスクレイピング済み）は league=NaN のため
-    # race_id[8:10] の競馬場コードで JRA/NAR を補完する。
-    # JRA: 01〜10 / NAR: 11〜33
+    # ── league 列の補完（race_id のフォーマット差で JRA/NAR を判定） ──
+    # JRA race_id: YYYY + MM(01-12) + DD + 競馬場(01-10) + レース番号
+    #              → race_id[4:6] = 月（01〜12）
+    # NAR race_id: YYYY + 競馬場(30-55) + MM + DD + レース番号
+    #              → race_id[4:6] = 競馬場コード（30〜55）
+    # 判定ルール: race_id[4:6] の数値が 13 以上なら NAR、12 以下なら JRA
+    # （月は最大12、NARの競馬場コードは最小30のため重複しない）
     if "race_id" in df.columns:
         if "league" not in df.columns:
             df["league"] = pd.NA
         missing_league = df["league"].isna()
         if missing_league.any():
-            venue_code = df.loc[missing_league, "race_id"].astype(str).str[8:10]
-            derived = venue_code.apply(
-                lambda v: "JRA" if v.isdigit() and 1 <= int(v) <= 10 else
-                          "NAR" if v.isdigit() and int(v) >= 11 else pd.NA
+            pos_4_6 = df.loc[missing_league, "race_id"].astype(str).str[4:6]
+            derived = pos_4_6.apply(
+                lambda v: "JRA" if v.isdigit() and int(v) <= 12 else
+                          "NAR" if v.isdigit() and int(v) >= 13 else pd.NA
             )
             df.loc[missing_league, "league"] = derived
             n_jra = (derived == "JRA").sum()
             n_nar = (derived == "NAR").sum()
-            logger.info(f"league補完: JRA={n_jra}行, NAR={n_nar}行 (race_idから判定)")
+            logger.info(f"league補完: JRA={n_jra}行, NAR={n_nar}行 (race_id[4:6]から判定)")
 
     # ── league 分布を表示 ─────────────────────────────────────
     if "league" in df.columns:

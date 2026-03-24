@@ -50,10 +50,20 @@ NAR_RACE_LIST_URL = NAR_TOP_URL + "/top/race_list_sub.html"
 NAR_RESULT_URL   = NAR_TOP_URL + "/race/result.html"
 
 NAR_VENUE_CODE_MAP: dict[str, str] = {
-    "11": "帯広",   "12": "門別",   "21": "盛岡",   "22": "水沢",
-    "23": "浦和",   "24": "船橋",   "25": "大井",   "26": "川崎",
-    "27": "金沢",   "28": "笠松",   "29": "名古屋", "30": "園田",
-    "31": "姫路",   "32": "高知",   "33": "佐賀",
+    # NAR race_id の形式: YYYY + VV(競馬場) + MM(月) + DD(日) + RR(レース番号)
+    # 競馬場コードは race_id[4:6] に格納される（JRAとは位置が異なる）
+    # 北海道
+    "30": "門別",   "31": "帯広",
+    # 東北
+    "35": "盛岡",   "36": "水沢",
+    # 関東
+    "42": "浦和",   "43": "船橋",   "44": "大井",   "45": "川崎",
+    # 中部・北陸
+    "46": "金沢",   "47": "笠松",   "48": "名古屋",
+    # 関西
+    "50": "園田",   "51": "姫路",
+    # 四国・九州
+    "54": "高知",   "55": "佐賀",
 }
 
 HEADERS = {
@@ -694,23 +704,55 @@ def scrape_races(
 # ── NAR（地方競馬）スクレイピング ────────────────────────────────
 
 def scrape_nar_kaisai_dates(year: int, month: int, session: requests.Session) -> list[str]:
-    """NAR カレンダーページから指定年月の開催日リストを返す。"""
+    """NAR カレンダーページから指定年月の開催日リストを返す。
+
+    nar.netkeiba.com のカレンダーは直近数年分しか提供しない。
+    要求年月の日付が返ってこない場合（過去データ・リダイレクト）は
+    race_list_sub.html を各日付で直接リクエストするフォールバックを使う。
+    """
+    import calendar as _calendar
+
+    ym_prefix = f"{year}{month:02d}"  # "202101" など
+
+    # ── Step1: カレンダーページを試みる ──────────────────────
     url = f"{NAR_CALENDAR_URL}?year={year}&month={month}"
     soup = _get(url, session, encoding="UTF-8")
-    if soup is None:
-        return []
 
     dates: list[str] = []
-    for a in soup.select("a[href*='kaisai_date=']"):
-        href = a.get("href", "")
-        m = re.search(r"kaisai_date=(\d{8})", href)
-        if m:
-            d = m.group(1)
+    if soup is not None:
+        for a in soup.select("a[href*='kaisai_date=']"):
+            href = a.get("href", "")
+            m = re.search(r"kaisai_date=(\d{8})", href)
+            if m:
+                d = m.group(1)
+                # 要求した年月と一致するもののみ収集（リダイレクト対策）
+                if d.startswith(ym_prefix) and d not in dates:
+                    dates.append(d)
+
+    if dates:
+        logger.info(f"  [NAR] カレンダー取得: {year}年{month}月 -> {len(dates)}開催日")
+        _sleep()
+        return dates
+
+    # ── Step2: カレンダーが空/リダイレクト → 日別に race_list_sub.html を試みる ──
+    # nar.netkeiba.com は直近データのみ対応のため、過去年分は
+    # 各日付で race_list_sub.html をリクエストして開催日を特定する。
+    logger.info(
+        f"  [NAR] カレンダー空（過去データ非対応の可能性）"
+        f" → 日別スキャン開始: {year}年{month}月"
+    )
+    _, days_in_month = _calendar.monthrange(year, month)
+    for day in range(1, days_in_month + 1):
+        d = f"{ym_prefix}{day:02d}"
+        list_url = f"{NAR_RACE_LIST_URL}?kaisai_date={d}"
+        list_soup = _get(list_url, session, encoding="UTF-8")
+        if list_soup and list_soup.select("a[href*='race_id=']"):
+            logger.info(f"    [NAR] 開催あり: {d}")
             if d not in dates:
                 dates.append(d)
+        _sleep()
 
-    logger.info(f"  [NAR] カレンダー取得: {year}年{month}月 -> {len(dates)}開催日")
-    _sleep()
+    logger.info(f"  [NAR] 日別スキャン完了: {year}年{month}月 -> {len(dates)}開催日")
     return dates
 
 
@@ -763,21 +805,39 @@ def scrape_nar_race_result(
     if soup is None:
         return None
 
-    # kaisai_date (YYYYMMDD) → "YYYY-MM-DD"
+    # ── NAR race_id フォーマット: YYYY + VV(競馬場) + MM(月) + DD(日) + RR(レース番号) ──
+    # race_id[4:6] = 競馬場コード（30〜55）
+    # race_id[6:8] = 月
+    # race_id[8:10] = 日
+    # race_id[10:12] = レース番号
+    # kaisai_date が渡された場合はそちらを優先（より確実）
     if kaisai_date and len(kaisai_date) == 8:
         race_date = f"{kaisai_date[:4]}-{kaisai_date[4:6]}-{kaisai_date[6:8]}"
+    elif len(race_id) >= 10:
+        # race_id から直接日付を算出（NAR形式 YYYY+VV+MM+DD+RR）
+        race_date = f"{race_id[:4]}-{race_id[6:8]}-{race_id[8:10]}"
+        # 月・日の妥当性チェック
+        try:
+            mm, dd = int(race_id[6:8]), int(race_id[8:10])
+            if not (1 <= mm <= 12 and 1 <= dd <= 31):
+                raise ValueError(f"Invalid mm={mm} dd={dd}")
+        except ValueError:
+            logger.warning(f"[NAR] race_id {race_id} から日付算出失敗 → HTMLから取得を試みる")
+            race_date = None
     else:
-        # HTMLからページ内の日付を探す（フォールバック）
         race_date = None
-        for sel in ["div.RaceData02 span", "span.RaceData", "p.smalltxt"]:
+
+    # HTMLから日付を取得（フォールバック）
+    if race_date is None:
+        for sel in ["div.RaceData02 span", "span.RaceData", "p.smalltxt", "div.RaceData01"]:
             el = soup.select_one(sel)
             if el:
                 dm = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", el.get_text())
                 if dm:
                     race_date = f"{dm.group(1)}-{int(dm.group(2)):02d}-{int(dm.group(3)):02d}"
                     break
-        if race_date is None:
-            logger.warning(f"[NAR] race_date not resolved for {race_id}, kaisai_date={kaisai_date}")
+    if race_date is None:
+        logger.warning(f"[NAR] race_date not resolved for {race_id}")
 
     race_info: dict = {
         "race_id":         race_id,
@@ -824,8 +884,9 @@ def scrape_nar_race_result(
         _parse_course_distance(all_text, race_info)
 
     # ── 競馬場名・リーグ ────────────────────────────────────
-    venue_code = race_id[8:10] if len(race_id) >= 10 else ""
-    race_info["venue"]  = NAR_VENUE_CODE_MAP.get(venue_code, venue_code)
+    # NAR race_id[4:6] が競馬場コード（JRAは[8:10]と異なる）
+    venue_code = race_id[4:6] if len(race_id) >= 6 else ""
+    race_info["venue"]  = NAR_VENUE_CODE_MAP.get(venue_code, f"不明({venue_code})")
     race_info["league"] = "NAR"
 
     logger.info(
