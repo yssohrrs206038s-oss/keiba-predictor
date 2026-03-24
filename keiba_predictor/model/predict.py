@@ -151,8 +151,8 @@ def format_prediction(
     ai_comments: Optional[dict] = None,
 ) -> str:
     """
-    予測結果をコンパクトなテキスト形式で返す（CLI・Discord 共通）。
-    TOP5 + EV/危険馬サマリ + 買い目2パターン。
+    予測結果をスマホ対応レイアウトで返す（CLI・Discord 共通）。
+    スペース揃えをやめて改行区切りに統一。
 
     Args:
         result_df  : predict_race() + calc_ev_and_flags() 済みの DataFrame
@@ -165,9 +165,9 @@ def format_prediction(
     if ai_comments is None:
         ai_comments = {}
 
-    sep    = "─" * 32
+    sep    = "━" * 20
     header = f"🏇 【KEIBA EDGE】{race_name}" if race_name else "🏇 【KEIBA EDGE 予測結果】"
-    lines  = [sep, header, sep]
+    lines  = [header, sep]
 
     # ── 穴馬インデックス ────────────────────────────────────
     ana_ridx: Optional[int] = None
@@ -193,7 +193,7 @@ def format_prediction(
             rank_marks[ridx] = "☆"
             hoshi_done = True
         else:
-            rank_marks[ridx] = " "
+            rank_marks[ridx] = ""
     if ana_ridx is not None:
         for rank, (ridx, _) in enumerate(result_df.head(5).iterrows()):
             if rank >= 2 and ridx not in rank_marks:
@@ -201,27 +201,36 @@ def format_prediction(
                     rank_marks[ridx] = "☆"
                     hoshi_done = True
                 else:
-                    rank_marks[ridx] = " "
+                    rank_marks[ridx] = ""
 
-    # ── TOP5 一行表示 ────────────────────────────────────────
+    # ── TOP5 表示（馬名行 + 数値行 + 解説行） ────────────────
     for _, (ridx, row) in enumerate(result_df.head(5).iterrows()):
-        mark  = rank_marks.get(ridx, " ")
-        num   = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "-"
-        name  = str(row.get("horse_name", "-"))[:10]
-        prob  = row["prob_top3"] * 100
-        pop   = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
-        odds  = row.get("odds", "-")
-        ev    = row.get("ev_score")
-        ev_str = f"EV{ev:.2f}" if pd.notna(ev) else "      "
-        warn  = " ⚠" if row.get("is_dangerous", False) else ""
-        lines.append(
-            f"{mark} {num:>2}番 {name:<10} {prob:>5.1f}%  {ev_str}  {pop:>2}人気 {str(odds):>5}倍{warn}"
-        )
-        # 📝解説は ◎○☆ のみ表示（△穴馬・5番手は省略）
+        mark = rank_marks.get(ridx, "")
+        num  = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "-"
+        name = str(row.get("horse_name", "-"))
+        prob = row["prob_top3"] * 100
+        pop  = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
+        odds = row.get("odds", "-")
+        ev   = row.get("ev_score")
+        ev_str  = f"EV{ev:.2f}" if pd.notna(ev) else ""
+        warn    = " ⚠" if row.get("is_dangerous", False) else ""
+
+        if mark:
+            lines.append(f"{mark} {num}番 {name}{warn}")
+        else:
+            lines.append(f"　{num}番 {name}{warn}")
+
+        stat_parts = [f"{prob:.1f}%"]
+        if ev_str:
+            stat_parts.append(ev_str)
+        stat_parts.append(f"{pop}人気 {odds}倍")
+        lines.append("　" + " ".join(stat_parts))
+
+        # 📝解説は ◎○☆ のみ表示（△・5番手は省略）
         if mark in ("◎", "○", "☆"):
             comment = ai_comments.get(num, "")
             if comment:
-                lines.append(f"  📝 {comment}")
+                lines.append(f"　📝 {comment}")
 
     lines.append(sep)
 
@@ -239,10 +248,10 @@ def format_prediction(
         ev   = row["ev_score"]
         pop  = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
         odds = row.get("odds", "-")
-        lines.append(f"★穴馬注目 {num}番{name} EV{ev:.2f}（{pop}人気 {odds}倍）")
-        lines.append("")
+        lines.append(f"★穴馬 {num}番{name}")
+        lines.append(f"　EV{ev:.2f} {pop}人気 {odds}倍")
 
-    # ── ⚠危険な人気馬（1行） ────────────────────────────────
+    # ── ⚠危険な人気馬 ──────────────────────────────────────
     danger_df = result_df[result_df["is_dangerous"]]
     if not danger_df.empty:
         for _, row in danger_df.iterrows():
@@ -250,14 +259,16 @@ def format_prediction(
             name    = str(row.get("horse_name", ""))
             reasons = row.get("danger_reasons", [])
             short   = reasons[0].split("（")[0] if reasons else "要注意"
-            lines.append(f"⚠危険 {num}番{name}（{short}）")
+            lines.append(f"⚠危険 {num}番{name}")
+            lines.append(f"　{short}")
             # 解説はTOP5内の危険馬のみ表示
             row_idx = row.name
             if row_idx in top5_idx:
                 comment = ai_comments.get(str(num), "")
                 if comment:
-                    lines.append(f"  📝 {comment}")
-        lines.append("")
+                    lines.append(f"　📝 {comment}")
+
+    lines.append(sep)
 
     # ── 推奨買い目（複勝1点＋馬連3点＋3連複10点＝14点） ────────
     top6 = result_df.head(6)
@@ -267,16 +278,15 @@ def format_prediction(
         if pd.notna(r.get("horse_number"))
     ]
     if len(buy_nums) >= 2:
-        axis         = buy_nums[0]
-        umaren_flow  = buy_nums[1:4]
-        sanren_flow  = buy_nums[1:6]
-        axis_name    = str(top6.iloc[0].get("horse_name", ""))
-        umaren_str   = " / ".join(f"{axis}-{n}" for n in umaren_flow)
-        sanren_str   = "/".join(str(n) for n in sanren_flow)
-        lines.append(f"■ 推奨買い目（14点）")
-        lines.append(f"  複勝:  {axis}番（{axis_name}）")
-        lines.append(f"  馬連:  {umaren_str}")
-        lines.append(f"  3連複: 軸{axis}番 × {sanren_str}")
+        axis        = buy_nums[0]
+        umaren_flow = buy_nums[1:4]
+        sanren_flow = buy_nums[1:6]
+        umaren_str  = " / ".join(f"{axis}-{n}" for n in umaren_flow)
+        sanren_str  = "/".join(str(n) for n in sanren_flow)
+        lines.append("■ 買い目（14点）")
+        lines.append(f"複勝: {axis}番")
+        lines.append(f"馬連: {umaren_str}")
+        lines.append(f"3連複: 軸{axis} × {sanren_str}")
 
     lines.append(sep)
     return "\n".join(lines)
