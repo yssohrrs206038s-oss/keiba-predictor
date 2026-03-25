@@ -168,8 +168,8 @@ def record_result(
     def _a(i: int) -> dict:
         return actuals[i] if i < len(actuals) else {"name": "", "num": 0}
 
-    # 複勝的中: 予測上位3頭のうち1頭以上が実際の3着以内に入ったか
-    fukusho_hit = bool(set(predicted_nums[:3]) & set(actual_nums))
+    # 複勝的中: ◎（honmei = predicted_nums[0]）が 3 着以内に入ったか
+    fukusho_hit = bool(predicted_nums) and (predicted_nums[0] in actual_nums)
 
     # 馬連・ワイド・3連複
     umaren_hit, umaren_pay_str  = _check_umaren_raw(predicted_nums, actual_nums, payouts)
@@ -307,38 +307,21 @@ def format_summary_message(
     streak: int,
 ) -> str:
     """Discord 用サマリーメッセージを生成する。"""
-    def _pct(v: float) -> str:
-        return f"{v * 100:.1f}%"
+    RULE = "━" * 24
+    w = week_stats
+    c = cum_stats
 
-    def _yen(v: int) -> str:
-        return f"¥{v:,}"
+    # 今週の複勝的中数
+    week_wins = int(round(w["fukusho_rate"] * w["n_races"]))
 
     lines = [
-        "```",
-        "📊 今週の的中実績",
-        "=" * 38,
-        f"  レース数   : {week_stats['n_races']}レース",
-        f"  複勝的中   : {_pct(week_stats['fukusho_rate'])}",
-        f"  馬連的中   : {_pct(week_stats['umaren_rate'])}",
-        f"  ワイド的中 : {_pct(week_stats['wide_rate'])}",
-        f"  3連複的中  : {_pct(week_stats['sanrenpuku_rate'])}",
-        f"  収支       : {_yen(week_stats['bet_total'])} → "
-        f"{_yen(week_stats['return_total'])} "
-        f"(回収率 {_pct(week_stats['roi'])})",
-        "",
-        "📈 累計実績",
-        "=" * 38,
-        f"  通算レース : {cum_stats['n_races']}レース",
-        f"  複勝的中率 : {_pct(cum_stats['fukusho_rate'])}",
-        f"  馬連的中率 : {_pct(cum_stats['umaren_rate'])}",
-        f"  ワイド的中率: {_pct(cum_stats['wide_rate'])}",
-        f"  3連複的中率: {_pct(cum_stats['sanrenpuku_rate'])}",
-        f"  累計収支   : {_yen(cum_stats['bet_total'])} → "
-        f"{_yen(cum_stats['return_total'])} "
-        f"(回収率 {_pct(cum_stats['roi'])})",
-        f"  連続的中   : {streak}週連続",
-        "```",
+        RULE,
+        f"📊 今週成績  {w['n_races']}戦{week_wins}勝",
+        f"📈 累計複勝的中率  {c['fukusho_rate'] * 100:.0f}%",
+        f"💰 累計回収率  {c['roi'] * 100:.0f}%",
     ]
+    if streak >= 2:
+        lines.append(f"🔥 {streak}週連続複勝的中中！")
     return "\n".join(lines)
 
 

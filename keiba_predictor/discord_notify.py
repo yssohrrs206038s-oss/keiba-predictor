@@ -445,80 +445,55 @@ def _fmt_result(race_name: str, race_date: str,
                 pred: dict,
                 payouts: dict) -> str:
     """日曜結果メッセージを生成する。"""
-    lines = [f"```\n🏆 {race_name}  {race_date}  【結果】"]
-    lines.append("=" * 46)
+    RULE = "━" * 24
+    lines = [f"🏆 【KEIBA EDGE】{race_name} 結果  {race_date}", RULE]
 
-    # 確定着順（1〜3着）
-    lines.append("■ 確定着順")
-    top3_actual = actual_df[actual_df["finish_position"].apply(
-        lambda x: str(x).strip() in ("1", "2", "3")
-    )].copy()
-    # finish_position を数値にして並び替え
-    top3_actual["_fp"] = pd.to_numeric(top3_actual["finish_position"], errors="coerce")
-    top3_actual = top3_actual.sort_values("_fp").head(3)
+    # 予想馬番→印 のマッピング
+    pred_num_to_mark: dict[int, str] = {}
+    for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "△")]:
+        p = pred.get(role, {})
+        num = p.get("horse_number")
+        if num is not None:
+            pred_num_to_mark[int(num)] = mark
+
+    predicted_nums = pred.get("predicted_top3_nums", [])
+
+    # 確定 1〜3 着
+    df_copy = actual_df.copy()
+    df_copy["_fp"] = pd.to_numeric(df_copy["finish_position"], errors="coerce")
+    top3 = df_copy[df_copy["_fp"].isin([1, 2, 3])].sort_values("_fp").head(3)
 
     actual_top3_nums: list[int] = []
-    for _, r in top3_actual.iterrows():
+    for _, r in top3.iterrows():
         fp   = int(r["_fp"])
         num  = int(r["horse_number"]) if pd.notna(r.get("horse_number")) else 0
         name = str(r.get("horse_name", ""))
         actual_top3_nums.append(num)
-        lines.append(f"  {fp}着: {num}番 {name}")
+        mark = pred_num_to_mark.get(num, "　")
+        icon = " ✅" if num in predicted_nums else ""
+        lines.append(f"{fp}着 {mark}{name}{icon}")
 
-    # AI予想との比較
-    lines += ["", "■ AI予想 vs 実際"]
-    for role, mark in MARK.items():
-        p = pred.get(role, {})
-        if not p:
-            continue
-        pnum  = p.get("horse_number")
-        pname = p.get("horse_name", "?")
-        prob  = p.get("prob", 0) * 100
+    lines.append(RULE)
 
-        if pnum in actual_top3_nums:
-            actual_rank = actual_top3_nums.index(pnum) + 1
-            hit = f"→ {actual_rank}着 ✅"
-        else:
-            # 実際の着順を検索
-            row = actual_df[actual_df["horse_number"].apply(
-                lambda x: int(x) == pnum if pd.notna(x) else False
-            )]
-            fp_val = row["finish_position"].values[0] if not row.empty else "?"
-            hit = f"→ {fp_val}着 ❌"
+    # 複勝的中: ◎ が 3 着以内
+    honmei_num = pred.get("honmei", {}).get("horse_number")
+    fukusho_hit = (honmei_num is not None) and (int(honmei_num) in actual_top3_nums)
+    lines.append(f"複勝  {'✅ 的中' if fukusho_hit else '❌ ハズレ'}")
 
-        lines.append(f"  {mark} {pname}({pnum}番, {prob:.1f}%)  {hit}")
-
-    # 買い目的中判定（module-level 関数を使用）
-    predicted_nums = pred.get("predicted_top3_nums", [])
-    lines += ["", "■ 買い目結果"]
-
+    # 馬連
     umaren_hit, umaren_pay = _check_umaren_raw(predicted_nums, actual_top3_nums, payouts)
-    if len(predicted_nums) >= 2:
-        mark = "✅ 的中" if umaren_hit else "❌ ハズレ"
-        lines.append(f"  馬連 {predicted_nums[0]}-{predicted_nums[1]}: {mark}"
-                     + (f"  {umaren_pay}" if umaren_pay else ""))
+    umaren_line = f"馬連  {'✅ 的中' if umaren_hit else '❌ ハズレ'}"
+    if umaren_hit and umaren_pay:
+        umaren_line += f"（配当{re.sub(r'[¥,]', '', umaren_pay)}円）"
+    lines.append(umaren_line)
 
-    for combo, hit, pay in _check_wide_pairs_raw(predicted_nums, actual_top3_nums, payouts):
-        mark = "✅ 的中" if hit else "❌ ハズレ"
-        lines.append(f"  ワイド {combo}: {mark}"
-                     + (f"  {pay}" if pay else ""))
-
+    # 3連複
     sanren_hit, sanren_pay = _check_sanrenpuku_raw(predicted_nums, actual_top3_nums, payouts)
-    if len(predicted_nums) >= 3:
-        mark = "✅ 的中" if sanren_hit else "❌ ハズレ"
-        lines.append(f"  三連複 {'-'.join(str(n) for n in predicted_nums[:3])}: {mark}"
-                     + (f"  {sanren_pay}" if sanren_pay else ""))
+    sanren_line = f"3連複 {'✅ 的中' if sanren_hit else '❌ ハズレ'}"
+    if sanren_hit and sanren_pay:
+        sanren_line += f"（配当{re.sub(r'[¥,]', '', sanren_pay)}円）"
+    lines.append(sanren_line)
 
-    # 払戻金一覧（あれば）
-    if payouts:
-        lines += ["", "■ 主な払戻金"]
-        for bet_type in ("単勝", "複勝", "馬連", "ワイド", "三連複", "三連単"):
-            for entry in payouts.get(bet_type, []):
-                amt = entry["amount"]
-                amt_str = f"¥{amt:,}" if amt else "-"
-                lines.append(f"  {bet_type:<4} {entry['combo']:>12}  {amt_str}")
-
-    lines.append("```")
     return "\n".join(lines)
 
 
