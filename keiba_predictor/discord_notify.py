@@ -322,8 +322,10 @@ def _save_cache(cache: dict) -> None:
 
 
 def _store_prediction(race_id: str, race_name: str, race_date: str,
-                      result_df: pd.DataFrame) -> None:
-    """予想結果をキャッシュに保存する（日曜の結果比較に使用）。"""
+                      result_df: pd.DataFrame,
+                      ai_comments: Optional[dict] = None,
+                      course_info: str = "") -> None:
+    """予想結果をキャッシュに保存する（日曜結果比較・note レポート生成に使用）。"""
     cache = _load_cache()
 
     def _row(df: pd.DataFrame, idx: int) -> dict:
@@ -381,12 +383,14 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
     cache[race_id] = {
         "race_name":           race_name,
         "race_date":           race_date,
+        "course_info":         course_info,
         "honmei":              _row(result_df, 0),
         "taikou":              _row(result_df, 1),
         "ana":                 ana,
         "predicted_top3_nums": top3_nums,
         "ev_top3":             ev_top3,
         "dangerous_horses":    dangerous,
+        "ai_comments":         ai_comments or {},
     }
     _save_cache(cache)
 
@@ -671,11 +675,14 @@ def run_predict_notify(
 
         result = predict_race(race_df, model_bundle)
         result = calc_ev_and_flags(result)
-        _store_prediction(race_id, race_name, race_date, result)
 
         # ① generate_comments() で解説を生成（1回だけ）
         ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
         print(f"[AI解説] {race_name}: {len(ai_comments)}頭分 keys={sorted(ai_comments.keys())}", flush=True)
+
+        # キャッシュに保存（ai_comments・course_info を含む）
+        _store_prediction(race_id, race_name, race_date, result,
+                          ai_comments=ai_comments, course_info=course_info)
 
         # ② format_prediction() でメッセージを生成（ai_comments を渡す）
         msg = format_prediction(result, race_name=race_name, ai_comments=ai_comments)
