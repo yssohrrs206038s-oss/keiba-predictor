@@ -61,7 +61,12 @@ ALL_MARKS = ["◎", "○", "☆", "△", "　"]
 
 
 def _build_article_body(race_id: str, entry: dict) -> str:
-    """1レース分のキャッシュエントリからプレーンテキスト本文を生成する。"""
+    """1レース分のキャッシュエントリからプレーンテキスト本文を生成する。
+
+    構成:
+        [無料公開] ヘッダー + 本命馬情報 + 有料コンテンツ案内
+        [有料公開] 全予想印・穴馬・危険馬・買い目
+    """
     race_name   = entry.get("race_name", race_id)
     race_date   = entry.get("race_date", "")
     course_info = entry.get("course_info", "")
@@ -73,7 +78,7 @@ def _build_article_body(race_id: str, entry: dict) -> str:
     # ── ヘッダー ─────────────────────────────────────────────
     lines += [
         SEP,
-        f"🏇 {race_name}",
+        f"🏇 {race_name}　AI予想",
     ]
     if course_info:
         lines.append(f"📍 {course_info}　{race_date}")
@@ -87,14 +92,30 @@ def _build_article_body(race_id: str, entry: dict) -> str:
         for e in entry.get("ev_top3", [])
         if e.get("horse_number") is not None
     }
-    # odds マップ
-    odds_map: dict[int, float] = {
-        int(e["horse_number"]): e.get("odds", 0)
-        for e in entry.get("ev_top3", [])
-        if e.get("horse_number") is not None
-    }
 
-    # ── 予想印（◎○☆）─────────────────────────────────────────
+    # ── 【無料公開】本命馬のみ ────────────────────────────────
+    lines.append("【無料公開】")
+    honmei = entry.get("honmei", {})
+    if honmei and honmei.get("horse_name"):
+        h_num  = honmei.get("horse_number")
+        h_name = honmei.get("horse_name", "")
+        h_prob = honmei.get("prob", 0) * 100
+        h_ev   = ev_map.get(int(h_num), 0) if h_num is not None else 0
+        h_ev_str = f"・期待値{h_ev:.2f}" if h_ev else ""
+        lines.append(f"◎ 本命： {h_num}番 {h_name}")
+        lines.append(f"AI確率{h_prob:.1f}%{h_ev_str}")
+    lines += [
+        "",
+        "続きは有料範囲で公開中↓",
+        "・買い目（複勝・馬連・3連複）",
+        "・穴馬注目",
+        "・AI解説",
+        "",
+        SEP,
+        "",
+    ]
+
+    # ── 【有料公開】全予想印（◎○☆）────────────────────────────
     lines.append("【予想印】")
     for role, mark in MARKS.items():
         p = entry.get(role, {})
@@ -119,9 +140,9 @@ def _build_article_body(race_id: str, entry: dict) -> str:
         if enum is None or int(enum) in pred_set:
             continue
         if e.get("ev_score", 0) >= 1.5:
-            ename = e.get("horse_name", "")
-            odds  = e.get("odds", 0)
-            pop   = e.get("popularity", "")
+            ename   = e.get("horse_name", "")
+            odds    = e.get("odds", 0)
+            pop     = e.get("popularity", "")
             pop_str = f"{pop}人気 " if pop else ""
             lines += [
                 "【穴馬注目】",
