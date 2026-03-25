@@ -70,13 +70,17 @@ jobs:
 
       # ── Discord 予想通知（デバッグモード有効）────────────────
       - name: Discord に予想を送信
+        id: notify_predict
+        continue-on-error: true   # ネットワーク障害・スクレイピング失敗でも後続ステップを継続
         run: |
           echo "📤 Discord 予想通知を送信中..."
           python -m keiba_predictor.main notify --mode predict --live --debug
           echo "✅ notify コマンド終了"
 
       # ── note 記事用レポート生成 ───────────────────────────────
+      # predict ステップ完了後（成否に関わらず）実行する
       - name: note レポートを生成
+        if: always()
         run: |
           echo "📝 note レポートを生成中..."
           python -m keiba_predictor.note_report
@@ -84,6 +88,7 @@ jobs:
 
       # ── 予想キャッシュ・レポートをリポジトリに保存 ────────────
       - name: 予想キャッシュ・レポートをコミット
+        if: always()   # predict/note_report が失敗してもキャッシュが更新されていれば保存する
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
