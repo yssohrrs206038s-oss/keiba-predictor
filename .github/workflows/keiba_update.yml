@@ -97,9 +97,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # 大きなファイルをステージング（存在する場合のみ）
-          git add keiba_predictor/model/xgb_model.pkl          2>/dev/null || true
-          git add keiba_predictor/data/cleaned_races.csv       2>/dev/null || true
-          git add keiba_predictor/data/featured_races.csv      2>/dev/null || true
+          git add    keiba_predictor/model/xgb_model.pkl          2>/dev/null || true
+          git add -f keiba_predictor/data/featured_races.csv   2>/dev/null || true
 
           if git diff --staged --quiet; then
             echo "ℹ️ 変更なし（コミットスキップ）"
