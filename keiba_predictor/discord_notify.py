@@ -101,39 +101,40 @@ def _weekend_dates() -> list[str]:
 
 
 def _is_grade_race(el) -> bool:
-    """BeautifulSoup要素（<li>など）が重賞かどうかを判定する。
+    """BeautifulSoup要素（<li>など）が GI/GII/GIII かどうかを判定する。
 
-    netkeiba で確認されているグレード表示パターン:
-      - <span class="Icon_GradeType2">   (CSS背景画像、テキストなし)
-      - <span class="gradeicon-g2">G2</span>  (テキストあり旧形式)
-      - <li class="... isGrade ...">
-      - 全テキストに (G2) などの括弧付きグレード表記
+    対象クラス（完全一致）:
+      Icon_GradeType1 → GI
+      Icon_GradeType2 → GII
+      Icon_GradeType3 → GIII
+    Icon_GradeType16/17/18 などリステッド・オープン・地方重賞はスキップ。
     """
-    # 1. 全子孫要素のクラスを走査（テキストなし CSS アイコンも捕捉）
-    GRADE_CLS_RE = re.compile(
-        r"icon_gradetype[123]"    # Icon_GradeType1/2/3 (race.netkeiba.com)
-        r"|gradeicon-g[123]"      # gradeicon-g1/g2/g3 (旧形式)
-        r"|grade_?type[123]"      # grade_type1/2/3 (変形)
-        r"|\bisgrade\b",          # isGrade クラス
-        re.I,
-    )
+    # 1. クラス名の完全一致で判定（部分一致させない）
+    JRA_GRADE_CLASSES = {"icon_gradetype1", "icon_gradetype2", "icon_gradetype3"}
+    for child in el.find_all(True):
+        classes = {c.lower() for c in child.get("class", [])}
+        if classes & JRA_GRADE_CLASSES:
+            return True
+
+    # 2. 旧形式テキストアイコン: gradeicon-g1/g2/g3
+    GRADE_CLS_RE = re.compile(r"\bgradeicon-g[123]\b", re.I)
     for child in el.find_all(True):
         cls_str = " ".join(child.get("class", []))
         if GRADE_CLS_RE.search(cls_str):
             return True
 
-    # 2. 全テキストに括弧付きグレード表記 (G1)/(G2)/(G3)/(GⅠ)/(GⅡ)/(GⅢ) があるか
+    # 3. 全テキストに括弧付きグレード表記 (G1)/(G2)/(G3)/(GⅠ)/(GⅡ)/(GⅢ)
     text = el.get_text(" ", strip=True)
     if GRADE_RE.search(text):
         return True
 
-    # 3. 単体テキストが "G1"/"G2"/"G3"/"GⅠ" 等の子孫要素があるか
+    # 4. 単体テキストが "G1"/"G2"/"G3"/"GⅠ" 等の子孫要素があるか
     for child in el.find_all(True):
         stext = child.get_text(strip=True)
         if re.fullmatch(r"G[Ⅰ-Ⅲ1-3]|GI{1,3}", stext):
             return True
 
-    # 4. 画像 alt 属性に "G1"/"G2"/"G3" があるか
+    # 5. 画像 alt 属性に "G1"/"G2"/"G3" があるか
     for img in el.find_all("img", alt=True):
         alt = img["alt"].strip()
         if re.fullmatch(r"G[Ⅰ-Ⅲ1-3]|GI{1,3}", alt):
