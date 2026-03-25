@@ -79,12 +79,26 @@ jobs:
 
       # ── note 記事用レポート生成 ───────────────────────────────
       # predict ステップ完了後（成否に関わらず）実行する
+      # 予想キャッシュが空（{}）の場合はスキップ
       - name: note レポートを生成
         if: always()
         run: |
-          echo "📝 note レポートを生成中..."
-          python -m keiba_predictor.note_report
-          echo "✅ note レポート生成完了"
+          if python - <<'EOF'
+          import json, sys
+          try:
+              cache = json.load(open("keiba_predictor/data/predictions_cache.json"))
+              if not cache:
+                  print("⏭️ 予想キャッシュが空のためnoteレポートをスキップします")
+                  sys.exit(1)
+          except Exception as e:
+              print(f"⏭️ キャッシュ確認エラー ({e})、スキップします")
+              sys.exit(1)
+          EOF
+          then
+            echo "📝 note レポートを生成中..."
+            python -m keiba_predictor.note_report
+            echo "✅ note レポート生成完了"
+          fi
 
       # ── 予想キャッシュ・レポートをリポジトリに保存 ────────────
       - name: 予想キャッシュ・レポートをコミット
