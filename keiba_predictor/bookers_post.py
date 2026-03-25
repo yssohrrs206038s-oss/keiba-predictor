@@ -222,23 +222,29 @@ def post_article(
         if env_val.strip().lstrip("-").isdigit():
             cat_env = int(env_val)
 
+    # 無料公開フィールド名を特定するため、候補を全て同時送信する。
+    # レスポンスのJSONで null 以外の値が入っているキーが正解。
+    FREE_BODY_PROBE = f"[無料公開テスト] {body[:100]}"
     payload: dict = {
-        "title":       title,
-        "text":        body,
-        "description": description,
-        "price":       price,
+        "title":        title,
+        "text":         body,           # 現在の本命
+        "body":         FREE_BODY_PROBE,
+        "content":      FREE_BODY_PROBE,
+        "free_content": FREE_BODY_PROBE,
+        "open_body":    FREE_BODY_PROBE,
+        "description":  description,
+        "price":        price,
     }
     if cat_env is not None:
         payload["category"] = cat_env
 
-    # デバッグ: 送信するpayloadのキーと文字数を出力
-    print(f"[BOOKERS] payload keys: {list(payload.keys())}", flush=True)
-    print(f"[BOOKERS] text({len(body)}文字)", flush=True)
+    # デバッグ: 送信するpayloadのキー一覧を出力
+    print(f"[BOOKERS] 送信payload keys: {list(payload.keys())}", flush=True)
 
     if dry_run:
         print(f"[BOOKERS dry-run] POST /api/postcreate/")
         print(f"  title={title!r}  price={price}  category={cat_env!r}")
-        print(f"  text:\n{body}")
+        print(f"  text({len(body)}文字):\n{body[:200]}...")
         return "dry-run-uuid"
 
     url = f"{BOOKERS_API_BASE}/postcreate/"
@@ -253,9 +259,17 @@ def post_article(
             headers=headers,
             timeout=30,
         )
-        # デバッグ: APIレスポンスを常に出力
+        # デバッグ: ステータスコードとレスポンスJSON全体を出力
         print(f"[BOOKERS] response status={resp.status_code}", flush=True)
-        print(f"[BOOKERS] response body={resp.text[:500]}", flush=True)
+        try:
+            resp_json = resp.json()
+            print(f"[BOOKERS] response JSON (全フィールド):", flush=True)
+            for k, v in resp_json.items():
+                v_preview = str(v)[:120] if v is not None else "null"
+                print(f"  {k}: {v_preview}", flush=True)
+        except Exception:
+            print(f"[BOOKERS] response text={resp.text[:800]}", flush=True)
+
         if resp.status_code in (200, 201):
             data = resp.json()
             uuid = data.get("uuid") or data.get("id") or data.get("post_id", "")
