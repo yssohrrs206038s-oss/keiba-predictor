@@ -50,31 +50,6 @@ jobs:
           pip install -r requirements.txt
           echo "✅ pip install 完了"
 
-      # ── データ収集（直近3ヶ月）────────────────────────────────
-      - name: スクレイピング（直近3ヶ月）
-        run: |
-          YEAR=$(date +%Y)
-          MONTH=$(date +%-m)
-          START_MONTH=$((MONTH - 3))
-          START_YEAR=$YEAR
-          if [ $START_MONTH -le 0 ]; then
-            START_MONTH=$((START_MONTH + 12))
-            START_YEAR=$((YEAR - 1))
-          fi
-          START="${START_YEAR}-$(printf '%02d' $START_MONTH)"
-          END="${YEAR}-$(printf '%02d' $MONTH)"
-          echo "📅 スクレイピング期間: $START ～ $END"
-          python -m keiba_predictor.main scrape --start "$START" --end "$END"
-
-      - name: データクリーニング
-        run: python -m keiba_predictor.main clean
-
-      - name: 特徴量エンジニアリング
-        run: python -m keiba_predictor.main features
-
-      - name: モデル学習
-        run: python -m keiba_predictor.main train
-
       # ── Discord 結果通知（デバッグモード有効）────────────────
       - name: Discord に結果を送信
         run: |
