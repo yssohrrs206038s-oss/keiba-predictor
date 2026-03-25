@@ -40,6 +40,19 @@ jobs:
           pip install -r requirements.txt
           echo "✅ pip install 完了"
 
+      # ── featured_races.csv 確認・生成 ────────────────────────
+      - name: featured_races.csv を確認・生成
+        run: |
+          CSV_PATH="keiba_predictor/data/featured_races.csv"
+          if [ ! -f "$CSV_PATH" ]; then
+            echo "⚠️ featured_races.csv が見つかりません。clean・features を実行します..."
+            python -m keiba_predictor.main clean
+            python -m keiba_predictor.main features
+            echo "✅ featured_races.csv 生成完了"
+          else
+            echo "✅ featured_races.csv 確認OK: $CSV_PATH"
+          fi
+
       # ── モデルファイル確認 ────────────────────────────────────
       - name: モデルファイルを確認
         run: |
