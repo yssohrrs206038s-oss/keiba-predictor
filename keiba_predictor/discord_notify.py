@@ -32,7 +32,7 @@ import requests
 from keiba_predictor.scraper.netkeiba_scraper import (
     _get, _sleep, RACE_RESULT_URL,
 )
-from keiba_predictor.model.predict import load_model, predict_race, calc_ev_and_flags, format_prediction
+from keiba_predictor.model.predict import load_model, predict_race, calc_ev_and_flags, format_prediction, _build_course_info
 from keiba_predictor.ai_comment import generate_comments
 
 logger = logging.getLogger(__name__)
@@ -667,11 +667,8 @@ def run_predict_notify(
             if race_df.empty:
                 logger.info(f"  スキップ(データなし): {race_name} ({race_id})")
                 continue
-            if "course_type" in race_df.columns and "distance" in race_df.columns:
-                ct  = race_df["course_type"].iloc[0]
-                dst = race_df["distance"].iloc[0]
-                if pd.notna(ct) and pd.notna(dst):
-                    course_info = f"{ct}{int(dst)}m"
+            course_info = _build_course_info(race_id, race_df)
+        print(f"[DEBUG] {race_name} course_info={course_info!r}", flush=True)
 
         result = predict_race(race_df, model_bundle)
         result = calc_ev_and_flags(result)

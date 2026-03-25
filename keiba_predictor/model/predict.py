@@ -24,6 +24,27 @@ logger = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent.parent / "data"
 MODEL_PATH = Path(__file__).parent / "xgb_model.pkl"
 
+# JRA 競馬場コード → 競馬場名
+VENUE_MAP: dict[str, str] = {
+    "01": "札幌", "02": "函館", "03": "福島", "04": "新潟",
+    "05": "東京", "06": "中山", "07": "中京", "08": "京都",
+    "09": "阪神", "10": "小倉",
+}
+
+
+def _build_course_info(race_id: str, race_df: pd.DataFrame) -> str:
+    """race_id と DataFrame からコース情報文字列（例: 小倉 芝1800m）を組み立てる。"""
+    venue = VENUE_MAP.get(str(race_id)[4:6], "")
+    ct_str = ""
+    if "course_type" in race_df.columns and "distance" in race_df.columns:
+        ct  = race_df["course_type"].iloc[0]
+        dst = race_df["distance"].iloc[0]
+        if pd.notna(ct) and pd.notna(dst):
+            ct_str = f"{ct}{int(dst)}m"
+    if venue and ct_str:
+        return f"{venue} {ct_str}"
+    return venue or ct_str
+
 
 def calc_ev_and_flags(result_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -317,10 +338,16 @@ def predict_from_csv(
     result = predict_race(race_df, model_bundle)
     result = calc_ev_and_flags(result)
 
-    race_name = race_df["race_name"].iloc[0] if "race_name" in race_df.columns else race_id
+    race_name   = race_df["race_name"].iloc[0] if "race_name" in race_df.columns else race_id
+    course_info = _build_course_info(race_id, race_df)
+    print(f"[DEBUG] race_id={race_id}  venue_code={str(race_id)[4:6]!r}  course_info={course_info!r}", flush=True)
+
     from keiba_predictor.ai_comment import generate_comments
-    ai_comments = generate_comments(result, race_name=race_name)
-    msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments=ai_comments)
+    ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
+    print(f"[DEBUG] ai_comments: {len(ai_comments)} 頭分  keys={sorted(ai_comments.keys())}", flush=True)
+
+    msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments=ai_comments,
+                                   course_info=course_info)
     print(msg1)
     print(msg2)
 
