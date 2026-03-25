@@ -13,7 +13,6 @@ env:
   X_API_SECRET:        ${{ secrets.X_API_SECRET }}
   X_ACCESS_TOKEN:      ${{ secrets.X_ACCESS_TOKEN }}
   X_ACCESS_SECRET:     ${{ secrets.X_ACCESS_SECRET }}
-  BOOKERS_API_KEY:     ${{ secrets.BOOKERS_API_KEY }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -100,20 +99,6 @@ jobs:
             python -m keiba_predictor.note_report
             echo "✅ note レポート生成完了"
           fi
-
-      # ── BOOKERS への記事投稿 ─────────────────────────────────
-      # 予想キャッシュが空の場合・APIキー未設定の場合は自動スキップ
-      - name: BOOKERS に記事を投稿
-        if: always()
-        continue-on-error: true   # 投稿失敗してもコミットステップを止めない
-        run: |
-          if [ -z "$BOOKERS_API_KEY" ]; then
-            echo "⏭️ BOOKERS_API_KEY 未設定のためスキップします"
-            exit 0
-          fi
-          echo "📚 BOOKERS への投稿を開始..."
-          python -m keiba_predictor.bookers_post
-          echo "✅ BOOKERS 投稿処理完了"
 
       # ── 予想キャッシュ・レポートをリポジトリに保存 ────────────
       - name: 予想キャッシュ・レポートをコミット
