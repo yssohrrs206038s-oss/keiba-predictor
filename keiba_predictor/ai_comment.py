@@ -126,26 +126,30 @@ def generate_comments(
 
     def _err(msg: str) -> None:
         logger.error(msg)
-        if verbose:
-            _p(f"  [AI ERROR] {msg}")
+        # verbose に関わらず常に stderr/stdout に出力してデバッグしやすくする
+        _p(f"  [AI ERROR] {msg}")
+
+    def _dbg(msg: str) -> None:
+        """verbose 不問で常に print するデバッグ専用出力。"""
+        print(f"[generate_comments] {msg}", flush=True)
 
     # ── Step 1: API キー確認 ─────────────────────────────────
     key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     if not key:
-        _log("ANTHROPIC_API_KEY が設定されていないため AI 解説をスキップします")
+        _dbg("ANTHROPIC_API_KEY が設定されていないためスキップ")
         return {}
-    _log(f"API キー確認 OK (末尾6桁: ...{key[-6:]})")
+    _dbg(f"Step1 OK: API キー末尾6桁=...{key[-6:]}")
 
     # ── Step 2: anthropic インポート ─────────────────────────
     try:
         import anthropic as _anthropic
-        _log(f"anthropic バージョン: {_anthropic.__version__}")
-    except ImportError:
-        _err("anthropic パッケージが未インストールです: pip install anthropic")
+        _dbg(f"Step2 OK: anthropic v{_anthropic.__version__}")
+    except ImportError as e:
+        _err(f"anthropic パッケージが未インストールです: {e}")
         return {}
 
     # ── Step 3: 馬データを組み立て ──────────────────────────
-    _log(f"解説生成開始: {race_name or '（レース名未指定）'}")
+    _dbg(f"Step3: データ組み立て開始  race_name={race_name!r}  course_info={course_info!r}")
     horses_data = []
     for _, row in result_df.iterrows():
         num = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "?"
@@ -190,7 +194,7 @@ def generate_comments(
 
         horses_data.append(entry)
 
-    _log(f"送信頭数: {len(horses_data)} 頭")
+    _dbg(f"Step3 OK: {len(horses_data)} 頭分データ組み立て完了")
 
     # ── Step 4: プロンプト生成 ────────────────────────────────
     race_label = race_name or "今回のレース"
@@ -212,11 +216,12 @@ def generate_comments(
         f'例: {{"1": "前走快勝の勢いそのまま。芝適性高くEV良好。", '
         f'"3": "1番人気だがAI確率低く危険。前走凡走で信頼しにくい。"}}\n'
     )
+    _dbg(f"Step4 OK: プロンプト {len(prompt)} 文字")
 
     # ── Step 5: API コール ────────────────────────────────────
     raw = ""
     try:
-        _log(f"Claude API 呼び出し中 (model={MODEL_ID})...")
+        _dbg(f"Step5: API 呼び出し開始 (model={MODEL_ID})")
         client = _anthropic.Anthropic(api_key=key)
         response = client.messages.create(
             model=MODEL_ID,
@@ -226,20 +231,27 @@ def generate_comments(
         raw = next(
             (b.text for b in response.content if b.type == "text"), ""
         ).strip()
-        _log(f"API 応答取得: {len(raw)} 文字 (stop_reason={response.stop_reason})")
+        _dbg(f"Step5 OK: API 応答 {len(raw)} 文字  stop_reason={response.stop_reason}")
+        _dbg(f"  raw preview: {raw[:300]!r}")
 
         # ── Step 6: JSON 解析 ─────────────────────────────────
+        _dbg("Step6: JSON 解析開始")
         json_str = _extract_json_object(raw)
+        _dbg(f"  json_str preview: {json_str[:200]!r}")
         comments = json.loads(json_str)
         result = {str(k): str(v)[:MAX_COMMENT_LEN] for k, v in comments.items()}
-        _log(f"AI 解説生成完了: {len(result)} 頭分")
+        _dbg(f"Step6 OK: {len(result)} 頭分  keys={sorted(result.keys())}")
         return result
 
     except json.JSONDecodeError as e:
-        _err(f"JSON 解析失敗: {e} | raw={raw[:200]!r}")
+        import traceback
+        _err(f"Step6 JSON 解析失敗: {e}")
+        _err(f"  raw (full): {raw!r}")
         return {}
     except Exception as e:
-        _err(f"API 呼び出し失敗: {type(e).__name__}: {e}")
+        import traceback
+        _err(f"Step5 API 呼び出し失敗: {type(e).__name__}: {e}")
+        _err(f"  traceback:\n{traceback.format_exc()}")
         return {}
 
 
