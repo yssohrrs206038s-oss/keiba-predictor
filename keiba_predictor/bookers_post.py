@@ -234,6 +234,10 @@ def post_article(
         "open_body":    FREE_BODY_PROBE,
         "description":  description,
         "price":        price,
+        # 下書き制御フィールド候補（どれが有効か確認）
+        "is_draft":     True,
+        "status":       "draft",
+        "published":    False,
     }
     if cat_env is not None:
         payload["category"] = cat_env
