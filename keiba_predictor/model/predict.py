@@ -172,11 +172,11 @@ def format_prediction(
     sep = "━" * 20
 
     # ── Message 1: 予想 ───────────────────────────────────────
-    header_parts = [race_name] if race_name else ["KEIBA EDGE 予測結果"]
+    race_label = race_name if race_name else "KEIBA EDGE 予測結果"
+    lines1 = [sep, f"🏇 {race_label}"]
     if course_info:
-        header_parts.append(course_info)
-    header = "  ".join(header_parts)
-    lines1 = [sep, f"🏇 {header}", sep]
+        lines1.append(course_info)
+    lines1.append(sep)
 
     # 印: rank 0=◎, 1=○, 2=☆, 3=△, 4=空白
     MARKS = ["◎", "○", "☆", "△", "　"]
