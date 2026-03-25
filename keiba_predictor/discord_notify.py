@@ -256,6 +256,12 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
                     if race_id in seen:
                         continue
 
+                    # JRA競馬場コード（9〜10文字目, 0-indexed [8:10]）が01〜10のみ対象
+                    venue_code = int(race_id[8:10]) if race_id[8:10].isdigit() else 99
+                    if venue_code > 10:
+                        logger.debug(f"    [fallback] {race_id} スキップ（地方競馬 venue={venue_code}）")
+                        continue
+
                     # <a> の最も近い block 祖先（<li>/<div>/<tr>）を検査対象にする
                     container = a
                     for anc in a.parents:
@@ -682,10 +688,6 @@ def run_predict_notify(
             race_df = df_all[df_all["race_id"].astype(str) == race_id].copy()
             if race_df.empty:
                 logger.info(f"  スキップ(データなし): {race_name} ({race_id})")
-                src = "出馬表未確定 / CSVにも" if use_live else "CSVに"
-                send_discord(webhook_url,
-                    f"**{race_name}**  {race_date}\n"
-                    f"※{src}予測データが不足しています")
                 continue
             if "course_type" in race_df.columns and "distance" in race_df.columns:
                 ct  = race_df["course_type"].iloc[0]
