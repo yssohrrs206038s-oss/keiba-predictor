@@ -319,6 +319,10 @@ def _save_cache(cache: dict) -> None:
     PRED_CACHE.parent.mkdir(parents=True, exist_ok=True)
     with open(PRED_CACHE, "w", encoding="utf-8") as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
+    # ── 書き込み確認ログ ──────────────────────────────────────
+    size = PRED_CACHE.stat().st_size
+    keys = list(cache.keys())
+    print(f"[_save_cache] 書き込み完了: {PRED_CACHE.resolve()} ({size}bytes, {len(keys)}件: {keys})", flush=True)
 
 
 def _store_prediction(race_id: str, race_name: str, race_date: str,
@@ -392,7 +396,9 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "dangerous_horses":    dangerous,
         "ai_comments":         ai_comments or {},
     }
+    print(f"[_store_prediction] _save_cache() 呼び出し直前: keys={list(cache.keys())}", flush=True)
     _save_cache(cache)
+    print(f"[_store_prediction] _save_cache() 完了", flush=True)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -678,8 +684,14 @@ def run_predict_notify(
         print(f"[AI解説] {race_name}: {len(ai_comments)}頭分 keys={sorted(ai_comments.keys())}", flush=True)
 
         # キャッシュに保存（ai_comments・course_info を含む）
-        _store_prediction(race_id, race_name, race_date, result,
-                          ai_comments=ai_comments, course_info=course_info)
+        print(f"[_store_prediction] 呼び出し: race_id={race_id}  PRED_CACHE={PRED_CACHE.resolve()}", flush=True)
+        try:
+            _store_prediction(race_id, race_name, race_date, result,
+                              ai_comments=ai_comments, course_info=course_info)
+        except Exception as _e:
+            import traceback
+            print(f"[_store_prediction] ❌ 例外発生: {type(_e).__name__}: {_e}", flush=True)
+            print(traceback.format_exc(), flush=True)
 
         # ② format_prediction() でメッセージを生成（ai_comments・course_info を渡す）
         msg1, msg2 = format_prediction(result, race_name=race_name,
