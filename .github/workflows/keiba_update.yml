@@ -38,10 +38,20 @@ jobs:
           echo "✅ pip install 完了"
 
       # ── データ収集・学習パイプライン ─────────────────────────
-      - name: スクレイピング（2024-01 ～ 2026-12）
+      - name: スクレイピング（直近2ヶ月）
         run: |
-          echo "📅 スクレイピング開始: 2024-01 ～ 2026-12"
-          python -m keiba_predictor.main scrape --start 2024-01 --end 2026-12
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          PREV_MONTH=$((MONTH - 1))
+          PREV_YEAR=$YEAR
+          if [ $PREV_MONTH -le 0 ]; then
+            PREV_MONTH=12
+            PREV_YEAR=$((YEAR - 1))
+          fi
+          START="${PREV_YEAR}-$(printf '%02d' $PREV_MONTH)"
+          END="${YEAR}-$(printf '%02d' $MONTH)"
+          echo "📅 スクレイピング期間: $START ～ $END"
+          python -m keiba_predictor.main scrape --start "$START" --end "$END"
 
       - name: データクリーニング
         run: |
