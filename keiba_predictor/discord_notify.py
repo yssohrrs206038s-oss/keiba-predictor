@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import date, timedelta
 from itertools import combinations
 from pathlib import Path
@@ -75,6 +76,7 @@ def send_discord(webhook_url: str, content: str) -> bool:
                 ok = False
             else:
                 logger.info(f"  Discord 送信OK chunk {idx + 1}/{len(chunks)} ({len(chunk)}文字)")
+                time.sleep(1)
         except requests.RequestException as e:
             logger.error(f"Discord 送信エラー: {e}")
             ok = False
