@@ -694,6 +694,14 @@ def run_predict_notify(
             notified += 1
             logger.info(f"  送信完了: {race_name}")
 
+        # ④ X（Twitter）に予想を投稿
+        try:
+            from keiba_predictor.x_post import post_predict_tweet
+            cache_entry = _load_cache().get(race_id, {})
+            post_predict_tweet(race_name, cache_entry)
+        except Exception as e:
+            logger.warning(f"  [X] 予想投稿エラー: {e}")
+
     send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース送信完了")
 
 
@@ -767,6 +775,13 @@ def run_result_notify(
             record_result(race_id, race_name, race_date, pred, actual_df, payouts)
         except Exception as e:
             logger.warning(f"  [history] 記録失敗 ({race_name}): {e}")
+
+        # X（Twitter）に結果を投稿
+        try:
+            from keiba_predictor.x_post import post_result_tweet
+            post_result_tweet(race_name, actual_df, pred, payouts)
+        except Exception as e:
+            logger.warning(f"  [X] 結果投稿エラー: {e}")
 
     send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース結果送信完了")
 
