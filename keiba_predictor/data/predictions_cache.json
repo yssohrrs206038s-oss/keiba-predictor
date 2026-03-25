@@ -1,1 +1,52 @@
-{}
+{
+  "202506050811": {
+    "race_name": "第70回有馬記念(GI)",
+    "race_date": "2025-06-05",
+    "course_info": "中山 芝2500m",
+    "honmei": {
+      "horse_number": 4,
+      "horse_name": "ミュージアムマイル",
+      "prob": 0.6883836984634399
+    },
+    "taikou": {
+      "horse_number": 9,
+      "horse_name": "ダノンデサイル",
+      "prob": 0.6541630625724792
+    },
+    "ana": {
+      "horse_number": 3,
+      "horse_name": "ジャスティンパレス",
+      "prob": 0.38183513283729553
+    },
+    "predicted_top3_nums": [
+      4,
+      9,
+      5
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 10,
+        "horse_name": "コスモキュランダ",
+        "ev_score": 13.186,
+        "prob": 0.1183,
+        "odds": 111.5
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "アドマイヤテラ",
+        "ev_score": 8.736,
+        "prob": 0.1737,
+        "odds": 50.3
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "サンライズジパング",
+        "ev_score": 8.691,
+        "prob": 0.0709,
+        "odds": 122.5
+      }
+    ],
+    "dangerous_horses": [],
+    "ai_comments": {}
+  }
+}

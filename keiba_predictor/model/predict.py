@@ -351,6 +351,17 @@ def predict_from_csv(
     print(msg1)
     print(msg2)
 
+    # 予想キャッシュに保存（note_report・結果照合で使用）
+    race_date = ""
+    if "race_date" in race_df.columns:
+        try:
+            race_date = str(race_df["race_date"].iloc[0].date())
+        except Exception:
+            race_date = str(race_df["race_date"].iloc[0])
+    from keiba_predictor.discord_notify import _store_prediction
+    _store_prediction(race_id, race_name, race_date, result,
+                      ai_comments=ai_comments, course_info=course_info)
+
     if notify:
         import os
         from keiba_predictor.discord_notify import send_discord
@@ -443,6 +454,12 @@ def predict_live(
     msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments=ai_comments, course_info=course_info)
     print(msg1)
     print(msg2)
+
+    # 予想キャッシュに保存（note_report・結果照合で使用）
+    race_date = shutuba_info.get("race_date", "")
+    from keiba_predictor.discord_notify import _store_prediction
+    _store_prediction(race_id, race_name, race_date, result,
+                      ai_comments=ai_comments, course_info=course_info)
 
     if notify:
         import os
