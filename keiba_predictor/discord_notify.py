@@ -684,13 +684,16 @@ def run_predict_notify(
         _store_prediction(race_id, race_name, race_date, result,
                           ai_comments=ai_comments, course_info=course_info)
 
-        # ② format_prediction() でメッセージを生成（ai_comments を渡す）
-        msg = format_prediction(result, race_name=race_name, ai_comments=ai_comments)
-        print(msg, flush=True)
+        # ② format_prediction() でメッセージを生成（ai_comments・course_info を渡す）
+        msg1, msg2 = format_prediction(result, race_name=race_name,
+                                       ai_comments=ai_comments, course_info=course_info)
+        print(msg1, flush=True)
+        print(msg2, flush=True)
 
-        # ③ 同じ msg を Discord に送信
-        ok = send_discord(webhook_url, msg)
+        # ③ 予想メッセージ → 買い目メッセージの順に Discord に送信
+        ok = send_discord(webhook_url, msg1)
         if ok:
+            send_discord(webhook_url, msg2)
             notified += 1
             logger.info(f"  送信完了: {race_name}")
 
