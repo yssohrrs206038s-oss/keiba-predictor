@@ -2,47 +2,48 @@
   "202610011011": {
     "race_name": "第60回小倉大賞典(GIII)",
     "race_date": "（テスト）",
+    "course_info": "芝1800m",
     "honmei": {
       "horse_number": 16,
       "horse_name": "タガノデュード",
-      "prob": 0.5707165002822876
+      "prob": 0.6496588587760925
     },
     "taikou": {
       "horse_number": 10,
       "horse_name": "ケイアイセナ",
-      "prob": 0.49701988697052
+      "prob": 0.5099244117736816
     },
     "ana": {
       "horse_number": 6,
       "horse_name": "パレハ",
-      "prob": 0.38627153635025024
+      "prob": 0.35778316855430603
     },
     "predicted_top3_nums": [
       16,
       10,
-      9
+      14
     ],
     "ev_top3": [
       {
-        "horse_number": 2,
-        "horse_name": "ビーアストニッシド",
-        "ev_score": 8.916,
-        "prob": 0.0705,
-        "odds": 126.5
-      },
-      {
         "horse_number": 3,
         "horse_name": "エアファンディタ",
-        "ev_score": 8.47,
-        "prob": 0.0836,
+        "ev_score": 13.095,
+        "prob": 0.1293,
         "odds": 101.3
       },
       {
         "horse_number": 8,
         "horse_name": "ラケマーダ",
-        "ev_score": 6.854,
-        "prob": 0.1477,
+        "ev_score": 5.887,
+        "prob": 0.1269,
         "odds": 46.4
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "ショウナンアデイブ",
+        "ev_score": 5.764,
+        "prob": 0.2585,
+        "odds": 22.3
       }
     ],
     "dangerous_horses": [
@@ -50,7 +51,7 @@
         "horse_number": 10,
         "horse_name": "ケイアイセナ",
         "popularity": 1,
-        "prob": 0.497,
+        "prob": 0.5099,
         "reasons": [
           "1〜2番人気だが前走12着"
         ]
@@ -59,20 +60,21 @@
         "horse_number": 14,
         "horse_name": "エラトー",
         "popularity": 3,
-        "prob": 0.3818,
+        "prob": 0.3905,
         "reasons": [
-          "AI確率38%（3番人気以内なのに低い）"
+          "AI確率39%（3番人気以内なのに低い）"
         ]
       },
       {
         "horse_number": 12,
         "horse_name": "センツブラッド",
         "popularity": 2,
-        "prob": 0.2995,
+        "prob": 0.3139,
         "reasons": [
-          "AI確率30%（3番人気以内なのに低い）"
+          "AI確率31%（3番人気以内なのに低い）"
         ]
       }
-    ]
+    ],
+    "ai_comments": {}
   }
 }
