@@ -584,11 +584,14 @@ def run_predict_notify(
     featured_path: Optional[Path] = None,
     model_path: Optional[Path] = None,
     test_race_id: Optional[str] = None,
+    use_live: bool = False,
 ) -> None:
     """週末重賞を予想して Discord に送信し、結果をキャッシュに保存する。
 
     Args:
         test_race_id: 指定時は週末重賞検索をスキップして該当race_idのみテスト送信する。
+        use_live:     True のとき出馬表をリアルタイム取得して予測する。
+                      出馬表未確定・取得失敗の場合は featured_races.csv にフォールバック。
     """
     webhook_url = _resolve_webhook(webhook_url)
 
@@ -651,20 +654,42 @@ def run_predict_notify(
     for race in grade_races:
         race_id, race_name, race_date = race["race_id"], race["race_name"], race["race_date"]
 
-        race_df = df_all[df_all["race_id"].astype(str) == race_id].copy()
-        if race_df.empty:
-            logger.info(f"  スキップ(データなし): {race_name} ({race_id})")
-            send_discord(webhook_url,
-                f"**{race_name}**  {race_date}\n※このレースは予測データが不足しています")
-            continue
-
-        # コース情報
+        # ── ライブ取得を試みる（use_live=True 時） ──────────────
+        race_df = pd.DataFrame()
         course_info = ""
-        if "course_type" in race_df.columns and "distance" in race_df.columns:
-            ct  = race_df["course_type"].iloc[0]
-            dst = race_df["distance"].iloc[0]
-            if pd.notna(ct) and pd.notna(dst):
-                course_info = f"{ct}{int(dst)}m"
+        if use_live:
+            try:
+                from keiba_predictor.scraper.shutuba_scraper import scrape_shutuba
+                from keiba_predictor.features.live_features import build_live_features
+                shutuba_info = scrape_shutuba(race_id)
+                if shutuba_info is None or shutuba_info["horses"].empty:
+                    raise ValueError("出馬表未確定または取得失敗")
+                race_df = build_live_features(shutuba_info)
+                if race_df.empty:
+                    raise ValueError("特徴量生成失敗")
+                course_info = shutuba_info.get("course_info", "")
+                logger.info(f"  ライブ取得成功: {race_name} ({race_id})")
+            except Exception as e:
+                logger.warning(
+                    f"  ライブ取得失敗 ({e}) → CSVにフォールバック: {race_name} ({race_id})"
+                )
+                race_df = pd.DataFrame()  # フォールバックへ
+
+        # ── CSV フォールバック ──────────────────────────────────
+        if race_df.empty:
+            race_df = df_all[df_all["race_id"].astype(str) == race_id].copy()
+            if race_df.empty:
+                logger.info(f"  スキップ(データなし): {race_name} ({race_id})")
+                src = "出馬表未確定 / CSVにも" if use_live else "CSVに"
+                send_discord(webhook_url,
+                    f"**{race_name}**  {race_date}\n"
+                    f"※{src}予測データが不足しています")
+                continue
+            if "course_type" in race_df.columns and "distance" in race_df.columns:
+                ct  = race_df["course_type"].iloc[0]
+                dst = race_df["distance"].iloc[0]
+                if pd.notna(ct) and pd.notna(dst):
+                    course_info = f"{ct}{int(dst)}m"
 
         result = predict_race(race_df, model_bundle)
         result = calc_ev_and_flags(result)

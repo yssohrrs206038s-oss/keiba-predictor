@@ -69,7 +69,7 @@ jobs:
       - name: Discord に予想を送信
         run: |
           echo "📤 Discord 予想通知を送信中..."
-          python -m keiba_predictor.main notify --mode predict --debug
+          python -m keiba_predictor.main notify --mode predict --live --debug
           echo "✅ notify コマンド終了"
 
       # ── 予想キャッシュをリポジトリに保存 ────────────────────

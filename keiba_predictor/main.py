@@ -142,7 +142,11 @@ def cmd_notify(args: argparse.Namespace) -> None:
 
     from keiba_predictor.discord_notify import run_predict_notify, run_result_notify
     if args.mode == "predict":
-        run_predict_notify(webhook_url=webhook, test_race_id=getattr(args, "test_race_id", None))
+        run_predict_notify(
+            webhook_url=webhook,
+            test_race_id=getattr(args, "test_race_id", None),
+            use_live=getattr(args, "live", False),
+        )
     else:
         run_result_notify(webhook_url=webhook)
 
@@ -254,6 +258,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_notify.add_argument(
         "--test-race-id", dest="test_race_id", metavar="RACE_ID",
         help="テスト用race_id（指定時は週末重賞検索をスキップして該当レースのみ送信）"
+    )
+    p_notify.add_argument(
+        "--live", action="store_true",
+        help="出馬表をリアルタイム取得して予測（出馬表未確定時はCSVにフォールバック）"
     )
     p_notify.set_defaults(func=cmd_notify)
 
