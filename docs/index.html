@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KEIBA EDGE | AI競馬予想ダッシュボード</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── リセット・基底 ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold:      #d4af37;
+      --gold-lt:   #f0d060;
+      --gold-dk:   #9a7c1f;
+      --bg:        #0a0a0f;
+      --bg-card:   #13131e;
+      --bg-card2:  #1a1a2a;
+      --border:    #2a2a40;
+      --text:      #e8e8f0;
+      --text-muted:#8888aa;
+      --green:     #2ecc71;
+      --red:       #e74c3c;
+      --blue:      #3498db;
+      --radius:    12px;
+      --shadow:    0 4px 24px rgba(0,0,0,.6);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── ローディング ───────────────────────────────────────── */
+    #loading {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 999;
+      transition: opacity .4s;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 56px; height: 56px;
+      border: 4px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── ヘッダー ───────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #0d0d18 0%, #1a1a2e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .header-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .logo-icon {
+      font-size: 28px;
+      filter: drop-shadow(0 0 8px var(--gold));
+    }
+    .logo-text {
+      font-size: 22px; font-weight: 900; letter-spacing: .04em;
+      background: linear-gradient(90deg, var(--gold), var(--gold-lt));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .logo-sub { font-size: 11px; color: var(--text-muted); letter-spacing: .08em; }
+    #last-updated { font-size: 12px; color: var(--text-muted); }
+
+    /* ── メインレイアウト ────────────────────────────────────── */
+    main {
+      max-width: 1100px; margin: 0 auto;
+      padding: 32px 16px 64px;
+    }
+
+    /* ── セクション見出し ────────────────────────────────────── */
+    .section-title {
+      font-size: 18px; font-weight: 700;
+      color: var(--gold);
+      border-left: 4px solid var(--gold);
+      padding-left: 12px;
+      margin-bottom: 20px;
+      margin-top: 40px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    /* ── スタッツバー ────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      animation: fadeUp .5s ease both;
+    }
+    .stat-value {
+      font-size: 32px; font-weight: 900;
+      background: linear-gradient(135deg, var(--gold), var(--gold-lt));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+    }
+    .stat-label {
+      font-size: 12px; color: var(--text-muted);
+      margin-top: 4px; letter-spacing: .05em;
+    }
+    .stat-card.green .stat-value { background: linear-gradient(135deg,#2ecc71,#a8ff78);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-card.blue  .stat-value { background: linear-gradient(135deg,#3498db,#74b9ff);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    /* ── レースカード ────────────────────────────────────────── */
+    .race-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .race-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      animation: fadeUp .5s ease both;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .race-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(212,175,55,.15);
+    }
+    .race-card-header {
+      background: linear-gradient(135deg, #1a1a2e, #0d0d25);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+    }
+    .race-name { font-size: 15px; font-weight: 700; }
+    .grade-badge {
+      font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      padding: 3px 8px; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+    }
+    .grade-gi   { background: #7c2020; color: #ffc6c6; border: 1px solid #b03030; }
+    .grade-gii  { background: #1e3a5c; color: #b8d9ff; border: 1px solid #2e5a8c; }
+    .grade-giii { background: #1e3d1e; color: #a8ffb8; border: 1px solid #2e5d2e; }
+    .race-meta  { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .race-card-body { padding: 16px; }
+
+    /* ── 予想馬リスト ────────────────────────────────────────── */
+    .horse-list { display: flex; flex-direction: column; gap: 10px; }
+    .horse-item {
+      display: grid;
+      grid-template-columns: 28px 36px 1fr auto;
+      align-items: center; gap: 8px;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .horse-mark {
+      font-size: 18px; font-weight: 900; text-align: center;
+      line-height: 1;
+    }
+    .mark-honmei { color: var(--gold); text-shadow: 0 0 8px var(--gold); }
+    .mark-taikou { color: #74b9ff; }
+    .mark-ana    { color: #a8ffb8; }
+    .horse-num {
+      font-size: 12px; font-weight: 700;
+      background: var(--border); border-radius: 4px;
+      text-align: center; padding: 2px 4px; color: var(--text-muted);
+    }
+    .horse-name { font-size: 14px; font-weight: 600; }
+    .horse-comment { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .horse-stats { text-align: right; }
+    .horse-prob { font-size: 14px; font-weight: 700; color: var(--gold); }
+    .horse-ev   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── 買い目ボックス ──────────────────────────────────────── */
+    .bet-box {
+      margin-top: 14px;
+      background: rgba(212,175,55,.06);
+      border: 1px solid rgba(212,175,55,.25);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .bet-box-title {
+      font-size: 12px; font-weight: 700; color: var(--gold);
+      margin-bottom: 8px; letter-spacing: .05em;
+    }
+    .bet-rows { display: flex; flex-direction: column; gap: 4px; }
+    .bet-row  { font-size: 12px; color: var(--text); }
+    .bet-label{ color: var(--text-muted); margin-right: 6px; font-weight: 600; }
+
+    /* ── アラートバッジ ──────────────────────────────────────── */
+    .alert-section { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .alert-item {
+      font-size: 12px; padding: 7px 10px;
+      border-radius: 6px; display: flex; align-items: flex-start; gap: 6px;
+    }
+    .alert-danger { background: rgba(231,76,60,.12); border: 1px solid rgba(231,76,60,.3);  color: #ff9d9d; }
+    .alert-dark   { background: rgba(212,175,55,.08); border: 1px solid rgba(212,175,55,.25); color: var(--gold-lt); }
+
+    /* ── チャートエリア ──────────────────────────────────────── */
+    .chart-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .chart-wrap canvas { max-height: 280px; }
+
+    /* ── 履歴テーブル ────────────────────────────────────────── */
+    .history-table {
+      width: 100%; border-collapse: collapse;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .history-table th {
+      background: var(--bg-card2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      font-size: 12px; color: var(--text-muted); letter-spacing: .05em;
+      text-align: left;
+    }
+    .history-table td {
+      padding: 10px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tr:hover td { background: rgba(255,255,255,.02); }
+    .hit-icon  { font-size: 15px; }
+    .grade-tag {
+      font-size: 10px; font-weight: 700;
+      padding: 2px 6px; border-radius: 4px;
+    }
+
+    /* ── エラー表示 ──────────────────────────────────────────── */
+    .error-box {
+      background: rgba(231,76,60,.1); border: 1px solid rgba(231,76,60,.4);
+      border-radius: var(--radius); padding: 20px;
+      color: #ff9d9d; font-size: 14px; text-align: center;
+    }
+    .no-data {
+      text-align: center; color: var(--text-muted);
+      padding: 40px 20px; font-size: 14px;
+    }
+
+    /* ── アニメーション ──────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .race-card:nth-child(2) { animation-delay: .05s; }
+    .race-card:nth-child(3) { animation-delay: .10s; }
+    .race-card:nth-child(4) { animation-delay: .15s; }
+    .stat-card:nth-child(2) { animation-delay: .05s; }
+    .stat-card:nth-child(3) { animation-delay: .10s; }
+    .stat-card:nth-child(4) { animation-delay: .15s; }
+
+    /* ── レスポンシブ ────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .header-inner { justify-content: center; text-align: center; }
+      .race-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .history-table th:nth-child(4),
+      .history-table td:nth-child(4) { display: none; }
+    }
+
+    /* ── フッター ────────────────────────────────────────────── */
+    footer {
+      text-align: center; padding: 32px 16px;
+      font-size: 12px; color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--gold-dk); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<!-- ローディング -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div style="color:var(--text-muted);font-size:13px;">データ読み込み中…</div>
+</div>
+
+<!-- ヘッダー -->
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-icon">🏇</span>
+      <div>
+        <div class="logo-text">KEIBA EDGE</div>
+        <div class="logo-sub">AI競馬予想ダッシュボード</div>
+      </div>
+    </div>
+    <div id="last-updated">読み込み中…</div>
+  </div>
+</header>
+
+<!-- メイン -->
+<main>
+
+  <!-- ① 累計実績 -->
+  <div class="section-title">📊 累計実績</div>
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="stat-value" id="s-races">—</div><div class="stat-label">通算レース数</div></div>
+    <div class="stat-card green"><div class="stat-value" id="s-fukusho">—</div><div class="stat-label">複勝的中率</div></div>
+    <div class="stat-card blue"><div class="stat-value" id="s-umaren">—</div><div class="stat-label">馬連的中率</div></div>
+    <div class="stat-card"><div class="stat-value" id="s-roi">—</div><div class="stat-label">累計回収率</div></div>
+    <div class="stat-card green"><div class="stat-value" id="s-streak">—</div><div class="stat-label">連続複勝的中</div></div>
+  </div>
+
+  <!-- ② 回収率推移グラフ -->
+  <div class="section-title">📈 回収率推移</div>
+  <div class="chart-wrap">
+    <canvas id="roi-chart"></canvas>
+  </div>
+
+  <!-- ③ 今週の予想 -->
+  <div class="section-title">🏇 今週の予想</div>
+  <div class="race-grid" id="race-grid">
+    <div class="no-data">予想データを読み込んでいます…</div>
+  </div>
+
+  <!-- ④ 過去レース一覧 -->
+  <div class="section-title">📋 直近レース結果</div>
+  <div style="overflow-x:auto;">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>日付</th>
+          <th>レース名</th>
+          <th>複勝</th>
+          <th>馬連</th>
+          <th>3連複</th>
+          <th>回収率</th>
+        </tr>
+      </thead>
+      <tbody id="history-tbody">
+        <tr><td colspan="6" class="no-data">履歴データを読み込んでいます…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<footer>
+  <p>KEIBA EDGE &copy; 2026 &nbsp;|&nbsp; Powered by XGBoost &amp; Claude AI</p>
+  <p style="margin-top:6px;">本サイトの予想はAIによる分析です。馬券購入は自己責任でお願いします。</p>
+</footer>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   定数
+════════════════════════════════════════════════════════════ */
+const REPO   = 'yssohrrs206038s-oss/keiba-predictor';
+const BRANCH = 'claude/horse-racing-predictor-TLZas';
+const RAW    = `https://raw.githubusercontent.com/${REPO}/${BRANCH}`;
+
+const CACHE_URL  = `${RAW}/keiba_predictor/data/predictions_cache.json`;
+const HIST_URL   = `${RAW}/keiba_predictor/data/results_history.csv`;
+
+/* ════════════════════════════════════════════════════════════
+   ユーティリティ
+════════════════════════════════════════════════════════════ */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function gradeClass(name = '') {
+  if (/G\s*[1Ⅰ]|GI[^I]/i.test(name)) return 'grade-gi';
+  if (/G\s*[2Ⅱ]|GII[^I]/i.test(name)) return 'grade-gii';
+  if (/G\s*[3Ⅲ]|GIII/i.test(name)) return 'grade-giii';
+  return '';
+}
+function gradeLabel(name = '') {
+  if (/G\s*[1Ⅰ]|GI[^I]/i.test(name)) return 'GI';
+  if (/G\s*[2Ⅱ]|GII[^I]/i.test(name)) return 'GII';
+  if (/G\s*[3Ⅲ]|GIII/i.test(name)) return 'GIII';
+  return '';
+}
+
+async function fetchJSON(url) {
+  const r = await fetch(url + '?t=' + Date.now());
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${url}`);
+  return r.json();
+}
+async function fetchText(url) {
+  const r = await fetch(url + '?t=' + Date.now());
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${url}`);
+  return r.text();
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const header = lines[0].split(',').map(h => h.trim().replace(/^\uFEFF/, ''));
+  return lines.slice(1).map(line => {
+    const vals = line.split(',');
+    const obj = {};
+    header.forEach((h, i) => { obj[h] = (vals[i] ?? '').trim(); });
+    return obj;
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   実績セクション
+════════════════════════════════════════════════════════════ */
+function pct(v) { return isNaN(v) ? '—' : (v * 100).toFixed(0) + '%'; }
+
+function renderStats(rows) {
+  if (!rows.length) return;
+
+  const n     = rows.length;
+  const fHits = rows.filter(r => r.fukusho_hit === 'True').length;
+  const uHits = rows.filter(r => r.umaren_hit  === 'True').length;
+  const sHits = rows.filter(r => r.sanrenpuku_hit === 'True').length;
+  const bet   = rows.reduce((s, r) => s + (+r.bet_total   || 0), 0);
+  const ret   = rows.reduce((s, r) => s + (+r.return_total || 0), 0);
+  const roi   = bet > 0 ? ret / bet : 0;
+
+  // 連続複勝的中（最新から遡る）
+  let streak = 0;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (rows[i].fukusho_hit === 'True') streak++;
+    else break;
+  }
+
+  document.getElementById('s-races').textContent   = n + ' 戦';
+  document.getElementById('s-fukusho').textContent = pct(fHits / n);
+  document.getElementById('s-umaren').textContent  = pct(uHits / n);
+  document.getElementById('s-roi').textContent     = pct(roi);
+  document.getElementById('s-streak').textContent  = streak + ' 連続';
+}
+
+/* ════════════════════════════════════════════════════════════
+   回収率推移グラフ
+════════════════════════════════════════════════════════════ */
+function renderChart(rows) {
+  if (!rows.length) return;
+
+  const labels = [];
+  const roiData = [];
+  let cumBet = 0, cumRet = 0;
+
+  rows.forEach(r => {
+    cumBet += +r.bet_total    || 0;
+    cumRet += +r.return_total || 0;
+    const roi = cumBet > 0 ? (cumRet / cumBet * 100) : 0;
+    const d = (r.date || '').slice(0, 10);
+    labels.push(d);
+    roiData.push(+roi.toFixed(1));
+  });
+
+  const ctx = document.getElementById('roi-chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '累計回収率 (%)',
+        data: roiData,
+        borderColor: '#d4af37',
+        backgroundColor: 'rgba(212,175,55,.08)',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#d4af37',
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#8888aa', font: { size: 12 } } },
+        tooltip: {
+          backgroundColor: '#13131e',
+          borderColor: '#2a2a40',
+          borderWidth: 1,
+          titleColor: '#d4af37',
+          bodyColor: '#e8e8f0',
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8888aa', maxRotation: 45, font: { size: 10 } },
+          grid:  { color: 'rgba(255,255,255,.04)' },
+        },
+        y: {
+          ticks: { color: '#8888aa', callback: v => v + '%', font: { size: 11 } },
+          grid:  { color: 'rgba(255,255,255,.04)' },
+          suggestedMin: 50,
+          suggestedMax: 150,
+        }
+      }
+    }
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   予想カード
+════════════════════════════════════════════════════════════ */
+function renderPredictions(cache) {
+  const grid = document.getElementById('race-grid');
+  const entries = Object.entries(cache);
+  if (!entries.length) {
+    grid.innerHTML = '<div class="no-data">今週の予想データがありません</div>';
+    return;
+  }
+
+  grid.innerHTML = entries.map(([raceId, r]) => {
+    const gLabel = gradeLabel(r.race_name);
+    const gClass = gradeClass(r.race_name);
+    const shortName = (r.race_name || raceId).replace(/[（(]G[^）)]*[）)]/g, '').trim();
+    const course = r.course_info ? `<span style="color:var(--text-muted);font-size:11px;margin-left:6px;">${esc(r.course_info)}</span>` : '';
+
+    // 予想馬
+    const roles = [
+      { key: 'honmei', mark: '◎', cls: 'mark-honmei' },
+      { key: 'taikou', mark: '○', cls: 'mark-taikou' },
+      { key: 'ana',    mark: '☆', cls: 'mark-ana'    },
+    ];
+    const evMap = {};
+    (r.ev_top3 || []).forEach(e => { if (e.horse_number != null) evMap[+e.horse_number] = e.ev_score; });
+    const aiComments = r.ai_comments || {};
+
+    const horseHTML = roles.map(({ key, mark, cls }) => {
+      const p = r[key];
+      if (!p || !p.horse_name) return '';
+      const prob = ((p.prob || 0) * 100).toFixed(1);
+      const ev   = evMap[+p.horse_number];
+      const evStr = ev ? `EV${ev.toFixed(2)}` : '';
+      const comment = aiComments[String(p.horse_number)] || '';
+      return `
+        <div class="horse-item">
+          <span class="horse-mark ${cls}">${mark}</span>
+          <span class="horse-num">${esc(p.horse_number)}番</span>
+          <div>
+            <div class="horse-name">${esc(p.horse_name)}</div>
+            ${comment ? `<div class="horse-comment">${esc(comment)}</div>` : ''}
+          </div>
+          <div class="horse-stats">
+            <div class="horse-prob">${prob}%</div>
+            ${evStr ? `<div class="horse-ev">${evStr}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    // 危険馬・穴馬
+    const predNums = new Set((r.predicted_top3_nums || []).map(Number));
+    const dangerous = (r.dangerous_horses || []).slice(0, 2).map(d =>
+      `<div class="alert-item alert-danger">⚠️ <span>危険：${esc(d.horse_number)}番 ${esc(d.horse_name)}（${esc(d.popularity)}番人気）${d.reasons?.length ? ' — ' + esc(d.reasons[0]) : ''}</span></div>`
+    ).join('');
+
+    let anaBakkeHTML = '';
+    for (const e of (r.ev_top3 || [])) {
+      if (e.horse_number != null && !predNums.has(+e.horse_number) && (e.ev_score || 0) >= 1.0) {
+        anaBakkeHTML = `<div class="alert-item alert-dark">★ 穴馬注目：${esc(e.horse_number)}番 ${esc(e.horse_name)} EV${e.ev_score.toFixed(2)}（${(e.odds||0).toFixed(0)}倍）</div>`;
+        break;
+      }
+    }
+
+    // 買い目
+    const pnums = (r.predicted_top3_nums || []).filter(n => n != null);
+    let betHTML = '';
+    if (pnums.length >= 2) {
+      const combos = [];
+      for (let i = 0; i < Math.min(pnums.length, 3); i++)
+        for (let j = i + 1; j < Math.min(pnums.length, 3); j++)
+          combos.push(`${pnums[i]}-${pnums[j]}`);
+      const sanren = pnums.length >= 3 ? `軸${pnums[0]} × ${pnums.slice(1).join('/')}` : '';
+      betHTML = `
+        <div class="bet-box">
+          <div class="bet-box-title">💰 推奨買い目</div>
+          <div class="bet-rows">
+            <div class="bet-row"><span class="bet-label">複勝</span>${pnums[0]}番</div>
+            <div class="bet-row"><span class="bet-label">馬連</span>${combos.join(' / ')}</div>
+            ${sanren ? `<div class="bet-row"><span class="bet-label">3連複</span>${sanren}</div>` : ''}
+          </div>
+        </div>`;
+    }
+
+    return `
+      <div class="race-card">
+        <div class="race-card-header">
+          <div>
+            <div class="race-name">${esc(shortName)}${course}</div>
+            <div class="race-meta">${esc(r.race_date || '')}</div>
+          </div>
+          ${gLabel ? `<span class="grade-badge ${gClass}">${gLabel}</span>` : ''}
+        </div>
+        <div class="race-card-body">
+          <div class="horse-list">${horseHTML}</div>
+          ${(dangerous || anaBakkeHTML) ? `<div class="alert-section">${dangerous}${anaBakkeHTML}</div>` : ''}
+          ${betHTML}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════
+   履歴テーブル
+════════════════════════════════════════════════════════════ */
+function renderHistory(rows) {
+  const tbody = document.getElementById('history-tbody');
+  const recent = rows.slice(-10).reverse();
+  if (!recent.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data">履歴データがありません</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = recent.map(r => {
+    const fHit = r.fukusho_hit === 'True';
+    const uHit = r.umaren_hit  === 'True';
+    const sHit = r.sanrenpuku_hit === 'True';
+    const bet  = +r.bet_total    || 0;
+    const ret  = +r.return_total || 0;
+    const roi  = bet > 0 ? (ret / bet * 100).toFixed(0) + '%' : '—';
+    const roiColor = bet > 0 && ret >= bet ? 'color:var(--green)' : 'color:var(--red)';
+    const gLabel = r.race_grade || '';
+    const gClass = gLabel === 'G1' ? 'grade-gi' : gLabel === 'G2' ? 'grade-gii' : gLabel === 'G3' ? 'grade-giii' : '';
+    const date  = (r.date || '').slice(0, 10);
+    const shortName = (r.race_name || '').replace(/[（(]G[^）)]*[）)]/g, '').trim();
+    return `
+      <tr>
+        <td style="color:var(--text-muted);white-space:nowrap">${esc(date)}</td>
+        <td>
+          ${esc(shortName)}
+          ${gClass ? `<span class="grade-tag ${gClass}" style="margin-left:6px;">${esc(gLabel)}</span>` : ''}
+        </td>
+        <td class="hit-icon">${fHit ? '✅' : '❌'}</td>
+        <td class="hit-icon">${uHit ? '✅' : '❌'}</td>
+        <td class="hit-icon">${sHit ? '✅' : '❌'}</td>
+        <td style="${roiColor};font-weight:700;">${esc(roi)}</td>
+      </tr>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════
+   メイン
+════════════════════════════════════════════════════════════ */
+async function main() {
+  const errors = [];
+
+  // 予想データ
+  try {
+    const cache = await fetchJSON(CACHE_URL);
+    renderPredictions(cache);
+  } catch (e) {
+    errors.push('予想データ: ' + e.message);
+    document.getElementById('race-grid').innerHTML =
+      `<div class="error-box">予想データの取得に失敗しました<br><small>${esc(e.message)}</small></div>`;
+  }
+
+  // 履歴データ
+  try {
+    const csv  = await fetchText(HIST_URL);
+    const rows = parseCSV(csv);
+    renderStats(rows);
+    renderChart(rows);
+    renderHistory(rows);
+  } catch (e) {
+    errors.push('履歴データ: ' + e.message);
+    document.getElementById('history-tbody').innerHTML =
+      `<tr><td colspan="6" class="error-box" style="padding:20px;">履歴データの取得に失敗しました<br><small>${esc(e.message)}</small></td></tr>`;
+  }
+
+  // 最終更新
+  document.getElementById('last-updated').textContent =
+    '最終更新: ' + new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+
+  // ローディング非表示
+  const loading = document.getElementById('loading');
+  loading.classList.add('hidden');
+  setTimeout(() => loading.remove(), 500);
+}
+
+main();
+</script>
+</body>
+</html>
