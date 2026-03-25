@@ -10,8 +10,7 @@ BOOKERS（bookers.tech）への自動記事投稿モジュール。
     Authorization: Token {BOOKERS_API_KEY}
     Body (JSON):
         title       : 記事タイトル
-        free_body   : 無料公開範囲の本文
-        paid_body   : 有料公開範囲の本文
+        text        : 本文（プレーンテキスト）
         description : 記事説明（100文字程度）
         price       : 0=無料, 正整数=有料（円）
         category    : カテゴリID（整数）
@@ -69,21 +68,25 @@ def _build_ev_map(entry: dict) -> dict[int, float]:
     }
 
 
-def _build_free_body(race_id: str, entry: dict) -> str:
-    """無料公開範囲: ヘッダー + 本命馬情報 + 有料コンテンツ案内。"""
+def _build_article_body(race_id: str, entry: dict) -> str:
+    """1レース分の本文を生成する（無料範囲＋有料範囲を1つのtextに）。"""
     race_name   = entry.get("race_name", race_id)
     race_date   = entry.get("race_date", "")
     course_info = entry.get("course_info", "")
+    ai_comments: dict = entry.get("ai_comments", {})
     ev_map      = _build_ev_map(entry)
+    SEP         = "━" * 20
+    lines: list[str] = []
 
-    SEP   = "━" * 20
-    lines = [SEP, f"🏇 {race_name}　AI予想"]
+    # ── ヘッダー ─────────────────────────────────────────────
+    lines += [SEP, f"🏇 {race_name}　AI予想"]
     if course_info:
         lines.append(f"📍 {course_info}　{race_date}")
     elif race_date:
         lines.append(f"📍 {race_date}")
     lines += [SEP, ""]
 
+    # ── 本命馬（無料プレビュー相当） ─────────────────────────
     honmei = entry.get("honmei", {})
     if honmei and honmei.get("horse_name"):
         h_num    = honmei.get("horse_number")
@@ -95,27 +98,9 @@ def _build_free_body(race_id: str, entry: dict) -> str:
             f"◎ 本命： {h_num}番 {h_name}",
             f"AI確率{h_prob:.1f}%{h_ev_str}",
         ]
+    lines += [SEP, ""]
 
-    lines += [
-        "",
-        "続きは有料範囲で公開中↓",
-        "・買い目（複勝・馬連・3連複）",
-        "・穴馬注目",
-        "・AI解説",
-        "",
-        SEP,
-    ]
-    return "\n".join(lines)
-
-
-def _build_paid_body(race_id: str, entry: dict) -> str:
-    """有料公開範囲: 全予想印・穴馬・危険馬・買い目。"""
-    ai_comments: dict = entry.get("ai_comments", {})
-    ev_map = _build_ev_map(entry)
-    SEP    = "━" * 20
-    lines: list[str] = []
-
-    # ── 予想印（◎○☆）─────────────────────────────────────────
+    # ── 全予想印（◎○☆）────────────────────────────────────
     lines.append("【予想印】")
     for role, mark in MARKS.items():
         p = entry.get(role, {})
@@ -210,8 +195,7 @@ def _build_description(entry: dict) -> str:
 
 def post_article(
     title: str,
-    free_body: str,
-    paid_body: str = "",
+    body: str,
     description: str = "",
     price: int = 0,
     api_key: Optional[str] = None,
@@ -220,10 +204,6 @@ def post_article(
 ) -> Optional[str]:
     """
     BOOKERS に記事を投稿する。
-
-    Args:
-        free_body : 無料公開範囲の本文
-        paid_body : 有料公開範囲の本文（price=0 の場合は無視される）
 
     Returns:
         成功時: 記事UUID（str）
@@ -244,8 +224,7 @@ def post_article(
 
     payload: dict = {
         "title":       title,
-        "free_body":   free_body,
-        "paid_body":   paid_body,
+        "text":        body,
         "description": description,
         "price":       price,
     }
@@ -254,13 +233,12 @@ def post_article(
 
     # デバッグ: 送信するpayloadのキーと文字数を出力
     print(f"[BOOKERS] payload keys: {list(payload.keys())}", flush=True)
-    print(f"[BOOKERS] free_body({len(free_body)}文字) paid_body({len(paid_body)}文字)", flush=True)
+    print(f"[BOOKERS] text({len(body)}文字)", flush=True)
 
     if dry_run:
         print(f"[BOOKERS dry-run] POST /api/postcreate/")
         print(f"  title={title!r}  price={price}  category={cat_env!r}")
-        print(f"  free_body:\n{free_body}")
-        print(f"  paid_body:\n{paid_body[:300]}...")
+        print(f"  text:\n{body}")
         return "dry-run-uuid"
 
     url = f"{BOOKERS_API_BASE}/postcreate/"
@@ -319,15 +297,13 @@ def post_predictions(
     success = 0
     for race_id, entry in cache.items():
         race_name = entry.get("race_name", race_id)
-        title     = f"【KEIBA EDGE】{race_name} AI予想"
-        free_body = _build_free_body(race_id, entry)
-        paid_body = _build_paid_body(race_id, entry)
-        desc      = _build_description(entry)
+        title = f"【KEIBA EDGE】{race_name} AI予想"
+        body  = _build_article_body(race_id, entry)
+        desc  = _build_description(entry)
 
         uuid = post_article(
             title=title,
-            free_body=free_body,
-            paid_body=paid_body,
+            body=body,
             description=desc,
             price=price,
             api_key=key,
