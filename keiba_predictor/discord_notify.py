@@ -471,7 +471,7 @@ def _fmt_result(race_name: str, race_date: str,
         actual_top3_nums.append(num)
         mark = pred_num_to_mark.get(num, "　")
         icon = " ✅" if num in predicted_nums else ""
-        lines.append(f"{fp}着 {mark}{name}{icon}")
+        lines.append(f"{fp}着 {mark} {num}番 {name}{icon}")
 
     lines.append(RULE)
 
