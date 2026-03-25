@@ -56,10 +56,12 @@ def _resolve_api_key(api_key: Optional[str] = None) -> str:
 # ══════════════════════════════════════════════════════════════
 
 MARKS = {"honmei": "◎", "taikou": "○", "ana": "☆"}
+# △は predicted_top3_nums[3] があれば使用
+ALL_MARKS = ["◎", "○", "☆", "△", "　"]
 
 
 def _build_article_body(race_id: str, entry: dict) -> str:
-    """1レース分のキャッシュエントリから Markdown 本文を生成する。"""
+    """1レース分のキャッシュエントリからプレーンテキスト本文を生成する。"""
     race_name   = entry.get("race_name", race_id)
     race_date   = entry.get("race_date", "")
     course_info = entry.get("course_info", "")
@@ -70,13 +72,14 @@ def _build_article_body(race_id: str, entry: dict) -> str:
 
     # ── ヘッダー ─────────────────────────────────────────────
     lines += [
-        f"## 🏇 {race_name}",
+        SEP,
+        f"🏇 {race_name}",
     ]
     if course_info:
-        lines.append(f"**{course_info}**　{race_date}")
-    else:
-        lines.append(f"**{race_date}**")
-    lines += ["", SEP, ""]
+        lines.append(f"📍 {course_info}　{race_date}")
+    elif race_date:
+        lines.append(f"📍 {race_date}")
+    lines += [SEP, ""]
 
     # ── ev マップ ─────────────────────────────────────────────
     ev_map: dict[int, float] = {
@@ -84,10 +87,15 @@ def _build_article_body(race_id: str, entry: dict) -> str:
         for e in entry.get("ev_top3", [])
         if e.get("horse_number") is not None
     }
+    # odds マップ
+    odds_map: dict[int, float] = {
+        int(e["horse_number"]): e.get("odds", 0)
+        for e in entry.get("ev_top3", [])
+        if e.get("horse_number") is not None
+    }
 
     # ── 予想印（◎○☆）─────────────────────────────────────────
-    lines.append("### 予想印")
-    lines.append("")
+    lines.append("【予想印】")
     for role, mark in MARKS.items():
         p = entry.get(role, {})
         if not p or not p.get("horse_name"):
@@ -97,25 +105,14 @@ def _build_article_body(race_id: str, entry: dict) -> str:
         prob = p.get("prob", 0) * 100
         ev   = ev_map.get(int(num), 0) if num is not None else 0
         ev_str = f"　EV{ev:.2f}" if ev else ""
-        lines.append(f"**{mark} {num}番 {name}**　AI確率{prob:.1f}%{ev_str}")
+        lines.append(f"{mark} {num}番 {name}　AI確率{prob:.1f}%{ev_str}")
         comment = ai_comments.get(str(num), "")
         if comment:
-            lines.append(f"> 📝 {comment}")
-        lines.append("")
-
-    # ── 買い目 ────────────────────────────────────────────────
-    pred_nums = entry.get("predicted_top3_nums", [])
-    if len(pred_nums) >= 2:
-        lines += ["### 💰 推奨買い目（14点）", ""]
-        axis = pred_nums[0]
-        umaren = pred_nums[1:4]
-        sanren = pred_nums[1:6]
-        lines.append(f"- 複勝（1点）：{axis}番")
-        lines.append(f"- 馬連（3点）：{' / '.join(f'{axis}-{n}' for n in umaren)}")
-        lines.append(f"- 3連複（10点）：軸{axis}番 × {'/'.join(str(n) for n in sanren)}")
-        lines.append("")
+            lines.append(f"  📝 {comment}")
+    lines.append("")
 
     # ── 穴馬 ─────────────────────────────────────────────────
+    pred_nums = entry.get("predicted_top3_nums", [])
     pred_set = set(pred_nums)
     for e in entry.get("ev_top3", []):
         enum = e.get("horse_number")
@@ -124,9 +121,11 @@ def _build_article_body(race_id: str, entry: dict) -> str:
         if e.get("ev_score", 0) >= 1.5:
             ename = e.get("horse_name", "")
             odds  = e.get("odds", 0)
+            pop   = e.get("popularity", "")
+            pop_str = f"{pop}人気 " if pop else ""
             lines += [
-                "### ★ 穴馬注目",
-                f"**{enum}番 {ename}**　EV{e['ev_score']:.2f}（{odds:.0f}倍）",
+                "【穴馬注目】",
+                f"★ {enum}番 {ename}　EV{e['ev_score']:.2f}（{pop_str}{odds:.0f}倍）",
                 "",
             ]
             break
@@ -134,22 +133,32 @@ def _build_article_body(race_id: str, entry: dict) -> str:
     # ── 危険馬 ────────────────────────────────────────────────
     dangerous = entry.get("dangerous_horses", [])
     if dangerous:
-        lines.append("### ⚠️ 危険な人気馬")
-        lines.append("")
+        lines.append("【危険な人気馬】")
         for d in dangerous:
             dnum  = d.get("horse_number", "?")
             dname = d.get("horse_name", "")
             dpop  = d.get("popularity", "?")
-            lines.append(f"- **{dnum}番 {dname}**（{dpop}番人気）")
+            lines.append(f"⚠ {dnum}番 {dname}（{dpop}番人気）")
             for rsn in d.get("reasons", []):
-                lines.append(f"  - {rsn}")
+                lines.append(f"  ・{rsn}")
         lines.append("")
+
+    # ── 買い目 ────────────────────────────────────────────────
+    if len(pred_nums) >= 2:
+        axis   = pred_nums[0]
+        umaren = pred_nums[1:4]
+        sanren = pred_nums[1:6]
+        lines += [
+            "【買い目】",
+            f"■ 複勝：{axis}番",
+            f"■ 馬連：{' / '.join(f'{axis}-{n}' for n in umaren)}",
+            f"■ 3連複：軸{axis}番 × {'/'.join(str(n) for n in sanren)}",
+            "",
+        ]
 
     lines += [
         SEP,
-        "",
-        "---",
-        "*本予想はXGBoostモデルによるAI分析です。投資は自己責任でお願いします。*",
+        "本予想はXGBoostモデルによるAI分析です。投資は自己責任でお願いします。",
         "",
         "#競馬 #AI予想 #KEIBAREDGE",
     ]
