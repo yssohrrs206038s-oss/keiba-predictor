@@ -33,7 +33,7 @@ DATA_DIR   = Path(__file__).parent / "data"
 CACHE_PATH = DATA_DIR / "predictions_cache.json"
 
 BOOKERS_API_BASE = "https://bookers.tech/api"
-DEFAULT_CATEGORY = "horse-racing"   # ← BOOKERS管理画面で確認して変更
+DEFAULT_CATEGORY: Optional[int] = None  # BOOKERS管理画面でIDを確認してBOOKERS_CATEGORY環境変数に整数で設定
 
 
 # ══════════════════════════════════════════════════════════════
@@ -184,7 +184,7 @@ def post_article(
     description: str = "",
     price: int = 0,
     api_key: Optional[str] = None,
-    category: Optional[str] = None,
+    category: Optional[int] = None,
     dry_run: bool = False,
 ) -> Optional[str]:
     """
@@ -199,18 +199,26 @@ def post_article(
         logger.warning("[BOOKERS] BOOKERS_API_KEY が未設定のためスキップ")
         return None
 
-    cat = category or os.environ.get("BOOKERS_CATEGORY", DEFAULT_CATEGORY)
-    payload = {
+    # category は整数 PK が必要。BOOKERS_CATEGORY 環境変数に整数を設定すれば使用。
+    # 未設定時は payload から除外（文字列スラッグを送ると 400 エラーになるため）。
+    cat_env = category if isinstance(category, int) else None
+    if cat_env is None:
+        env_val = os.environ.get("BOOKERS_CATEGORY", "")
+        if env_val.strip().lstrip("-").isdigit():
+            cat_env = int(env_val)
+
+    payload: dict = {
         "title":       title,
         "text":        body,
         "description": description,
         "price":       price,
-        "category":    cat,
     }
+    if cat_env is not None:
+        payload["category"] = cat_env
 
     if dry_run:
         print(f"[BOOKERS dry-run] POST /api/postcreate/")
-        print(f"  title={title!r}  price={price}  category={cat!r}")
+        print(f"  title={title!r}  price={price}  category={cat_env!r}")
         print(f"  body({len(body)}文字):\n{body[:200]}...")
         return "dry-run-uuid"
 
