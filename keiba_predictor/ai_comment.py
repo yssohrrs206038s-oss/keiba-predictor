@@ -434,8 +434,13 @@ def flush_reports() -> None:
         print(f"{_FENCE}\n", flush=True)
 
         # 自分宛 Discord チャンネルへ送信（DISCORD_REPORT_WEBHOOK_URL が設定されている場合）
-        report_url = os.environ.get("DISCORD_REPORT_WEBHOOK_URL", "")
-        if report_url:
+        report_url = os.environ.get("DISCORD_REPORT_WEBHOOK_URL")
+        if report_url is None:
+            print("[flush_reports] DISCORD_REPORT_WEBHOOK_URL = None（未設定）→ Discord送信スキップ", flush=True)
+        elif report_url == "":
+            print("[flush_reports] DISCORD_REPORT_WEBHOOK_URL = ''（空文字）→ Discord送信スキップ", flush=True)
+        else:
+            print(f"[flush_reports] DISCORD_REPORT_WEBHOOK_URL = {report_url[:10]}... → Discord送信開始", flush=True)
             _send_report_to_discord(report_url, race_name, text)
 
     _pending_reports.clear()
@@ -461,9 +466,19 @@ def _send_report_to_discord(webhook_url: str, race_name: str, text: str) -> None
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 status = resp.status
+            ok = status in (200, 204)
+            print(
+                f"[flush_reports] Discord report送信 chunk {idx+1}/{len(chunks)}: "
+                f"status={status} {'✅ 成功' if ok else '⚠️ 予期しないステータス'}",
+                flush=True,
+            )
         except Exception as exc:
-            status = str(exc)
-        print(f"[flush_reports] Discord report送信 chunk {idx+1}/{len(chunks)}: {status}", flush=True)
+            print(
+                f"[flush_reports] Discord report送信 chunk {idx+1}/{len(chunks)}: "
+                f"❌ 失敗 {type(exc).__name__}: {exc}",
+                flush=True,
+            )
+            print(traceback.format_exc(), flush=True)
 
 
 # ══════════════════════════════════════════════════════════════
