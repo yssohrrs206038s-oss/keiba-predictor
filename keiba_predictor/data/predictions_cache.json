@@ -48,5 +48,55 @@
     ],
     "dangerous_horses": [],
     "ai_comments": {}
+  },
+  "202505021211": {
+    "race_name": "第92回東京優駿(GI)",
+    "race_date": "2025-05-02",
+    "course_info": "東京 芝2400m",
+    "honmei": {
+      "horse_number": 13,
+      "horse_name": "クロワデュノール",
+      "prob": 0.8217821717262268
+    },
+    "taikou": {
+      "horse_number": 7,
+      "horse_name": "ミュージアムマイル",
+      "prob": 0.706605076789856
+    },
+    "ana": {
+      "horse_number": 3,
+      "horse_name": "エリキング",
+      "prob": 0.5345764756202698
+    },
+    "predicted_top3_nums": [
+      13,
+      7,
+      17
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 10,
+        "horse_name": "トッピボーン",
+        "ev_score": 14.493,
+        "prob": 0.1717,
+        "odds": 84.4
+      },
+      {
+        "horse_number": 12,
+        "horse_name": "カラマティアノス",
+        "ev_score": 13.911,
+        "prob": 0.1101,
+        "odds": 126.4
+      },
+      {
+        "horse_number": 1,
+        "horse_name": "リラエンブレム",
+        "ev_score": 9.179,
+        "prob": 0.1194,
+        "odds": 76.9
+      }
+    ],
+    "dangerous_horses": [],
+    "ai_comments": {}
   }
 }
