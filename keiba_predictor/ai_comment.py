@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 MODEL_ID = "gemini-1.5-flash"
 
 # ── 1頭あたりの最大解説文字数（Discord の行幅に合わせて調整） ──
-MAX_COMMENT_LEN = 40
+MAX_COMMENT_LEN = 50
 
 
 # ══════════════════════════════════════════════════════════════
@@ -148,16 +148,36 @@ def generate_comments(
 
     # ── Step 3: 馬データを組み立て ──────────────────────────
     _dbg(f"Step3: データ組み立て開始  race_name={race_name!r}  course_info={course_info!r}")
+
+    # prob_top3 降順でランク付け（1位=◎🔥 2位=○✨ 3位=▲⚡）
+    sorted_idx = result_df["prob_top3"].rank(ascending=False, method="first")
+    # EV上位で予想印外の馬を「穴」扱いにする閾値
+    EV_ANA_THRESHOLD = 2.0
+
     horses_data = []
     for _, row in result_df.iterrows():
         num = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "?"
+        rank = int(sorted_idx.loc[row.name]) if row.name in sorted_idx.index else 99
+        ev_val = float(row["ev_score"]) if pd.notna(row.get("ev_score")) else 0.0
+
+        # 印・絵文字をPython側で確定してAIに渡す
+        if rank == 1:
+            mark = "◎🔥"
+        elif rank == 2:
+            mark = "○✨"
+        elif rank == 3:
+            mark = "▲⚡"
+        elif rank > 3 and ev_val >= EV_ANA_THRESHOLD:
+            mark = "穴🚀"
+        else:
+            mark = ""
+
         entry: dict = {
             "馬番": num,
             "馬名": str(row.get("horse_name", "不明"))[:12],
+            "AI印": mark,          # ← AIはこの印を解説の先頭に必ず付ける
             "AI3着以内確率": f"{row['prob_top3'] * 100:.1f}%",
-            "EVスコア": (
-                f"{row['ev_score']:.2f}" if pd.notna(row.get("ev_score")) else "N/A"
-            ),
+            "EVスコア": f"{ev_val:.2f}" if ev_val else "N/A",
             "人気": str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "?",
             "オッズ": str(row.get("odds", "?")),
         }
@@ -205,17 +225,20 @@ def generate_comments(
         f"各馬のデータ（JSON配列）:\n"
         f"{json.dumps(horses_data, ensure_ascii=False, indent=2)}\n\n"
         f"上記データを基に、各馬について競馬ファン向けの自然な日本語解説を生成してください。\n\n"
+        f"【重要ルール】\n"
+        f"各馬のデータに「AI印」フィールドがあります。解説テキストの先頭に必ずその印をそのまま付けること。\n"
+        f"（例: AI印が '◎🔥' なら解説は '◎🔥 ...' で始める。空文字の場合は印なし）\n\n"
         f"【解説の必須要素】\n"
         f"統計学的なXGBoostスコアに加え、プロの相馬眼を持つ視点で以下を必ず含めること：\n"
-        f"1. 【展開】位置取り（逃げ・先行・差し・追い込み）とペース適性を1行で独自に加筆\n"
-        f"2. 【血統】コース適性・距離適性を血統背景から1行で独自に加筆\n"
-        f"3. EVスコアが高い穴馬は激走理由を強調して推奨\n"
+        f"1. 【展開】位置取り（逃げ・先行・差し・追い込み）とペース適性を簡潔に\n"
+        f"2. 【血統】コース適性・距離適性を血統背景から簡潔に\n"
+        f"3. 穴🚀の馬はEVが高い激走理由を強調して推奨\n"
         f"4. 人気でも危険な馬には忖度なしの毒舌で懸念を明記\n\n"
         f"出力形式:\n"
         f"- 必ず以下のJSONオブジェクトのみを返す（コードブロック不要、JSON以外の文字列不要）\n"
         f"- キー: 馬番（文字列）、値: 解説テキスト（最大{MAX_COMMENT_LEN}文字、改行なし）\n\n"
-        f'例: {{"1": "XGBoost上位。先行有利展開で前残り濃厚。サンデー系で中距離◎。EV高く穴候補。", '
-        f'"3": "1番人気だが差し脚質で前残り展開は厳しい。母父ダート寄りで芝は疑問。消し推奨。"}}\n'
+        f'例: {{"1": "◎🔥 前走快勝の勢い。先行策が叶えば前残り濃厚。父譲りの持続力あり。", '
+        f'"3": "○✨ 差し届かず展開不向き。母父ダート寄りで芝は疑問。消し推奨。"}}\n'
     )
     _dbg(f"Step4 OK: プロンプト {len(prompt)} 文字")
 
