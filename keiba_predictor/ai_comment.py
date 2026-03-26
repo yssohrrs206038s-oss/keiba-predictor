@@ -1,5 +1,5 @@
 """
-Gemini API を使った予測結果の自然言語解説生成モジュール。
+Gemini API（google-genai SDK）を使った予測結果の自然言語解説生成モジュール。
 
 GEMINI_API_KEY 未設定時はスキップして空 dict を返す（グレースフルデグラデーション）。
 
@@ -27,7 +27,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 # ── 使用するモデル ─────────────────────────────────────────────
-MODEL_ID = "gemini-1.5-flash"
+MODEL_ID = "gemini-2.0-flash-exp"
 
 # ── 1頭あたりの最大解説文字数（Discord の行幅に合わせて調整） ──
 MAX_COMMENT_LEN = 40
@@ -136,12 +136,12 @@ def generate_comments(
         return {}
     _dbg(f"Step1 OK: API キー末尾6桁=...{key[-6:]}")
 
-    # ── Step 2: google-generativeai インポート ───────────────
+    # ── Step 2: google-genai インポート ──────────────────────
     try:
-        import google.generativeai as genai
-        _dbg(f"Step2 OK: google-generativeai インポート成功")
+        from google import genai
+        _dbg(f"Step2 OK: google-genai インポート成功")
     except ImportError as e:
-        _err(f"google-generativeai パッケージが未インストールです: {e}")
+        _err(f"google-genai パッケージが未インストールです: {e}")
         return {}
 
     # ── Step 3: 馬データを組み立て ──────────────────────────
@@ -218,9 +218,11 @@ def generate_comments(
     raw = ""
     try:
         _dbg(f"Step5: API 呼び出し開始 (model={MODEL_ID})")
-        genai.configure(api_key=key)
-        model = genai.GenerativeModel(MODEL_ID)
-        response = model.generate_content(prompt)
+        client = genai.Client(api_key=key)
+        response = client.models.generate_content(
+            model=MODEL_ID,
+            contents=prompt,
+        )
         raw = response.text.strip()
         _dbg(f"Step5 OK: API 応答 {len(raw)} 文字")
         _dbg(f"  raw preview: {raw[:300]!r}")
@@ -317,22 +319,24 @@ def _run_test() -> None:
         _p("Set the key and re-run:  python -m keiba_predictor.ai_comment --test")
         sys.exit(1)
 
-    # ── google-generativeai インポート確認 ────────────────────
+    # ── google-genai インポート確認 ───────────────────────────
     try:
-        import google.generativeai as genai
-        _p(f"[OK] google-generativeai : インポート成功")
+        from google import genai
+        _p(f"[OK] google-genai : インポート成功")
     except ImportError as e:
-        _p(f"[NG] google-generativeai import failed: {e}")
-        _p("     Run: pip install google-generativeai")
+        _p(f"[NG] google-genai import failed: {e}")
+        _p("     Run: pip install google-genai")
         sys.exit(1)
 
     # ── Step 1: API 疎通確認（最小コール）────────────────────
     _p()
     _p("[Step 1] API connectivity check ...")
     try:
-        genai.configure(api_key=key)
-        model = genai.GenerativeModel(MODEL_ID)
-        resp = model.generate_content("Reply with just: OK")
+        client = genai.Client(api_key=key)
+        resp = client.models.generate_content(
+            model=MODEL_ID,
+            contents="Reply with just: OK",
+        )
         reply = resp.text.strip()
         _p(f"  [OK] API response: {reply!r}")
     except Exception as e:
