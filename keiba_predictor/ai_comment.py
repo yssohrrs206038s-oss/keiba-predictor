@@ -257,10 +257,18 @@ def generate_comments(
             else:
                 time.sleep(2)  # 初回も念のため2秒待機
             _dbg(f"Step5: API 呼び出し (attempt={attempt+1}/3, model={MODEL_ID!r})")
-            response = client.models.generate_content(
-                model=MODEL_ID,
-                contents=prompt,
-            )
+            print("### Gemini API Call Started ###", flush=True)
+            print(f"  model={MODEL_ID!r}  attempt={attempt+1}/3  prompt_len={len(prompt)}", flush=True)
+            try:
+                response = client.models.generate_content(
+                    model=MODEL_ID,
+                    contents=prompt,
+                )
+                print(f"### Gemini Response Length: {len(response.text)} characters ###", flush=True)
+            except Exception as api_exc:
+                print(f"### Gemini API Error: {type(api_exc).__name__}: {api_exc} ###", flush=True)
+                print(traceback.format_exc(), flush=True)
+                raise  # 上位の except に委譲
             raw = response.text.strip()
             _dbg(f"Step5 OK: API 応答 {len(raw)} 文字")
             _dbg(f"  raw preview: {raw[:300]!r}")
