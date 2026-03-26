@@ -553,18 +553,43 @@ def _build_race_discord_message(race_id: str, r: dict) -> str:
 
     # 買い目
     if len(pnums) >= 2:
-        hon = pnums[0]
-        umaren = " / ".join(f"{a}-{b}" for a, b in _comb(pnums[:3], 2))
+        SEP2 = "━" * 20
+        hon      = pnums[0]
+        # 馬番 → 馬名マップ（honmei/taikou/ana から構築）
+        name_map: dict[int, str] = {}
+        for p in [honmei, taikou, ana]:
+            if p and p.get("horse_number") is not None:
+                name_map[int(p["horse_number"])] = p.get("horse_name", "")
+        hon_name = name_map.get(hon, "")
+
+        umaren_pairs = list(_comb(pnums[:3], 2))
+        umaren_str   = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
+
+        total = 1 + len(umaren_pairs)  # 複勝1 + 馬連N
         lines += [
             "",
-            "【買い目】",
-            f"■ 複勝：{hon}番",
-            f"■ 馬連：{umaren}",
+            SEP2,
+            f"💰 {race_name}  買い目",
+            SEP2,
+            f"■ 複勝（1点）",
+            f"　{hon}番 {hon_name}",
+            f"■ 馬連（{len(umaren_pairs)}点）",
+            f"　{umaren_str}",
         ]
         if len(pnums) >= 3:
-            jiku   = pnums[0]
-            others = "/".join(str(n) for n in pnums[1:3])
-            lines.append(f"■ 3連複：軸{jiku}番 × {others}")
+            others    = " / ".join(str(n) for n in pnums[1:3])
+            sanren_pt = len(pnums[1:3])
+            total    += sanren_pt
+            lines += [
+                f"■ 3連複（{sanren_pt}点）",
+                f"　軸 {hon}番",
+                f"　× {others}",
+            ]
+        lines += [
+            SEP2,
+            f"合計 {total}点",
+            SEP2,
+        ]
 
     lines += [
         "",
