@@ -342,7 +342,7 @@ def predict_from_csv(
     course_info = _build_course_info(race_id, race_df)
     print(f"[DEBUG] race_id={race_id}  venue_code={str(race_id)[4:6]!r}  course_info={course_info!r}", flush=True)
 
-    from keiba_predictor.ai_comment import generate_comments
+    from keiba_predictor.ai_comment import generate_comments, generate_report_text, save_report
     ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
     print(f"[DEBUG] ai_comments: {len(ai_comments)} 頭分  keys={sorted(ai_comments.keys())}", flush=True)
 
@@ -350,6 +350,12 @@ def predict_from_csv(
                                    course_info=course_info)
     print(msg1)
     print(msg2)
+
+    # note / BOOKERS 投稿用レポートをファイルに保存（Discord通知とは独立）
+    if ai_comments:
+        report = generate_report_text(ai_comments, race_name=race_name,
+                                      course_info=course_info, result_df=result)
+        save_report(report, race_name)
 
     # 予想キャッシュに保存（note_report・結果照合で使用）
     race_date = ""
@@ -448,12 +454,18 @@ def predict_live(
     race_name   = shutuba_info["race_name"]
     course_info = shutuba_info["course_info"]
 
-    from keiba_predictor.ai_comment import generate_comments
+    from keiba_predictor.ai_comment import generate_comments, generate_report_text, save_report
     ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
 
     msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments=ai_comments, course_info=course_info)
     print(msg1)
     print(msg2)
+
+    # note / BOOKERS 投稿用レポートをファイルに保存（Discord通知とは独立）
+    if ai_comments:
+        report = generate_report_text(ai_comments, race_name=race_name,
+                                      course_info=course_info, result_df=result)
+        save_report(report, race_name)
 
     # 予想キャッシュに保存（note_report・結果照合で使用）
     race_date = shutuba_info.get("race_date", "")

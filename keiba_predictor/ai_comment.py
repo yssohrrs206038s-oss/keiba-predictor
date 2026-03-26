@@ -299,6 +299,97 @@ def generate_comments(
 
 
 # ══════════════════════════════════════════════════════════════
+# レポートテキスト生成（note / BOOKERS 投稿用）
+# ══════════════════════════════════════════════════════════════
+
+def generate_report_text(
+    comments_dict: dict[str, str],
+    race_name: str = "",
+    course_info: str = "",
+    result_df: "Optional[pd.DataFrame]" = None,
+) -> str:
+    """
+    AI解説コメントから note / BOOKERS 投稿用のレポートテキストを生成する。
+
+    Args:
+        comments_dict : generate_comments() の返り値 {"馬番": "解説テキスト"}
+        race_name     : 表示用レース名
+        course_info   : コース情報（例: "中山 芝2500m"）
+        result_df     : predict_race() 済みの DataFrame（馬名・印の取得に使用）
+
+    Returns:
+        整形済みレポート文字列
+    """
+    SEP = "─" * 30
+    header = race_name or "AI予想レポート"
+    course_str = f"（{course_info}）" if course_info else ""
+
+    lines = [
+        SEP,
+        f"【AI予想】{header}{course_str}",
+        SEP,
+        "",
+    ]
+
+    # 馬番→馬名マップを result_df から構築
+    name_map: dict[str, str] = {}
+    if result_df is not None and not result_df.empty:
+        for _, row in result_df.iterrows():
+            try:
+                num = str(int(row["horse_number"]))
+                name_map[num] = str(row.get("horse_name", ""))
+            except Exception:
+                pass
+
+    # 馬番の数値順に並べて出力
+    def _sort_key(k: str) -> int:
+        try:
+            return int(k)
+        except ValueError:
+            return 999
+
+    for num in sorted(comments_dict.keys(), key=_sort_key):
+        comment = comments_dict[num]
+        horse_name = name_map.get(num, f"{num}番")
+        # コメント先頭の印（◎🔥 など）を取り出して行頭に置く
+        # 残りをインデントして表示
+        lines.append(f"{horse_name}")
+        lines.append(f"  {comment}")
+        lines.append("")
+
+    lines += [
+        SEP,
+        "【AI解析のポイント】",
+        "本レースはXGBoostによる高精度確率と、Gemini 1.5 Flashによる展開・血統分析を",
+        "融合した独自の期待値算出を行っています。",
+        SEP,
+    ]
+    return "\n".join(lines)
+
+
+def save_report(text: str, race_name: str) -> "Optional[Path]":
+    """
+    レポートテキストを outputs/report_{race_name}.txt に保存する。
+
+    Returns:
+        保存したファイルパス。失敗時は None。
+    """
+    from pathlib import Path
+    # ファイル名に使えない文字を除去
+    safe_name = re.sub(r'[\\/:*?"<>|]', "_", race_name).strip() or "unknown"
+    out_dir = Path(__file__).parent.parent / "outputs"
+    out_dir.mkdir(exist_ok=True)
+    out_path = out_dir / f"report_{safe_name}.txt"
+    try:
+        out_path.write_text(text, encoding="utf-8")
+        print(f"[save_report] レポート保存: {out_path}", flush=True)
+        return out_path
+    except Exception as e:
+        print(f"[save_report] 保存失敗: {e}", flush=True)
+        return None
+
+
+# ══════════════════════════════════════════════════════════════
 # CLI テスト: python -m keiba_predictor.ai_comment --test
 # ══════════════════════════════════════════════════════════════
 
