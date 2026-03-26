@@ -370,26 +370,30 @@ def generate_report_text(
         SEP,
     ]
     text = "\n".join(lines)
-
-    # noteへのコピペ用に全文を stdout に出力
-    print("\n" + "=" * 50, flush=True)
-    print("【note / BOOKERS コピペ用レポート】", flush=True)
-    print("=" * 50, flush=True)
-    print(text, flush=True)
-    print("=" * 50 + "\n", flush=True)
-
     return text
 
 
 def save_report(text: str, race_name: str) -> "Optional[Path]":
     """
-    レポートテキストを outputs/report_{race_name}.txt に保存する。
+    レポートテキストを outputs/report_{race_name}.txt に保存し、
+    全文を標準出力に出力する（ログ確認・コピペ用）。
 
     Returns:
         保存したファイルパス。失敗時は None。
     """
     from pathlib import Path
-    # ファイル名に使えない文字を除去
+    _BORDER = "#" * 50
+
+    # ── 全文を stdout に出力（区切り線付き） ──────────────────
+    print(f"\n{_BORDER}", flush=True)
+    print("### NOTE REPORT START ###", flush=True)
+    print(_BORDER, flush=True)
+    print(text, flush=True)
+    print(_BORDER, flush=True)
+    print("### NOTE REPORT END ###", flush=True)
+    print(f"{_BORDER}\n", flush=True)
+
+    # ── ファイル保存 ─────────────────────────────────────────
     safe_name = re.sub(r'[\\/:*?"<>|]', "_", race_name).strip() or "unknown"
     out_dir = Path(__file__).parent.parent / "outputs"
     out_dir.mkdir(exist_ok=True)
