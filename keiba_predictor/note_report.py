@@ -457,46 +457,126 @@ def generate_note_report(output_path: Optional[Path] = None) -> str:
     output_path.write_text(report, encoding="utf-8")
     logger.info(f"note レポート保存: {output_path}")
 
-    # Discord 送信（完全版レポートをそのまま送信）
-    send_note_report_to_discord(report)
+    # Discord 送信（レースごとに個別メッセージ）
+    send_discord_per_race(cache)
 
     return report
 
 
 # ── Discord 送信 ──────────────────────────────────────────────────────
 
-def _build_discord_message(cache: dict, weekend_label: str, c_stats: dict, streak: int) -> str:
-    """Discord 送信用のサマリメッセージを組み立てる。"""
-    SEP = "━" * 20
-    lines = ["📝 今週のKEIBA EDGE週次レポート", SEP]
+def _build_race_discord_message(race_id: str, r: dict) -> str:
+    """レース1件分の Discord 送信メッセージを組み立てる。"""
+    from itertools import combinations as _comb
 
-    for race_id, r in cache.items():
-        race_name = r.get("race_name", race_id)
-        honmei    = r.get("honmei", {})
-        taikou    = r.get("taikou", {})
-        line = f"🏇 {race_name}"
-        if honmei and honmei.get("horse_name"):
-            line += f"  ◎{honmei['horse_number']}番{honmei['horse_name']}"
-        if taikou and taikou.get("horse_name"):
-            line += f"  ○{taikou['horse_number']}番{taikou['horse_name']}"
-        lines.append(line)
+    SEP = "---"
+    race_name   = r.get("race_name", race_id)
+    race_date   = r.get("race_date", "")
+    course_info = r.get("course_info", "")
+    grade       = _grade_from_name(race_name)
+    # レース名に既にグレード表記が含まれている場合は追加しない
+    grade_str   = f"（{grade}）" if grade and grade not in race_name else ""
 
-    lines.append(SEP)
+    # course_info "中山 芝2500m" → venue / course に分割
+    parts = course_info.split(" ", 1) if course_info else []
+    venue  = parts[0] if parts else _venue_from_race_id(race_id)
+    course = parts[1] if len(parts) > 1 else course_info
 
-    if streak >= 1:
-        lines.append(f"✅ 重賞{streak}連続複勝的中")
-    if c_stats.get("n_races", 0) > 0:
+    # EV マップ（馬番 → ev_score, odds, popularity）
+    ev_map: dict[int, dict] = {}
+    for e in r.get("ev_top3", []):
+        num = e.get("horse_number")
+        if num is not None:
+            ev_map[int(num)] = e
+
+    def _prob_str(p: dict) -> str:
+        prob = p.get("prob", 0) * 100
+        num  = p.get("horse_number")
+        ev   = ev_map.get(int(num), {}).get("ev_score", 0) if num is not None else 0
+        ev_str = f" EV{ev:.2f}" if ev else ""
+        return f"AI確率{prob:.1f}%{ev_str}"
+
+    honmei = r.get("honmei", {})
+    taikou = r.get("taikou", {})
+    ana    = r.get("ana", {})
+
+    # △ 連下: predicted_top3_nums の4番目 or honmei/taikou/ana 以外の最初
+    pnums    = [n for n in r.get("predicted_top3_nums", []) if n is not None]
+    top3_set = {
+        honmei.get("horse_number"),
+        taikou.get("horse_number"),
+        ana.get("horse_number"),
+    } - {None}
+    renka_num = next((n for n in pnums if n not in top3_set), None)
+
+    # 穴馬: ev_top3 の中で predicted_top3_nums 外かつ EV ≥ 1.0 の最上位
+    pred_set = set(pnums)
+    ana_horse = None
+    for e in r.get("ev_top3", []):
+        enum = e.get("horse_number")
+        if enum and int(enum) not in pred_set and e.get("ev_score", 0) >= 1.0:
+            ana_horse = e
+            break
+
+    lines = [
+        SEP,
+        f"📝 【{race_date}】{race_name}{grade_str} AI予想レポート",
+        SEP,
+        "",
+        "本日のメインレースのAI分析が完了しました。",
+        "データに基づいた客観的な視点で勝ち馬を炙り出します。",
+        "",
+        "【レース概要】",
+        f"📅 開催日：{race_date}",
+        f"📍 場所：{venue}",
+        f"🏁 条件：{course}",
+        "",
+        "【AI予想印】",
+    ]
+
+    if honmei and honmei.get("horse_name"):
+        lines.append(f"◎ 本命：{honmei['horse_number']}番 {honmei['horse_name']}（{_prob_str(honmei)}）")
+    if taikou and taikou.get("horse_name"):
+        lines.append(f"○ 対抗：{taikou['horse_number']}番 {taikou['horse_name']}（{_prob_str(taikou)}）")
+    if ana and ana.get("horse_name"):
+        lines.append(f"▲ 単穴：{ana['horse_number']}番 {ana['horse_name']}（{_prob_str(ana)}）")
+    if renka_num:
+        lines.append(f"△ 連下：{renka_num}番")
+    if ana_horse:
+        ev_val = ana_horse.get("ev_score", 0)
+        pop    = ana_horse.get("popularity", "?")
+        odds   = ana_horse.get("odds", 0)
         lines.append(
-            f"📈 複勝的中率：{c_stats['fukusho_rate'] * 100:.0f}%"
-            f"  💰 回収率：{c_stats['roi'] * 100:.0f}%"
+            f"★ 穴馬：{ana_horse['horse_number']}番 {ana_horse.get('horse_name', '')}"
+            f"（EV{ev_val:.2f} {pop}人気 {odds:.0f}倍）"
         )
 
-    lines += [SEP, "📊 詳細はnoteで公開予定"]
+    # 買い目
+    if len(pnums) >= 2:
+        hon = pnums[0]
+        umaren = " / ".join(f"{a}-{b}" for a, b in _comb(pnums[:3], 2))
+        lines += [
+            "",
+            "【買い目】",
+            f"■ 複勝：{hon}番",
+            f"■ 馬連：{umaren}",
+        ]
+        if len(pnums) >= 3:
+            jiku   = pnums[0]
+            others = "/".join(str(n) for n in pnums[1:3])
+            lines.append(f"■ 3連複：軸{jiku}番 × {others}")
+
+    lines += [
+        "",
+        SEP,
+        "⚠️ 予想はAIによる分析です。馬券購入は自己責任でお願いします。",
+        SEP,
+    ]
     return "\n".join(lines)
 
 
-def send_note_report_to_discord(message: str) -> None:
-    """DISCORD_REPORT_WEBHOOK_URL にメッセージを送信する。discord_notify.send_discord() を使用。"""
+def send_discord_per_race(cache: dict) -> None:
+    """レースごとに個別メッセージを DISCORD_REPORT_WEBHOOK_URL に送信する。"""
     url = os.environ.get("DISCORD_REPORT_WEBHOOK_URL")
     if url is None:
         print("[note_report] DISCORD_REPORT_WEBHOOK_URL = None（未設定）→ Discord送信スキップ", flush=True)
@@ -507,8 +587,12 @@ def send_note_report_to_discord(message: str) -> None:
 
     print(f"[note_report] Sending to direct URL: {url[:10]}...", flush=True)
     from keiba_predictor.discord_notify import send_discord
-    ok = send_discord(url, message)
-    print(f"[note_report] Discord送信{'✅ 成功' if ok else '❌ 失敗'}", flush=True)
+
+    for race_id, r in cache.items():
+        race_name = r.get("race_name", race_id)
+        msg = _build_race_discord_message(race_id, r)
+        ok  = send_discord(url, msg)
+        print(f"[note_report] {race_name} Discord送信{'✅ 成功' if ok else '❌ 失敗'}", flush=True)
 
 
 # ── エントリポイント ──────────────────────────────────────────────────
