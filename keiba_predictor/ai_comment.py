@@ -220,6 +220,8 @@ def generate_comments(
     _dbg(f"Step4 OK: プロンプト {len(prompt)} 文字")
 
     # ── Step 5: API コール（429対策: sleep + 最大3回リトライ）────
+    # MODEL_ID は "gemini-1.5-flash" 形式（プレフィックス不要）
+    # google-genai SDK が内部で "models/gemini-1.5-flash" に解決する
     raw = ""
     client = genai.Client(api_key=key)
     last_exc: Exception = Exception("未実行")
@@ -231,7 +233,7 @@ def generate_comments(
                 time.sleep(wait)
             else:
                 time.sleep(2)  # 初回も念のため2秒待機
-            _dbg(f"Step5: API 呼び出し (attempt={attempt+1}/3, model={MODEL_ID})")
+            _dbg(f"Step5: API 呼び出し (attempt={attempt+1}/3, model={MODEL_ID!r})")
             response = client.models.generate_content(
                 model=MODEL_ID,
                 contents=prompt,
@@ -242,6 +244,13 @@ def generate_comments(
             break  # 成功
         except Exception as e:
             last_exc = e
+            err_str = str(e).lower()
+            # 404: モデル名が無効 → リトライ不要なので即終了
+            if "404" in err_str or "not found" in err_str:
+                _err(f"Step5 404エラー: モデル名 {MODEL_ID!r} が無効である可能性があります")
+                _err(f"  有効なモデル例: 'gemini-1.5-flash' / 'gemini-1.5-pro' / 'gemini-2.0-flash'")
+                _err(f"  原文: {e}")
+                return {}
             _err(f"Step5 attempt {attempt+1} 失敗: {type(e).__name__}: {e}")
             if attempt == 2:
                 _err(f"  traceback:\n{traceback.format_exc()}")
