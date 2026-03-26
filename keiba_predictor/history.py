@@ -118,7 +118,36 @@ def load_history() -> pd.DataFrame:
     if not HISTORY_PATH.exists():
         return pd.DataFrame(columns=HISTORY_COLS)
     df = pd.read_csv(HISTORY_PATH, encoding="utf-8-sig", dtype=str)
-    # 型変換
+
+    # ── 旧カラム名 → 新カラム名へのリネーム ──────────────────
+    _rename = {
+        "grade":      "race_grade",
+        "rentan_hit": "umaren_hit",
+        "payout":     "return_total",
+        "investment": "bet_total",
+    }
+    df.rename(columns={k: v for k, v in _rename.items() if k in df.columns}, inplace=True)
+
+    # ── 不足カラムをデフォルト値で補完 ───────────────────────
+    _defaults: dict = {
+        "race_grade": "",
+        "pred1_name": "", "pred1_num": "0", "pred1_prob": "0",
+        "pred2_name": "", "pred2_num": "0", "pred2_prob": "0",
+        "pred3_name": "", "pred3_num": "0", "pred3_prob": "0",
+        "actual1_name": "", "actual1_num": "0",
+        "actual2_name": "", "actual2_num": "0",
+        "actual3_name": "", "actual3_num": "0",
+        "fukusho_hit": "False",
+        "umaren_hit": "False",   "umaren_payout": "0",
+        "wide_hit": "False",     "wide_payout": "0",
+        "sanrenpuku_hit": "False", "sanrenpuku_payout": "0",
+        "bet_total": "0",        "return_total": "0",
+    }
+    for col, default in _defaults.items():
+        if col not in df.columns:
+            df[col] = default
+
+    # ── 型変換 ───────────────────────────────────────────────
     for col in ("pred1_prob", "pred2_prob", "pred3_prob"):
         df[col] = pd.to_numeric(df[col], errors="coerce")
     for col in ("fukusho_hit", "umaren_hit", "wide_hit", "sanrenpuku_hit"):
