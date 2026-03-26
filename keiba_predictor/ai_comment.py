@@ -307,6 +307,7 @@ def generate_report_text(
     race_name: str = "",
     course_info: str = "",
     result_df: "Optional[pd.DataFrame]" = None,
+    buy_lines: Optional[list] = None,
 ) -> str:
     """
     AI解説コメントから note / BOOKERS 投稿用のレポートテキストを生成する。
@@ -315,10 +316,11 @@ def generate_report_text(
         comments_dict : generate_comments() の返り値 {"馬番": "解説テキスト"}
         race_name     : 表示用レース名
         course_info   : コース情報（例: "中山 芝2500m"）
-        result_df     : predict_race() 済みの DataFrame（馬名・印の取得に使用）
+        result_df     : predict_race() 済みの DataFrame（馬名の取得に使用）
+        buy_lines     : _build_buy_lines() の返り値（推奨買い目行リスト）
 
     Returns:
-        整形済みレポート文字列
+        整形済みレポート文字列（stdout にも print する）
     """
     SEP = "─" * 30
     header = race_name or "AI予想レポート"
@@ -341,7 +343,7 @@ def generate_report_text(
             except Exception:
                 pass
 
-    # 馬番の数値順に並べて出力
+    # 馬番の数値順に詳細解説を出力（展開・血統・毒舌コメント含む）
     def _sort_key(k: str) -> int:
         try:
             return int(k)
@@ -351,11 +353,14 @@ def generate_report_text(
     for num in sorted(comments_dict.keys(), key=_sort_key):
         comment = comments_dict[num]
         horse_name = name_map.get(num, f"{num}番")
-        # コメント先頭の印（◎🔥 など）を取り出して行頭に置く
-        # 残りをインデントして表示
         lines.append(f"{horse_name}")
         lines.append(f"  {comment}")
         lines.append("")
+
+    # 推奨買い目セクション
+    if buy_lines:
+        lines += [SEP, "【AI推奨買い目】", SEP]
+        lines += buy_lines
 
     lines += [
         SEP,
@@ -364,7 +369,16 @@ def generate_report_text(
         "融合した独自の期待値算出を行っています。",
         SEP,
     ]
-    return "\n".join(lines)
+    text = "\n".join(lines)
+
+    # noteへのコピペ用に全文を stdout に出力
+    print("\n" + "=" * 50, flush=True)
+    print("【note / BOOKERS コピペ用レポート】", flush=True)
+    print("=" * 50, flush=True)
+    print(text, flush=True)
+    print("=" * 50 + "\n", flush=True)
+
+    return text
 
 
 def save_report(text: str, race_name: str) -> "Optional[Path]":
