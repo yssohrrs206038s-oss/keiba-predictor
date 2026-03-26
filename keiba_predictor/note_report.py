@@ -552,40 +552,48 @@ def _build_race_discord_message(race_id: str, r: dict) -> str:
         )
 
     # 買い目
+    # pnums: top5（predicted_top5_nums があれば優先、なければ top3 で代用）
+    pnums = [n for n in (r.get("predicted_top5_nums") or r.get("predicted_top3_nums", [])) if n is not None]
     if len(pnums) >= 2:
         SEP2 = "━" * 20
-        hon      = pnums[0]
-        # 馬番 → 馬名マップ（honmei/taikou/ana から構築）
+        hon = pnums[0]  # 軸（◎）
+
+        # 馬番 → 馬名マップ
         name_map: dict[int, str] = {}
         for p in [honmei, taikou, ana]:
             if p and p.get("horse_number") is not None:
                 name_map[int(p["horse_number"])] = p.get("horse_name", "")
         hon_name = name_map.get(hon, "")
 
+        # 馬連: top3 の組み合わせ
         umaren_pairs = list(_comb(pnums[:3], 2))
         umaren_str   = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
 
-        total = 1 + len(umaren_pairs)  # 複勝1 + 馬連N
+        # 3連複: 軸1頭 × 相手（2〜5位 + 穴馬）
+        partners  = pnums[1:5]  # 2位〜5位
+        cached_ana_num = r.get("ana_horse_num")
+        ana_label = ""
+        if cached_ana_num and cached_ana_num not in partners:
+            partners  = partners + [cached_ana_num]
+            ana_label = "（穴）"
+        sanren_pt  = len(list(_comb(partners, 2)))  # C(n,2)
+        partners_str = "/".join(
+            f"{n}{ana_label if n == cached_ana_num else ''}" for n in partners
+        )
+
+        total = 1 + len(umaren_pairs) + sanren_pt
         lines += [
             "",
             SEP2,
             f"💰 {race_name}  買い目",
             SEP2,
-            f"■ 複勝（1点）",
+            "■ 複勝（1点）",
             f"　{hon}番 {hon_name}",
             f"■ 馬連（{len(umaren_pairs)}点）",
             f"　{umaren_str}",
-        ]
-        if len(pnums) >= 3:
-            others    = " / ".join(str(n) for n in pnums[1:3])
-            sanren_pt = len(pnums[1:3])
-            total    += sanren_pt
-            lines += [
-                f"■ 3連複（{sanren_pt}点）",
-                f"　軸 {hon}番",
-                f"　× {others}",
-            ]
-        lines += [
+            f"■ 3連複（{sanren_pt}点）",
+            f"　軸 {hon}番",
+            f"　× {partners_str}",
             SEP2,
             f"合計 {total}点",
             SEP2,

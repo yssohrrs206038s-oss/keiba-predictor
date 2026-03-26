@@ -360,6 +360,24 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         if pd.notna(v):
             top3_nums.append(int(v))
 
+    top5_nums = []
+    for _, row in result_df.head(5).iterrows():
+        v = row.get("horse_number")
+        if pd.notna(v):
+            top5_nums.append(int(v))
+
+    # 穴馬（3連複用）: 6位以降で EV≥3.0 の最上位1頭
+    ana_horse_num: Optional[int] = None
+    if "ev_score" in result_df.columns and len(result_df) > 5:
+        rest     = result_df.iloc[5:]
+        rest_ev  = pd.to_numeric(rest["ev_score"], errors="coerce")
+        high_ev  = rest[rest_ev >= 3.0]
+        if not high_ev.empty:
+            best = high_ev.nlargest(1, "ev_score").iloc[0]
+            v = best.get("horse_number")
+            if pd.notna(v):
+                ana_horse_num = int(v)
+
     # EV・危険馬データ（_calc_ev_and_flags 済みならそのまま使う）
     if "ev_score" not in result_df.columns:
         result_df = calc_ev_and_flags(result_df)
@@ -392,6 +410,8 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "taikou":              _row(result_df, 1),
         "ana":                 ana,
         "predicted_top3_nums": top3_nums,
+        "predicted_top5_nums": top5_nums,
+        "ana_horse_num":       ana_horse_num,
         "ev_top3":             ev_top3,
         "dangerous_horses":    dangerous,
         "ai_comments":         ai_comments or {},
