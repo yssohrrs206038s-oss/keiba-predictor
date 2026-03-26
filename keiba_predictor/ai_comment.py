@@ -20,6 +20,8 @@ import logging
 import os
 import re
 import sys
+import time
+import traceback
 from typing import Optional
 
 import pandas as pd
@@ -203,22 +205,21 @@ def generate_comments(
         f"各馬のデータ（JSON配列）:\n"
         f"{json.dumps(horses_data, ensure_ascii=False, indent=2)}\n\n"
         f"上記データを基に、各馬について競馬ファン向けの自然な日本語解説を生成してください。\n\n"
+        f"【解説の必須要素】\n"
+        f"統計学的なXGBoostスコアに加え、プロの相馬眼を持つ視点で以下を必ず含めること：\n"
+        f"1. 【展開】位置取り（逃げ・先行・差し・追い込み）とペース適性を1行で独自に加筆\n"
+        f"2. 【血統】コース適性・距離適性を血統背景から1行で独自に加筆\n"
+        f"3. EVスコアが高い穴馬は激走理由を強調して推奨\n"
+        f"4. 人気でも危険な馬には忖度なしの毒舌で懸念を明記\n\n"
         f"出力形式:\n"
         f"- 必ず以下のJSONオブジェクトのみを返す（コードブロック不要、JSON以外の文字列不要）\n"
-        f"- キー: 馬番（文字列）、値: 解説テキスト（最大{MAX_COMMENT_LEN}文字、改行なし）\n"
-        f"- 解説には「なぜその順位か」「強み・懸念点」「買い推奨/見送り理由」を簡潔に含める\n"
-        f"- EVスコアが高い馬は配当妙味にも触れる\n"
-        f"- 危険フラグのある馬はその理由を含める\n"
-        f"- XGBoostの予測スコアに加え、レース展開（先行・差し・追い込み等）の向き不向きを1行で独自視点から加える\n"
-        f"- 血統背景（距離適性・馬場適性など）を1行で独自視点から加える\n\n"
-        f'例: {{"1": "前走快勝の勢いそのまま。芝適性高くEV良好。", '
-        f'"3": "1番人気だがAI確率低く危険。前走凡走で信頼しにくい。"}}\n'
+        f"- キー: 馬番（文字列）、値: 解説テキスト（最大{MAX_COMMENT_LEN}文字、改行なし）\n\n"
+        f'例: {{"1": "XGBoost上位。先行有利展開で前残り濃厚。サンデー系で中距離◎。EV高く穴候補。", '
+        f'"3": "1番人気だが差し脚質で前残り展開は厳しい。母父ダート寄りで芝は疑問。消し推奨。"}}\n'
     )
     _dbg(f"Step4 OK: プロンプト {len(prompt)} 文字")
 
     # ── Step 5: API コール（429対策: sleep + 最大3回リトライ）────
-    import time
-    import traceback
     raw = ""
     client = genai.Client(api_key=key)
     last_exc: Exception = Exception("未実行")

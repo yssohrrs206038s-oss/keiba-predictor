@@ -2,7 +2,7 @@ name: 金曜予想通知
 
 on:
   schedule:
-    - cron: '0 5 * * 5'  # 毎週金曜 5:00 UTC = JST 14:00
+    - cron: '0 9 * * 5'  # 毎週金曜 9:00 UTC = JST 18:00
   workflow_dispatch:       # 手動実行ボタンも有効化
 
 # ジョブ全体で環境変数を参照できるようにする
