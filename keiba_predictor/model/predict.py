@@ -174,7 +174,6 @@ def _build_buy_lines(result_df: pd.DataFrame) -> list[str]:
     top3   = result_df.head(3)
     nums   = [int(r["horse_number"]) for _, r in top3.iterrows()
               if pd.notna(r.get("horse_number"))]
-    names  = [str(r.get("horse_name", "")) for _, r in top3.iterrows()]
 
     # 穴馬: TOP3以外で EV≥2.0 かつ 確率≥10%
     top3_idx = top3.index
@@ -183,21 +182,12 @@ def _build_buy_lines(result_df: pd.DataFrame) -> list[str]:
         (result_df["ev_score"].fillna(0) >= 2.0) &
         (result_df["prob_top3"] >= 0.10)
     ]
-    ana_num  = None
-    ana_name = ""
+    ana_num = None
     if not ana_df.empty:
-        ana_row  = ana_df.nlargest(1, "ev_score").iloc[0]
-        ana_num  = int(ana_row["horse_number"]) if pd.notna(ana_row.get("horse_number")) else None
-        ana_name = str(ana_row.get("horse_name", ""))
+        ana_row = ana_df.nlargest(1, "ev_score").iloc[0]
+        ana_num = int(ana_row["horse_number"]) if pd.notna(ana_row.get("horse_number")) else None
 
     lines: list[str] = []
-    mark_names = ["◎", "○", "▲"]
-    for i, (n, nm) in enumerate(zip(nums, names)):
-        mk = mark_names[i] if i < len(mark_names) else ""
-        lines.append(f"　{mk} {n}番 {nm}")
-    if ana_num:
-        lines.append(f"　穴🚀 {ana_num}番 {ana_name}")
-    lines.append("")
 
     if len(nums) >= 2:
         hon, tai, san = (nums + [None, None])[:3]
