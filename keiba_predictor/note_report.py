@@ -447,9 +447,8 @@ def generate_note_report(output_path: Optional[Path] = None) -> str:
     output_path.write_text(report, encoding="utf-8")
     logger.info(f"note レポート保存: {output_path}")
 
-    # Discord 送信
-    discord_msg = _build_discord_message(cache, weekend_label, c_stats, streak)
-    send_note_report_to_discord(discord_msg)
+    # Discord 送信（完全版レポートをそのまま送信）
+    send_note_report_to_discord(report)
 
     return report
 
