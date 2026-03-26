@@ -17,8 +17,6 @@ import json
 import logging
 import os
 import re
-import traceback
-import urllib.request
 from datetime import date, timedelta
 from itertools import combinations
 from pathlib import Path
@@ -264,7 +262,7 @@ def _build_discord_message(cache: dict, weekend_label: str, c_stats: dict, strea
 
 
 def send_note_report_to_discord(message: str) -> None:
-    """DISCORD_REPORT_WEBHOOK_URL にメッセージを送信する。2000字超は自動分割。"""
+    """DISCORD_REPORT_WEBHOOK_URL にメッセージを送信する。discord_notify.send_discord() を使用。"""
     url = os.environ.get("DISCORD_REPORT_WEBHOOK_URL")
     if url is None:
         print("[note_report] DISCORD_REPORT_WEBHOOK_URL = None（未設定）→ Discord送信スキップ", flush=True)
@@ -274,32 +272,9 @@ def send_note_report_to_discord(message: str) -> None:
         return
 
     print(f"[note_report] Sending to direct URL: {url[:10]}...", flush=True)
-
-    chunks = [message[i: i + 1900] for i in range(0, len(message), 1900)]
-    for idx, chunk in enumerate(chunks):
-        payload = json.dumps({"content": chunk}, ensure_ascii=False).encode("utf-8")
-        req = urllib.request.Request(
-            url,
-            data=payload,
-            headers={"Content-Type": "application/json; charset=utf-8"},
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                status = resp.status
-            ok = status in (200, 204)
-            print(
-                f"[note_report] Discord送信 chunk {idx+1}/{len(chunks)}: "
-                f"status={status} {'✅ 成功' if ok else '⚠️ 予期しないステータス'}",
-                flush=True,
-            )
-        except Exception as exc:
-            print(
-                f"[note_report] Discord送信 chunk {idx+1}/{len(chunks)}: "
-                f"❌ 失敗 {type(exc).__name__}: {exc}",
-                flush=True,
-            )
-            print(traceback.format_exc(), flush=True)
+    from keiba_predictor.discord_notify import send_discord
+    ok = send_discord(url, message)
+    print(f"[note_report] Discord送信{'✅ 成功' if ok else '❌ 失敗'}", flush=True)
 
 
 # ── エントリポイント ──────────────────────────────────────────────────
