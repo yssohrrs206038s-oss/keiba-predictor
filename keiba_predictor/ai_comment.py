@@ -1,17 +1,17 @@
 """
-Gemini API（google-genai SDK）を使った予測結果の自然言語解説生成モジュール。
+Claude API（anthropic SDK）を使った予測結果の自然言語解説生成モジュール。
 
-GEMINI_API_KEY 未設定時はスキップして空 dict を返す（グレースフルデグラデーション）。
+ANTHROPIC_API_KEY 未設定時はスキップして空 dict を返す（グレースフルデグラデーション）。
 
 CLI テスト:
     python -m keiba_predictor.ai_comment --test
 
 Windows コマンドプロンプトで環境変数を設定する方法:
-    set GEMINI_API_KEY=AIza...
+    set ANTHROPIC_API_KEY=sk-ant-...
     python -m keiba_predictor.ai_comment --test
 
 PowerShell の場合:
-    $env:GEMINI_API_KEY="AIza..."
+    $env:ANTHROPIC_API_KEY="sk-ant-..."
     python -m keiba_predictor.ai_comment --test
 """
 
@@ -32,7 +32,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 # ── 使用するモデル ─────────────────────────────────────────────
-MODEL_ID = "gemini-1.5-flash"
+MODEL_ID = "claude-haiku-4-5"
 
 # ── 1頭あたりの最大解説文字数（Discord の行幅に合わせて調整） ──
 MAX_COMMENT_LEN = 50
@@ -107,13 +107,13 @@ def generate_comments(
     verbose: bool = False,
 ) -> dict[str, str]:
     """
-    各馬の解説テキストを Gemini API で生成する。
+    各馬の解説テキストを Claude API で生成する。
 
     Args:
         result_df  : predict_race() + calc_ev_and_flags() 済みの DataFrame
         race_name  : 表示用レース名
         course_info: コース情報（例: "芝2500m"）
-        api_key    : Gemini API キー（省略時は環境変数 GEMINI_API_KEY を使用）
+        api_key    : Anthropic API キー（省略時は環境変数 ANTHROPIC_API_KEY を使用）
         verbose    : True のとき print() で進捗を逐次出力する（--test 時に使用）
 
     Returns:
@@ -135,18 +135,18 @@ def generate_comments(
         print(f"[generate_comments] {msg}", flush=True)
 
     # ── Step 1: API キー確認 ─────────────────────────────────
-    key = api_key or os.environ.get("GEMINI_API_KEY", "")
+    key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     if not key:
-        _dbg("GEMINI_API_KEY が設定されていないためスキップ")
+        _dbg("ANTHROPIC_API_KEY が設定されていないためスキップ")
         return {}
     _dbg(f"Step1 OK: API キー末尾6桁=...{key[-6:]}")
 
-    # ── Step 2: google-genai インポート ──────────────────────
+    # ── Step 2: anthropic インポート ─────────────────────────
     try:
-        from google import genai
-        _dbg(f"Step2 OK: google-genai インポート成功")
+        import anthropic
+        _dbg(f"Step2 OK: anthropic インポート成功")
     except ImportError as e:
-        _err(f"google-genai パッケージが未インストールです: {e}")
+        _err(f"anthropic パッケージが未インストールです: {e}")
         return {}
 
     # ── Step 3: 馬データを組み立て ──────────────────────────
@@ -246,10 +246,8 @@ def generate_comments(
     _dbg(f"Step4 OK: プロンプト {len(prompt)} 文字")
 
     # ── Step 5: API コール（429対策: sleep + 最大3回リトライ）────
-    # MODEL_ID は "gemini-1.5-flash" 形式（プレフィックス不要）
-    # google-genai SDK が内部で "models/gemini-1.5-flash" に解決する
     raw = ""
-    client = genai.Client(api_key=key, http_options={"api_version": "v1"})
+    client = anthropic.Anthropic(api_key=key)
     last_exc: Exception = Exception("未実行")
     for attempt in range(3):
         try:
@@ -260,19 +258,21 @@ def generate_comments(
             else:
                 time.sleep(2)  # 初回も念のため2秒待機
             _dbg(f"Step5: API 呼び出し (attempt={attempt+1}/3, model={MODEL_ID!r})")
-            print("### Gemini API Call Started ###", flush=True)
+            print("### Claude API Call Started ###", flush=True)
             print(f"  model={MODEL_ID!r}  attempt={attempt+1}/3  prompt_len={len(prompt)}", flush=True)
             try:
-                response = client.models.generate_content(
+                response = client.messages.create(
                     model=MODEL_ID,
-                    contents=prompt,
+                    max_tokens=1024,
+                    messages=[{"role": "user", "content": prompt}],
                 )
-                print(f"### Gemini Response Length: {len(response.text)} characters ###", flush=True)
+                response_text = response.content[0].text
+                print(f"### Claude Response Length: {len(response_text)} characters ###", flush=True)
             except Exception as api_exc:
-                print(f"### Gemini API Error: {type(api_exc).__name__}: {api_exc} ###", flush=True)
+                print(f"### Claude API Error: {type(api_exc).__name__}: {api_exc} ###", flush=True)
                 print(traceback.format_exc(), flush=True)
                 raise  # 上位の except に委譲
-            raw = response.text.strip()
+            raw = response_text.strip()
             _dbg(f"Step5 OK: API 応答 {len(raw)} 文字")
             _dbg(f"  raw preview: {raw[:300]!r}")
             break  # 成功
@@ -282,16 +282,16 @@ def generate_comments(
             # 404: モデル名が無効 → リトライ不要なので即終了
             if "404" in err_str or "not found" in err_str:
                 _err(f"Step5 404エラー: モデル名 {MODEL_ID!r} が無効である可能性があります")
-                _err(f"  有効なモデル例: 'gemini-1.5-flash' / 'gemini-1.5-pro' / 'gemini-2.0-flash'")
+                _err(f"  有効なモデル例: 'claude-haiku-4-5' / 'claude-sonnet-4-5'")
                 _err(f"  原文: {e}")
                 return {}
             # 429: レート制限 → 60秒待機してリトライ
             if "429" in err_str or "quota" in err_str or "rate" in err_str:
-                print(f"[Gemini] 429エラー: 60秒待機してリトライ ({attempt+1}/3)", flush=True)
+                print(f"[Claude] 429エラー: 60秒待機してリトライ ({attempt+1}/3)", flush=True)
                 time.sleep(60)
                 if attempt < 2:
                     continue
-                print("[Gemini] 3回失敗 スキップします", flush=True)
+                print("[Claude] 3回失敗 スキップします", flush=True)
                 return {}
             _err(f"Step5 attempt {attempt+1} 失敗: {type(e).__name__}: {e}")
             if attempt == 2:
@@ -299,7 +299,7 @@ def generate_comments(
                 return {}
         else:
             if raw:
-                print("[Gemini] リトライ成功", flush=True) if attempt > 0 else None
+                print("[Claude] リトライ成功", flush=True) if attempt > 0 else None
 
     if not raw:
         _err(f"Step5: レスポンスが空  last_exc={last_exc}")
@@ -387,7 +387,7 @@ def generate_report_text(
     lines += [
         SEP,
         "【AI解析のポイント】",
-        "本レースはXGBoostによる高精度確率と、Gemini 1.5 Flashによる展開・血統分析を",
+        "本レースはXGBoostによる高精度確率と、Claude Haikuによる展開・血統分析を",
         "融合した独自の期待値算出を行っています。",
         SEP,
     ]
@@ -550,38 +550,39 @@ def _run_test() -> None:
     _p()
 
     # ── 環境変数確認 ─────────────────────────────────────────
-    key = os.environ.get("GEMINI_API_KEY", "")
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
     if key:
-        _p(f"[OK] GEMINI_API_KEY : set (last 6 chars: ...{key[-6:]})")
+        _p(f"[OK] ANTHROPIC_API_KEY : set (last 6 chars: ...{key[-6:]})")
     else:
-        _p("[NG] GEMINI_API_KEY : NOT SET")
+        _p("[NG] ANTHROPIC_API_KEY : NOT SET")
         _p()
-        _p("  Windows CMD    : set GEMINI_API_KEY=AIza...")
-        _p("  PowerShell     : $env:GEMINI_API_KEY='AIza...'")
-        _p("  Git Bash/Linux : export GEMINI_API_KEY=AIza...")
+        _p("  Windows CMD    : set ANTHROPIC_API_KEY=sk-ant-...")
+        _p("  PowerShell     : $env:ANTHROPIC_API_KEY='sk-ant-...'")
+        _p("  Git Bash/Linux : export ANTHROPIC_API_KEY=sk-ant-...")
         _p()
         _p("Set the key and re-run:  python -m keiba_predictor.ai_comment --test")
         sys.exit(1)
 
-    # ── google-genai インポート確認 ───────────────────────────
+    # ── anthropic インポート確認 ──────────────────────────────
     try:
-        from google import genai
-        _p(f"[OK] google-genai : インポート成功")
+        import anthropic
+        _p(f"[OK] anthropic : インポート成功")
     except ImportError as e:
-        _p(f"[NG] google-genai import failed: {e}")
-        _p("     Run: pip install google-genai")
+        _p(f"[NG] anthropic import failed: {e}")
+        _p("     Run: pip install anthropic")
         sys.exit(1)
 
     # ── Step 1: API 疎通確認（最小コール）────────────────────
     _p()
     _p("[Step 1] API connectivity check ...")
     try:
-        client = genai.Client(api_key=key, http_options={"api_version": "v1"})
-        resp = client.models.generate_content(
+        client = anthropic.Anthropic(api_key=key)
+        resp = client.messages.create(
             model=MODEL_ID,
-            contents="Reply with just: OK",
+            max_tokens=16,
+            messages=[{"role": "user", "content": "Reply with just: OK"}],
         )
-        reply = resp.text.strip()
+        reply = resp.content[0].text.strip()
         _p(f"  [OK] API response: {reply!r}")
     except Exception as e:
         _p(f"  [NG] API call failed: {type(e).__name__}: {e}")
