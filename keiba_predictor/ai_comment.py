@@ -285,10 +285,21 @@ def generate_comments(
                 _err(f"  有効なモデル例: 'gemini-1.5-flash' / 'gemini-1.5-pro' / 'gemini-2.0-flash'")
                 _err(f"  原文: {e}")
                 return {}
+            # 429: レート制限 → 60秒待機してリトライ
+            if "429" in err_str or "quota" in err_str or "rate" in err_str:
+                print(f"[Gemini] 429エラー: 60秒待機してリトライ ({attempt+1}/3)", flush=True)
+                time.sleep(60)
+                if attempt < 2:
+                    continue
+                print("[Gemini] 3回失敗 スキップします", flush=True)
+                return {}
             _err(f"Step5 attempt {attempt+1} 失敗: {type(e).__name__}: {e}")
             if attempt == 2:
                 _err(f"  traceback:\n{traceback.format_exc()}")
                 return {}
+        else:
+            if raw:
+                print("[Gemini] リトライ成功", flush=True) if attempt > 0 else None
 
     if not raw:
         _err(f"Step5: レスポンスが空  last_exc={last_exc}")

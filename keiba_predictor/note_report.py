@@ -134,13 +134,23 @@ def _gemini_call(prompt: str, api_key: str) -> str:
             )
             response = client.models.generate_content(model=MODEL_ID, contents=prompt)
             print(f"[note_report] Gemini response {len(response.text)} chars", flush=True)
+            if attempt > 0:
+                print("[Gemini] リトライ成功", flush=True)
             return response.text.strip()
         except Exception as e:
             err_str = str(e).lower()
             print(f"[note_report] Gemini error attempt={attempt+1}: {type(e).__name__}: {e}", flush=True)
             if "404" in err_str or "not found" in err_str:
                 return ""
+            if "429" in err_str or "quota" in err_str or "rate" in err_str:
+                print(f"[Gemini] 429エラー: 60秒待機してリトライ ({attempt+1}/3)", flush=True)
+                time.sleep(60)
+                if attempt < 2:
+                    continue
+                print("[Gemini] 3回失敗 スキップします", flush=True)
+                return ""
             if attempt == 2:
+                print("[Gemini] 3回失敗 スキップします", flush=True)
                 print(traceback.format_exc(), flush=True)
     return ""
 
