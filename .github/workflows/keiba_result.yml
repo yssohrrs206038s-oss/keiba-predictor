@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 8 * * 0'  # 毎週日曜 8:00 UTC = JST 17:00
   workflow_dispatch:       # 手動実行ボタンも有効化
+    inputs:
+      race_id:
+        description: '結果照合対象のレースID（例: 202506050811）。空欄の場合は予想キャッシュ内の全レースを対象。'
+        required: false
+        default: ''
 
 # ジョブ全体で環境変数を参照できるようにする
 env:
@@ -58,7 +63,14 @@ jobs:
       - name: Discord に結果を送信
         run: |
           echo "📤 Discord 結果通知を送信中..."
-          python -m keiba_predictor.main notify --mode result --debug
+          RACE_ID="${{ inputs.race_id }}"
+          if [ -n "$RACE_ID" ]; then
+            echo "🎯 指定レースID: $RACE_ID"
+            python -m keiba_predictor.main notify --mode result --debug --race-id "$RACE_ID"
+          else
+            echo "📋 レースID未指定 → キャッシュ内の全レースを対象"
+            python -m keiba_predictor.main notify --mode result --debug
+          fi
           echo "✅ notify コマンド終了"
 
       # ── エラー時の Discord 通知 ──────────────────────────────

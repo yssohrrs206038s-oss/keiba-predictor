@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 9 * * 5'  # 毎週金曜 9:00 UTC = JST 18:00
   workflow_dispatch:       # 手動実行ボタンも有効化
+    inputs:
+      race_id:
+        description: '予測対象のレースID（例: 202506050811）。空欄の場合は当週の全対象レースを自動取得。'
+        required: false
+        default: ''
 
 # ジョブ全体で環境変数を参照できるようにする
 env:
@@ -74,7 +79,14 @@ jobs:
         continue-on-error: true   # ネットワーク障害・スクレイピング失敗でも後続ステップを継続
         run: |
           echo "📤 Discord 予想通知を送信中..."
-          python -m keiba_predictor.main notify --mode predict --live --debug
+          RACE_ID="${{ inputs.race_id }}"
+          if [ -n "$RACE_ID" ]; then
+            echo "🎯 指定レースID: $RACE_ID"
+            python -m keiba_predictor.main notify --mode predict --live --debug --race-id "$RACE_ID"
+          else
+            echo "📋 レースID未指定 → 当週の全対象レースを自動取得"
+            python -m keiba_predictor.main notify --mode predict --live --debug
+          fi
           echo "✅ notify コマンド終了"
 
       # ── note 記事用レポート生成 ───────────────────────────────
