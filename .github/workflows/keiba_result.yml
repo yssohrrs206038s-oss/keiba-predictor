@@ -12,8 +12,9 @@ on:
 
 # ジョブ全体で環境変数を参照できるようにする
 env:
-  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_RESULT }}
-  GEMINI_API_KEY:    ${{ secrets.GEMINI_API_KEY }}
+  DISCORD_WEBHOOK_URL:        ${{ secrets.DISCORD_WEBHOOK_RESULT }}
+  DISCORD_REPORT_WEBHOOK_URL: ${{ secrets.DISCORD_REPORT_WEBHOOK_URL }}
+  GEMINI_API_KEY:             ${{ secrets.GEMINI_API_KEY }}
   X_API_KEY:         ${{ secrets.X_API_KEY }}
   X_API_SECRET:      ${{ secrets.X_API_SECRET }}
   X_ACCESS_TOKEN:    ${{ secrets.X_ACCESS_TOKEN }}
