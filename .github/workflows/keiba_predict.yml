@@ -82,7 +82,7 @@ jobs:
           RACE_ID="${{ inputs.race_id }}"
           if [ -n "$RACE_ID" ]; then
             echo "🎯 指定レースID: $RACE_ID"
-            python -m keiba_predictor.main predict --race-id "$RACE_ID" --notify --webhook-url "$DISCORD_WEBHOOK_URL" --live
+            python -m keiba_predictor.main predict --race-id "$RACE_ID" --notify --webhook-url "$DISCORD_WEBHOOK_URL"
           else
             echo "📋 レースID未指定 → 当週の全対象レースを自動取得"
             python -m keiba_predictor.main notify --mode predict --live --debug
