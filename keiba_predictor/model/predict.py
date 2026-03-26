@@ -166,61 +166,75 @@ def predict_race(
     return result
 
 
-def _build_buy_lines(result_df: pd.DataFrame) -> list[str]:
+def _build_buy_lines(result_df: pd.DataFrame, race_name: str = "") -> list[str]:
     """
-    ◎○▲ + 穴馬（EV高）を組み合わせた買い目リストを返す。
-    的中率と回収率のバランスを重視した構成。
+    買い目リストを返す。
+    3連複: 軸（◎）× 相手（2〜5位 + 穴馬EV≥3.0・6位以下）
+    穴馬あり→10点、穴馬なし→6点。
     """
-    top3   = result_df.head(3)
-    nums   = [int(r["horse_number"]) for _, r in top3.iterrows()
-              if pd.notna(r.get("horse_number"))]
+    from itertools import combinations as _comb
 
-    # 穴馬: TOP3以外で EV≥2.0 かつ 確率≥10%
-    top3_idx = top3.index
-    ana_df = result_df.loc[
-        ~result_df.index.isin(top3_idx) &
-        (result_df["ev_score"].fillna(0) >= 2.0) &
-        (result_df["prob_top3"] >= 0.10)
-    ]
+    SEP = "━" * 20
+
+    # 上位5頭の馬番
+    top5 = result_df.head(5)
+    nums = [int(r["horse_number"]) for _, r in top5.iterrows()
+            if pd.notna(r.get("horse_number"))]
+
+    if len(nums) < 2:
+        return []
+
+    hon = nums[0]  # 軸（◎）
+
+    # 複勝: 本命馬名
+    hon_name = ""
+    hon_row = result_df.iloc[0]
+    if pd.notna(hon_row.get("horse_name")):
+        hon_name = str(hon_row["horse_name"])
+
+    # 馬連: top3の組み合わせ
+    umaren_pairs = list(_comb(nums[:3], 2))
+    umaren_str   = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
+
+    # 穴馬: 6位以降で EV≥3.0 の最上位1頭
     ana_num = None
-    if not ana_df.empty:
-        ana_row = ana_df.nlargest(1, "ev_score").iloc[0]
-        ana_num = int(ana_row["horse_number"]) if pd.notna(ana_row.get("horse_number")) else None
+    if len(result_df) > 5 and "ev_score" in result_df.columns:
+        rest    = result_df.iloc[5:]
+        rest_ev = pd.to_numeric(rest["ev_score"], errors="coerce")
+        high_ev = rest[rest_ev >= 3.0]
+        if not high_ev.empty:
+            best = high_ev.nlargest(1, "ev_score").iloc[0]
+            v = best.get("horse_number")
+            if pd.notna(v):
+                ana_num = int(v)
 
-    lines: list[str] = []
+    # 3連複: 軸1頭 × 相手（2〜5位 + 穴馬）
+    partners = nums[1:5]  # 2〜5位
+    if ana_num and ana_num not in partners:
+        partners = partners + [ana_num]
+    sanren_pt    = len(list(_comb(partners, 2)))  # C(n,2)
+    partners_str = "/".join(
+        f"{n}（穴）" if n == ana_num else str(n) for n in partners
+    )
 
-    if len(nums) >= 2:
-        hon, tai, san = (nums + [None, None])[:3]
+    total = 1 + len(umaren_pairs) + sanren_pt
 
-        # 複勝
-        lines += ["■ 複勝（1点）", f"　{hon}番"]
-
-        # 馬連
-        umaren = []
-        if hon and tai:
-            umaren.append(f"{hon}-{tai}")
-        if hon and san:
-            umaren.append(f"{hon}-{san}")
-        if tai and san:
-            umaren.append(f"{tai}-{san}")
-        if umaren:
-            lines += [f"■ 馬連（{len(umaren)}点）", f"　{' / '.join(umaren)}"]
-
-        # ワイド（穴絡み）
-        if ana_num:
-            wide = [f"{hon}-{ana_num}"]
-            if tai:
-                wide.append(f"{tai}-{ana_num}")
-            lines += [f"■ ワイド 穴絡み（{len(wide)}点）", f"　{' / '.join(wide)}"]
-
-        # 3連複
-        if hon and tai and san:
-            lines += ["■ 3連複 本線（1点）", f"　{hon}-{tai}-{san}"]
-            if ana_num:
-                san3 = [f"{hon}-{tai}-{ana_num}", f"{hon}-{san}-{ana_num}"]
-                lines += [f"■ 3連複 穴絡み（{len(san3)}点）",
-                          f"　{' / '.join(san3)}"]
-
+    header = f"💰 {race_name}  買い目" if race_name else "💰 買い目"
+    lines = [
+        SEP,
+        header,
+        SEP,
+        "■ 複勝（1点）",
+        f"　{hon}番 {hon_name}",
+        f"■ 馬連（{len(umaren_pairs)}点）",
+        f"　{umaren_str}",
+        f"■ 3連複（{sanren_pt}点）",
+        f"　軸 {hon}番",
+        f"　× {partners_str}",
+        SEP,
+        f"合計 {total}点",
+        SEP,
+    ]
     return lines
 
 
@@ -295,11 +309,7 @@ def format_prediction(
     msg1 = "\n".join(lines1)
 
     # ── Message 2: 買い目 ────────────────────────────────────
-    buy_header = f"💰 {race_name}  AI推奨買い目" if race_name else "💰 AI推奨買い目"
-    lines2 = [sep, buy_header, sep]
-    lines2 += _build_buy_lines(result_df)
-    lines2.append(sep)
-    msg2 = "\n".join(lines2)
+    msg2 = "\n".join(_build_buy_lines(result_df, race_name=race_name))
 
     return msg1, msg2
 
@@ -354,7 +364,7 @@ def predict_from_csv(
     if ai_comments:
         report = generate_report_text(ai_comments, race_name=race_name,
                                       course_info=course_info, result_df=result,
-                                      buy_lines=_build_buy_lines(result))
+                                      buy_lines=_build_buy_lines(result, race_name=race_name))
         save_report(report, race_name)
 
     # 予想キャッシュに保存（note_report・結果照合で使用）
@@ -468,7 +478,7 @@ def predict_live(
     if ai_comments:
         report = generate_report_text(ai_comments, race_name=race_name,
                                       course_info=course_info, result_df=result,
-                                      buy_lines=_build_buy_lines(result))
+                                      buy_lines=_build_buy_lines(result, race_name=race_name))
         save_report(report, race_name)
 
     # 予想キャッシュに保存（note_report・結果照合で使用）
