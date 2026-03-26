@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 DATA_DIR   = Path(__file__).parent / "data"
 CACHE_PATH = DATA_DIR / "predictions_cache.json"
 
-MODEL_ID = "gemini-1.5-flash"
+MODEL_ID = "gemini-2.0-flash"
 
 JRA_VENUES = {
     "01": "札幌", "02": "函館", "03": "福島", "04": "新潟", "05": "東京",
