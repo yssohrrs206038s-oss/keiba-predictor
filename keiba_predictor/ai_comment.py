@@ -27,7 +27,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 # ── 使用するモデル ─────────────────────────────────────────────
-MODEL_ID = "gemini-2.0-flash"
+MODEL_ID = "gemini-1.5-flash"
 
 # ── 1頭あたりの最大解説文字数（Discord の行幅に合わせて調整） ──
 MAX_COMMENT_LEN = 40
@@ -208,26 +208,50 @@ def generate_comments(
         f"- キー: 馬番（文字列）、値: 解説テキスト（最大{MAX_COMMENT_LEN}文字、改行なし）\n"
         f"- 解説には「なぜその順位か」「強み・懸念点」「買い推奨/見送り理由」を簡潔に含める\n"
         f"- EVスコアが高い馬は配当妙味にも触れる\n"
-        f"- 危険フラグのある馬はその理由を含める\n\n"
+        f"- 危険フラグのある馬はその理由を含める\n"
+        f"- XGBoostの予測スコアに加え、レース展開（先行・差し・追い込み等）の向き不向きを1行で独自視点から加える\n"
+        f"- 血統背景（距離適性・馬場適性など）を1行で独自視点から加える\n\n"
         f'例: {{"1": "前走快勝の勢いそのまま。芝適性高くEV良好。", '
         f'"3": "1番人気だがAI確率低く危険。前走凡走で信頼しにくい。"}}\n'
     )
     _dbg(f"Step4 OK: プロンプト {len(prompt)} 文字")
 
-    # ── Step 5: API コール ────────────────────────────────────
+    # ── Step 5: API コール（429対策: sleep + 最大3回リトライ）────
+    import time
+    import traceback
     raw = ""
-    try:
-        _dbg(f"Step5: API 呼び出し開始 (model={MODEL_ID})")
-        client = genai.Client(api_key=key)
-        response = client.models.generate_content(
-            model=MODEL_ID,
-            contents=prompt,
-        )
-        raw = response.text.strip()
-        _dbg(f"Step5 OK: API 応答 {len(raw)} 文字")
-        _dbg(f"  raw preview: {raw[:300]!r}")
+    client = genai.Client(api_key=key)
+    last_exc: Exception = Exception("未実行")
+    for attempt in range(3):
+        try:
+            if attempt > 0:
+                wait = 10 * attempt  # 10s, 20s
+                _dbg(f"Step5: リトライ {attempt}/2  {wait}秒待機中...")
+                time.sleep(wait)
+            else:
+                time.sleep(2)  # 初回も念のため2秒待機
+            _dbg(f"Step5: API 呼び出し (attempt={attempt+1}/3, model={MODEL_ID})")
+            response = client.models.generate_content(
+                model=MODEL_ID,
+                contents=prompt,
+            )
+            raw = response.text.strip()
+            _dbg(f"Step5 OK: API 応答 {len(raw)} 文字")
+            _dbg(f"  raw preview: {raw[:300]!r}")
+            break  # 成功
+        except Exception as e:
+            last_exc = e
+            _err(f"Step5 attempt {attempt+1} 失敗: {type(e).__name__}: {e}")
+            if attempt == 2:
+                _err(f"  traceback:\n{traceback.format_exc()}")
+                return {}
 
-        # ── Step 6: JSON 解析 ─────────────────────────────────
+    if not raw:
+        _err(f"Step5: レスポンスが空  last_exc={last_exc}")
+        return {}
+
+    # ── Step 6: JSON 解析 ─────────────────────────────────────
+    try:
         _dbg("Step6: JSON 解析開始")
         json_str = _extract_json_object(raw)
         _dbg(f"  json_str preview: {json_str[:200]!r}")
@@ -235,16 +259,9 @@ def generate_comments(
         result = {str(k): str(v)[:MAX_COMMENT_LEN] for k, v in comments.items()}
         _dbg(f"Step6 OK: {len(result)} 頭分  keys={sorted(result.keys())}")
         return result
-
     except json.JSONDecodeError as e:
-        import traceback
         _err(f"Step6 JSON 解析失敗: {e}")
         _err(f"  raw (full): {raw!r}")
-        return {}
-    except Exception as e:
-        import traceback
-        _err(f"Step5 API 呼び出し失敗: {type(e).__name__}: {e}")
-        _err(f"  traceback:\n{traceback.format_exc()}")
         return {}
 
 
