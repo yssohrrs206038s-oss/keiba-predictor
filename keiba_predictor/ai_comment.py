@@ -440,7 +440,7 @@ def flush_reports() -> None:
         elif report_url == "":
             print("[flush_reports] DISCORD_REPORT_WEBHOOK_URL = ''（空文字）→ Discord送信スキップ", flush=True)
         else:
-            print(f"[flush_reports] DISCORD_REPORT_WEBHOOK_URL = {report_url[:10]}... → Discord送信開始", flush=True)
+            print(f"[flush_reports] Sending to direct URL: {report_url[:10]}...", flush=True)
             _send_report_to_discord(report_url, race_name, text)
 
     _pending_reports.clear()
