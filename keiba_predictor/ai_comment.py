@@ -415,6 +415,7 @@ def save_report(text: str, race_name: str) -> "Optional[Path]":
 def flush_reports() -> None:
     """
     _pending_reports に溜まったレポートを ▼▼▼ で囲んで一括 print する。
+    環境変数 DISCORD_REPORT_WEBHOOK_URL が設定されていれば自分宛チャンネルにも送信。
     predict_from_csv / predict_live の最後に呼ぶことで、
     他のログと混ざらずにまとめて表示される。
     """
@@ -432,7 +433,37 @@ def flush_reports() -> None:
         print(f"▼▼▼  END OF REPORT  ▼▼▼", flush=True)
         print(f"{_FENCE}\n", flush=True)
 
+        # 自分宛 Discord チャンネルへ送信（DISCORD_REPORT_WEBHOOK_URL が設定されている場合）
+        report_url = os.environ.get("DISCORD_REPORT_WEBHOOK_URL", "")
+        if report_url:
+            _send_report_to_discord(report_url, race_name, text)
+
     _pending_reports.clear()
+
+
+def _send_report_to_discord(webhook_url: str, race_name: str, text: str) -> None:
+    """レポート全文を Discord に送信する。2000字超は自動分割。"""
+    import urllib.request
+    import json as _json
+
+    header = f"📋 **{race_name} レポート**\n" if race_name else "📋 **レポート**\n"
+    full_text = header + text
+    chunks = [full_text[i: i + 1900] for i in range(0, len(full_text), 1900)]
+
+    for idx, chunk in enumerate(chunks):
+        payload = _json.dumps({"content": chunk}, ensure_ascii=False).encode("utf-8")
+        req = urllib.request.Request(
+            webhook_url,
+            data=payload,
+            headers={"Content-Type": "application/json; charset=utf-8"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                status = resp.status
+        except Exception as exc:
+            status = str(exc)
+        print(f"[flush_reports] Discord report送信 chunk {idx+1}/{len(chunks)}: {status}", flush=True)
 
 
 # ══════════════════════════════════════════════════════════════
