@@ -116,6 +116,10 @@ def _claude_call(prompt: str, api_key: str) -> str:
     Claude API を呼び出してテキストを返す。失敗時は "" を返す。
     429対策: 初回2秒待機、リトライ10秒/20秒。
     """
+    # ── AI解説 無効化中（有効化するには下の2行を削除） ────────
+    print("[note_report] AI解説は現在無効化されています（シンプルモード）", flush=True)
+    return ""
+
     try:
         import anthropic
     except ImportError:
