@@ -15,7 +15,10 @@ KEIBA EDGE 週次予想レポート生成（note 記事用 Markdown）
 
 import json
 import logging
+import os
 import re
+import traceback
+import urllib.request
 from datetime import date, timedelta
 from itertools import combinations
 from pathlib import Path
@@ -220,7 +223,83 @@ def generate_note_report(output_path: Optional[Path] = None) -> str:
     output_path.write_text(report, encoding="utf-8")
     logger.info(f"note レポート保存: {output_path}")
 
+    # Discord 送信
+    discord_msg = _build_discord_message(cache, weekend_label, c_stats, streak)
+    send_note_report_to_discord(discord_msg)
+
     return report
+
+
+def _build_discord_message(cache: dict, weekend_label: str, c_stats: dict, streak: int) -> str:
+    """Discord 送信用のサマリメッセージを組み立てる。"""
+    SEP = "━" * 20
+    lines = [
+        f"📝 今週のKEIBA EDGE週次レポート",
+        SEP,
+    ]
+
+    for race_id, r in cache.items():
+        race_name = r.get("race_name", race_id)
+        honmei = r.get("honmei", {})
+        taikou = r.get("taikou", {})
+        line = f"🏇 {race_name}"
+        if honmei and honmei.get("horse_name"):
+            line += f"  ◎{honmei['horse_number']}番{honmei['horse_name']}"
+        if taikou and taikou.get("horse_name"):
+            line += f"  ○{taikou['horse_number']}番{taikou['horse_name']}"
+        lines.append(line)
+
+    lines.append(SEP)
+
+    if streak >= 1:
+        lines.append(f"✅ 重賞{streak}連続複勝的中")
+    if c_stats.get("n_races", 0) > 0:
+        lines.append(
+            f"📈 複勝的中率：{c_stats['fukusho_rate'] * 100:.0f}%"
+            f"  💰 回収率：{c_stats['roi'] * 100:.0f}%"
+        )
+
+    lines += [SEP, "📊 詳細はnoteで公開予定"]
+    return "\n".join(lines)
+
+
+def send_note_report_to_discord(message: str) -> None:
+    """DISCORD_REPORT_WEBHOOK_URL にメッセージを送信する。2000字超は自動分割。"""
+    url = os.environ.get("DISCORD_REPORT_WEBHOOK_URL")
+    if url is None:
+        print("[note_report] DISCORD_REPORT_WEBHOOK_URL = None（未設定）→ Discord送信スキップ", flush=True)
+        return
+    if url == "":
+        print("[note_report] DISCORD_REPORT_WEBHOOK_URL = ''（空文字）→ Discord送信スキップ", flush=True)
+        return
+
+    print(f"[note_report] Sending to direct URL: {url[:10]}...", flush=True)
+
+    chunks = [message[i: i + 1900] for i in range(0, len(message), 1900)]
+    for idx, chunk in enumerate(chunks):
+        payload = json.dumps({"content": chunk}, ensure_ascii=False).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={"Content-Type": "application/json; charset=utf-8"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                status = resp.status
+            ok = status in (200, 204)
+            print(
+                f"[note_report] Discord送信 chunk {idx+1}/{len(chunks)}: "
+                f"status={status} {'✅ 成功' if ok else '⚠️ 予期しないステータス'}",
+                flush=True,
+            )
+        except Exception as exc:
+            print(
+                f"[note_report] Discord送信 chunk {idx+1}/{len(chunks)}: "
+                f"❌ 失敗 {type(exc).__name__}: {exc}",
+                flush=True,
+            )
+            print(traceback.format_exc(), flush=True)
 
 
 # ── エントリポイント ──────────────────────────────────────────────────
