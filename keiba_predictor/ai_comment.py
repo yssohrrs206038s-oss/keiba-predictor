@@ -223,7 +223,7 @@ def generate_comments(
     # MODEL_ID は "gemini-1.5-flash" 形式（プレフィックス不要）
     # google-genai SDK が内部で "models/gemini-1.5-flash" に解決する
     raw = ""
-    client = genai.Client(api_key=key)
+    client = genai.Client(api_key=key, http_options={"api_version": "v1"})
     last_exc: Exception = Exception("未実行")
     for attempt in range(3):
         try:
@@ -359,7 +359,7 @@ def _run_test() -> None:
     _p()
     _p("[Step 1] API connectivity check ...")
     try:
-        client = genai.Client(api_key=key)
+        client = genai.Client(api_key=key, http_options={"api_version": "v1"})
         resp = client.models.generate_content(
             model=MODEL_ID,
             contents="Reply with just: OK",
