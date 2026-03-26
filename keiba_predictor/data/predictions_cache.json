@@ -98,5 +98,65 @@
     ],
     "dangerous_horses": [],
     "ai_comments": {}
+  },
+  "202503020811": {
+    "race_name": "福島テレビ賞(OP)",
+    "race_date": "2025-03-02",
+    "course_info": "福島 ダート1150m",
+    "honmei": {
+      "horse_number": 11,
+      "horse_name": "オーブルクール",
+      "prob": 0.7490061521530151
+    },
+    "taikou": {
+      "horse_number": 8,
+      "horse_name": "エスカル",
+      "prob": 0.7106749415397644
+    },
+    "ana": {
+      "horse_number": 6,
+      "horse_name": "エコロガイア",
+      "prob": 0.5816563367843628
+    },
+    "predicted_top3_nums": [
+      11,
+      8,
+      1
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 12,
+        "horse_name": "コパノパサディナ",
+        "ev_score": 37.267,
+        "prob": 0.3611,
+        "odds": 103.2
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "タイセイブレイズ",
+        "ev_score": 9.69,
+        "prob": 0.1602,
+        "odds": 60.5
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "ルクスメテオール",
+        "ev_score": 8.557,
+        "prob": 0.4174,
+        "odds": 20.5
+      }
+    ],
+    "dangerous_horses": [
+      {
+        "horse_number": 8,
+        "horse_name": "エスカル",
+        "popularity": 2,
+        "prob": 0.7107,
+        "reasons": [
+          "1〜2番人気だが前走10着"
+        ]
+      }
+    ],
+    "ai_comments": {}
   }
 }
