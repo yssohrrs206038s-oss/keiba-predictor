@@ -1,17 +1,17 @@
 """
-Claude API を使った予測結果の自然言語解説生成モジュール。
+Gemini API を使った予測結果の自然言語解説生成モジュール。
 
-ANTHROPIC_API_KEY 未設定時はスキップして空 dict を返す（グレースフルデグラデーション）。
+GEMINI_API_KEY 未設定時はスキップして空 dict を返す（グレースフルデグラデーション）。
 
 CLI テスト:
     python -m keiba_predictor.ai_comment --test
 
 Windows コマンドプロンプトで環境変数を設定する方法:
-    set ANTHROPIC_API_KEY=sk-ant-...
+    set GEMINI_API_KEY=AIza...
     python -m keiba_predictor.ai_comment --test
 
 PowerShell の場合:
-    $env:ANTHROPIC_API_KEY="sk-ant-..."
+    $env:GEMINI_API_KEY="AIza..."
     python -m keiba_predictor.ai_comment --test
 """
 
@@ -27,7 +27,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 # ── 使用するモデル ─────────────────────────────────────────────
-MODEL_ID = "claude-haiku-4-5-20251001"
+MODEL_ID = "gemini-1.5-flash"
 
 # ── 1頭あたりの最大解説文字数（Discord の行幅に合わせて調整） ──
 MAX_COMMENT_LEN = 40
@@ -41,11 +41,9 @@ def _setup_utf8_stdout() -> None:
     """Windows で stdout/stderr を UTF-8 に強制する。"""
     if sys.platform == "win32":
         try:
-            # Python 3.7+ — reconfigure でエンコードを変更
             sys.stdout.reconfigure(encoding="utf-8", errors="replace")
             sys.stderr.reconfigure(encoding="utf-8", errors="replace")
         except AttributeError:
-            # fallback: io.TextIOWrapper で置き換え
             import io
             sys.stdout = io.TextIOWrapper(
                 sys.stdout.buffer, encoding="utf-8", errors="replace"
@@ -60,7 +58,6 @@ def _p(msg: str = "") -> None:
     try:
         print(msg, flush=True)
     except UnicodeEncodeError:
-        # 表示できない文字を ? に置換してフォールバック出力
         safe = msg.encode(sys.stdout.encoding or "ascii", errors="replace").decode(
             sys.stdout.encoding or "ascii", errors="replace"
         )
@@ -105,13 +102,13 @@ def generate_comments(
     verbose: bool = False,
 ) -> dict[str, str]:
     """
-    各馬の解説テキストを Claude API で生成する。
+    各馬の解説テキストを Gemini API で生成する。
 
     Args:
         result_df  : predict_race() + calc_ev_and_flags() 済みの DataFrame
         race_name  : 表示用レース名
         course_info: コース情報（例: "芝2500m"）
-        api_key    : Anthropic API キー（省略時は環境変数 ANTHROPIC_API_KEY を使用）
+        api_key    : Gemini API キー（省略時は環境変数 GEMINI_API_KEY を使用）
         verbose    : True のとき print() で進捗を逐次出力する（--test 時に使用）
 
     Returns:
@@ -126,7 +123,6 @@ def generate_comments(
 
     def _err(msg: str) -> None:
         logger.error(msg)
-        # verbose に関わらず常に stderr/stdout に出力してデバッグしやすくする
         _p(f"  [AI ERROR] {msg}")
 
     def _dbg(msg: str) -> None:
@@ -134,18 +130,18 @@ def generate_comments(
         print(f"[generate_comments] {msg}", flush=True)
 
     # ── Step 1: API キー確認 ─────────────────────────────────
-    key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    key = api_key or os.environ.get("GEMINI_API_KEY", "")
     if not key:
-        _dbg("ANTHROPIC_API_KEY が設定されていないためスキップ")
+        _dbg("GEMINI_API_KEY が設定されていないためスキップ")
         return {}
     _dbg(f"Step1 OK: API キー末尾6桁=...{key[-6:]}")
 
-    # ── Step 2: anthropic インポート ─────────────────────────
+    # ── Step 2: google-generativeai インポート ───────────────
     try:
-        import anthropic as _anthropic
-        _dbg(f"Step2 OK: anthropic v{_anthropic.__version__}")
+        import google.generativeai as genai
+        _dbg(f"Step2 OK: google-generativeai インポート成功")
     except ImportError as e:
-        _err(f"anthropic パッケージが未インストールです: {e}")
+        _err(f"google-generativeai パッケージが未インストールです: {e}")
         return {}
 
     # ── Step 3: 馬データを組み立て ──────────────────────────
@@ -222,16 +218,11 @@ def generate_comments(
     raw = ""
     try:
         _dbg(f"Step5: API 呼び出し開始 (model={MODEL_ID})")
-        client = _anthropic.Anthropic(api_key=key)
-        response = client.messages.create(
-            model=MODEL_ID,
-            max_tokens=2048,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = next(
-            (b.text for b in response.content if b.type == "text"), ""
-        ).strip()
-        _dbg(f"Step5 OK: API 応答 {len(raw)} 文字  stop_reason={response.stop_reason}")
+        genai.configure(api_key=key)
+        model = genai.GenerativeModel(MODEL_ID)
+        response = model.generate_content(prompt)
+        raw = response.text.strip()
+        _dbg(f"Step5 OK: API 応答 {len(raw)} 文字")
         _dbg(f"  raw preview: {raw[:300]!r}")
 
         # ── Step 6: JSON 解析 ─────────────────────────────────
@@ -291,10 +282,8 @@ def _make_test_df() -> pd.DataFrame:
 
 
 def _run_test() -> None:
-    # ── stdout を UTF-8 に強制（Windows 対策）────────────────
     _setup_utf8_stdout()
 
-    # ── logging を stdout へ（stderr だと cmd.exe では見えない場合がある）
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
     if not root.handlers:
@@ -304,7 +293,6 @@ def _run_test() -> None:
         )
         root.addHandler(handler)
 
-    # ── ヘッダー（ASCII のみ — エンコード問題が起きても最初の行は必ず出る）
     _p("=" * 60)
     _p("KEIBA EDGE / AI Comment Module -- Self Test")
     _p("=" * 60)
@@ -316,39 +304,36 @@ def _run_test() -> None:
     _p()
 
     # ── 環境変数確認 ─────────────────────────────────────────
-    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    key = os.environ.get("GEMINI_API_KEY", "")
     if key:
-        _p(f"[OK] ANTHROPIC_API_KEY : set (last 6 chars: ...{key[-6:]})")
+        _p(f"[OK] GEMINI_API_KEY : set (last 6 chars: ...{key[-6:]})")
     else:
-        _p("[NG] ANTHROPIC_API_KEY : NOT SET")
+        _p("[NG] GEMINI_API_KEY : NOT SET")
         _p()
-        _p("  Windows CMD    : set ANTHROPIC_API_KEY=sk-ant-...")
-        _p("  PowerShell     : $env:ANTHROPIC_API_KEY='sk-ant-...'")
-        _p("  Git Bash/Linux : export ANTHROPIC_API_KEY=sk-ant-...")
+        _p("  Windows CMD    : set GEMINI_API_KEY=AIza...")
+        _p("  PowerShell     : $env:GEMINI_API_KEY='AIza...'")
+        _p("  Git Bash/Linux : export GEMINI_API_KEY=AIza...")
         _p()
         _p("Set the key and re-run:  python -m keiba_predictor.ai_comment --test")
         sys.exit(1)
 
-    # ── anthropic インポート確認 ──────────────────────────────
+    # ── google-generativeai インポート確認 ────────────────────
     try:
-        import anthropic
-        _p(f"[OK] anthropic         : v{anthropic.__version__}")
+        import google.generativeai as genai
+        _p(f"[OK] google-generativeai : インポート成功")
     except ImportError as e:
-        _p(f"[NG] anthropic import failed: {e}")
-        _p("     Run: pip install anthropic")
+        _p(f"[NG] google-generativeai import failed: {e}")
+        _p("     Run: pip install google-generativeai")
         sys.exit(1)
 
     # ── Step 1: API 疎通確認（最小コール）────────────────────
     _p()
     _p("[Step 1] API connectivity check ...")
     try:
-        client = anthropic.Anthropic(api_key=key)
-        resp = client.messages.create(
-            model=MODEL_ID,
-            max_tokens=10,
-            messages=[{"role": "user", "content": "Reply with just: OK"}],
-        )
-        reply = next((b.text for b in resp.content if b.type == "text"), "(empty)")
+        genai.configure(api_key=key)
+        model = genai.GenerativeModel(MODEL_ID)
+        resp = model.generate_content("Reply with just: OK")
+        reply = resp.text.strip()
         _p(f"  [OK] API response: {reply!r}")
     except Exception as e:
         _p(f"  [NG] API call failed: {type(e).__name__}: {e}")
@@ -364,7 +349,7 @@ def _run_test() -> None:
         race_name="TestRace",
         course_info="Turf2000m",
         api_key=key,
-        verbose=True,     # <- 進捗を print で表示
+        verbose=True,
     )
 
     _p()
@@ -375,7 +360,6 @@ def _run_test() -> None:
     _p(f"[OK] generate_comments() returned {len(comments)} comments")
     _p("-" * 60)
     for num, comment in sorted(comments.items(), key=lambda x: int(x[0])):
-        # 出力時もエンコード安全に
         _p(f"  Horse #{num}: {comment}")
     _p("-" * 60)
     _p()
@@ -389,7 +373,6 @@ if __name__ == "__main__":
         except SystemExit:
             raise
         except Exception as e:
-            # 予期しない例外をキャッチして確実に表示する
             try:
                 print(f"\n[FATAL] Unexpected error: {type(e).__name__}: {e}", flush=True)
             except Exception:
