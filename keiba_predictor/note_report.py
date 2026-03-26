@@ -1,6 +1,6 @@
 """
 KEIBA EDGE 週次予想レポート生成（note 記事用 Markdown）
-Gemini API で展開予測・馬別解説・期待値分析を生成する。
+Claude API で展開予測・馬別解説・期待値分析を生成する。
 
 【使用方法】
     python -m keiba_predictor.note_report
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 DATA_DIR   = Path(__file__).parent / "data"
 CACHE_PATH = DATA_DIR / "predictions_cache.json"
 
-MODEL_ID = "gemini-2.0-flash"
+MODEL_ID = "claude-haiku-4-5-20251001"
 
 JRA_VENUES = {
     "01": "札幌", "02": "函館", "03": "福島", "04": "新潟", "05": "東京",
@@ -109,55 +109,60 @@ def _extract_json_object(text: str) -> str:
     return text[start:]
 
 
-# ── Gemini API ───────────────────────────────────────────────────────
+# ── Claude API ───────────────────────────────────────────────────────
 
-def _gemini_call(prompt: str, api_key: str) -> str:
+def _claude_call(prompt: str, api_key: str) -> str:
     """
-    Gemini API を呼び出してテキストを返す。失敗時は "" を返す。
+    Claude API を呼び出してテキストを返す。失敗時は "" を返す。
     429対策: 初回2秒待機、リトライ10秒/20秒。
     """
     try:
-        from google import genai
+        import anthropic
     except ImportError:
-        print("[note_report] google-genai 未インストール → Gemini分析スキップ", flush=True)
+        print("[note_report] anthropic 未インストール → Claude分析スキップ", flush=True)
         return ""
 
-    client = genai.Client(api_key=api_key, http_options={"api_version": "v1"})
+    client = anthropic.Anthropic(api_key=api_key)
     for attempt in range(3):
         wait = 2 if attempt == 0 else 10 * attempt
         time.sleep(wait)
         try:
             print(
-                f"[note_report] Gemini API call attempt={attempt+1}/3"
+                f"[note_report] Claude API call attempt={attempt+1}/3"
                 f" model={MODEL_ID!r} prompt_len={len(prompt)}",
                 flush=True,
             )
-            response = client.models.generate_content(model=MODEL_ID, contents=prompt)
-            print(f"[note_report] Gemini response {len(response.text)} chars", flush=True)
+            response = client.messages.create(
+                model=MODEL_ID,
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            response_text = response.content[0].text
+            print(f"[note_report] Claude response {len(response_text)} chars", flush=True)
             if attempt > 0:
-                print("[Gemini] リトライ成功", flush=True)
-            return response.text.strip()
+                print("[Claude] リトライ成功", flush=True)
+            return response_text.strip()
         except Exception as e:
             err_str = str(e).lower()
-            print(f"[note_report] Gemini error attempt={attempt+1}: {type(e).__name__}: {e}", flush=True)
+            print(f"[note_report] Claude error attempt={attempt+1}: {type(e).__name__}: {e}", flush=True)
             if "404" in err_str or "not found" in err_str:
                 return ""
             if "429" in err_str or "quota" in err_str or "rate" in err_str:
-                print(f"[Gemini] 429エラー: 60秒待機してリトライ ({attempt+1}/3)", flush=True)
+                print(f"[Claude] 429エラー: 60秒待機してリトライ ({attempt+1}/3)", flush=True)
                 time.sleep(60)
                 if attempt < 2:
                     continue
-                print("[Gemini] 3回失敗 スキップします", flush=True)
+                print("[Claude] 3回失敗 スキップします", flush=True)
                 return ""
             if attempt == 2:
-                print("[Gemini] 3回失敗 スキップします", flush=True)
+                print("[Claude] 3回失敗 スキップします", flush=True)
                 print(traceback.format_exc(), flush=True)
     return ""
 
 
 def _generate_race_analysis(race_data: dict, race_name: str, course_info: str, api_key: str) -> dict:
     """
-    1レース分の Gemini 分析を生成する。
+    1レース分の Claude 分析を生成する。
 
     Returns:
         {
@@ -231,7 +236,7 @@ def _generate_race_analysis(race_data: dict, race_name: str, course_info: str, a
         f'{{"tenkai": "...", "horses": {{"1": "...", "3": "..."}}, "ev_analysis": "..."}}\n'
     )
 
-    raw = _gemini_call(prompt, api_key)
+    raw = _claude_call(prompt, api_key)
     if not raw:
         return empty
 
@@ -244,7 +249,7 @@ def _generate_race_analysis(race_data: dict, race_name: str, course_info: str, a
             "ev_analysis": str(data.get("ev_analysis", ""))[:200],
         }
     except Exception as e:
-        print(f"[note_report] Gemini JSON解析失敗: {e}  raw={raw[:300]!r}", flush=True)
+        print(f"[note_report] Claude JSON解析失敗: {e}  raw={raw[:300]!r}", flush=True)
         return empty
 
 
@@ -253,7 +258,7 @@ def _generate_race_analysis(race_data: dict, race_name: str, course_info: str, a
 def generate_note_report(output_path: Optional[Path] = None) -> str:
     """
     predictions_cache.json と results_history.csv から note 記事用 Markdown を生成する。
-    GEMINI_API_KEY が設定されていれば Gemini で展開予測・馬別解説・期待値分析も生成する。
+    ANTHROPIC_API_KEY が設定されていれば Claude で展開予測・馬別解説・期待値分析も生成する。
 
     Returns:
         生成した Markdown 文字列
@@ -262,7 +267,7 @@ def generate_note_report(output_path: Optional[Path] = None) -> str:
     if not cache:
         raise ValueError("予想キャッシュが空です。先に notify --mode predict を実行してください。")
 
-    api_key   = os.environ.get("GEMINI_API_KEY", "")
+    api_key   = os.environ.get("ANTHROPIC_API_KEY", "")
     today_str = date.today().strftime("%Y/%m/%d")
 
     race_dates    = [r.get("race_date", "") for r in cache.values()]
