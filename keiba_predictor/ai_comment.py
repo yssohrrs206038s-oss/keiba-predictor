@@ -22,6 +22,9 @@ import re
 import sys
 import time
 import traceback
+
+# ログ末尾に一括表示するためのバッファ
+_pending_reports: list[tuple[str, str]] = []  # [(race_name, text), ...]
 from typing import Optional
 
 import pandas as pd
@@ -384,22 +387,16 @@ def generate_report_text(
 def save_report(text: str, race_name: str) -> "Optional[Path]":
     """
     レポートテキストを outputs/report_{race_name}.txt に保存し、
-    全文を標準出力に出力する（ログ確認・コピペ用）。
+    表示用バッファ (_pending_reports) に積む。
+    実際の print は flush_reports() で一括実施。
 
     Returns:
         保存したファイルパス。失敗時は None。
     """
     from pathlib import Path
-    _BORDER = "#" * 50
 
-    # ── 全文を stdout に出力（区切り線付き） ──────────────────
-    print(f"\n{_BORDER}", flush=True)
-    print("### NOTE REPORT START ###", flush=True)
-    print(_BORDER, flush=True)
-    print(text, flush=True)
-    print(_BORDER, flush=True)
-    print("### NOTE REPORT END ###", flush=True)
-    print(f"{_BORDER}\n", flush=True)
+    # ── バッファに積む（ログ末尾で一括表示するため）──────────
+    _pending_reports.append((race_name, text))
 
     # ── ファイル保存 ─────────────────────────────────────────
     safe_name = re.sub(r'[\\/:*?"<>|]', "_", race_name).strip() or "unknown"
@@ -413,6 +410,29 @@ def save_report(text: str, race_name: str) -> "Optional[Path]":
     except Exception as e:
         print(f"[save_report] 保存失敗: {e}", flush=True)
         return None
+
+
+def flush_reports() -> None:
+    """
+    _pending_reports に溜まったレポートを ▼▼▼ で囲んで一括 print する。
+    predict_from_csv / predict_live の最後に呼ぶことで、
+    他のログと混ざらずにまとめて表示される。
+    """
+    if not _pending_reports:
+        return
+
+    _FENCE = "▼" * 50
+    for race_name, text in _pending_reports:
+        label = f"NOTE REPORT: {race_name}" if race_name else "NOTE REPORT"
+        print(f"\n{_FENCE}", flush=True)
+        print(f"▼▼▼  {label}  ▼▼▼", flush=True)
+        print(_FENCE, flush=True)
+        print(text, flush=True)
+        print(_FENCE, flush=True)
+        print(f"▼▼▼  END OF REPORT  ▼▼▼", flush=True)
+        print(f"{_FENCE}\n", flush=True)
+
+    _pending_reports.clear()
 
 
 # ══════════════════════════════════════════════════════════════

@@ -378,6 +378,9 @@ def predict_from_csv(
             ok = send_discord(url, msg1) and send_discord(url, msg2)
             logger.info(f"Discord 送信{'完了' if ok else '失敗'}")
 
+    from keiba_predictor.ai_comment import flush_reports
+    flush_reports()
+
     return result
 
 
@@ -483,6 +486,9 @@ def predict_live(
         else:
             ok = send_discord(url, msg1) and send_discord(url, msg2)
             logger.info(f"Discord 送信{'完了' if ok else '失敗'}")
+
+    from keiba_predictor.ai_comment import flush_reports
+    flush_reports()
 
     return result
 
