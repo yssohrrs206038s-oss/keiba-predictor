@@ -330,6 +330,7 @@
     <div class="stat-card"><div class="stat-value" id="s-races">—</div><div class="stat-label">通算レース数</div></div>
     <div class="stat-card green"><div class="stat-value" id="s-fukusho">—</div><div class="stat-label">複勝的中率</div></div>
     <div class="stat-card blue"><div class="stat-value" id="s-umaren">—</div><div class="stat-label">馬連的中率</div></div>
+    <div class="stat-card blue"><div class="stat-value" id="s-sanren">—</div><div class="stat-label">3連複的中率</div></div>
     <div class="stat-card"><div class="stat-value" id="s-roi">—</div><div class="stat-label">累計回収率</div></div>
     <div class="stat-card green"><div class="stat-value" id="s-streak">—</div><div class="stat-label">連続複勝的中</div></div>
   </div>
@@ -452,6 +453,7 @@ function renderStats(rows) {
   document.getElementById('s-races').textContent   = n + ' 戦';
   document.getElementById('s-fukusho').textContent = pct(fHits / n);
   document.getElementById('s-umaren').textContent  = pct(uHits / n);
+  document.getElementById('s-sanren').textContent  = pct(sHits / n);
   document.getElementById('s-roi').textContent     = pct(roi);
   document.getElementById('s-streak').textContent  = streak + ' 連続';
 }
