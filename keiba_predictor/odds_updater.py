@@ -8,6 +8,8 @@
 import json
 import logging
 from datetime import date
+from keiba_predictor.model.predict import _ensure_utf8_stdout
+_ensure_utf8_stdout()
 from pathlib import Path
 
 import pandas as pd
