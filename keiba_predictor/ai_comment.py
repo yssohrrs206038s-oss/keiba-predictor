@@ -215,23 +215,23 @@ def generate_comments(
     if course_info:
         race_label += f"（{course_info}）"
 
+    system_prompt = (
+        "あなたはKEIBA EDGEの専属AIアナリストです。\n"
+        "10万件の競馬データで学習したXGBoostモデルの予測結果を\n"
+        "競馬ファンに向けて魅力的に解説します。\n"
+        "語尾は断定的・自信ありげに。絵文字を効果的に使用。"
+    )
+
     prompt = (
-        f"あなたは競馬予測AIの解説アシスタントです。\n"
-        f"以下は「{race_label}」の◎○▲3頭の予測データです。\n\n"
-        f"対象馬データ（JSON配列）:\n"
-        f"{json.dumps(horses_data, ensure_ascii=False, indent=2)}\n\n"
-        f"上記3頭について競馬ファン向けの自然な日本語解説を生成してください。\n\n"
-        f"【重要ルール】\n"
-        f"各馬の「AI印」を解説テキストの先頭に必ずそのまま付けること。\n"
-        f"（例: AI印が '◎🔥' なら解説は '◎🔥 ...' で始める）\n\n"
-        f"【解説の必須要素（各馬{MAX_COMMENT_LEN}文字以内）】\n"
-        f"1. 展開・位置取り適性を簡潔に\n"
-        f"2. コース・距離適性を簡潔に\n"
-        f"3. 人気でも危険な馬には懸念を明記\n\n"
-        f"出力形式:\n"
-        f"- JSONオブジェクトのみを返す（コードブロック不要）\n"
-        f"- キー: 馬番（文字列）、値: 解説テキスト（最大{MAX_COMMENT_LEN}文字、改行なし）\n\n"
-        f'例: {{"1": "◎🔥 先行策が叶えば前残り濃厚。持続力あり。", "3": "○✨ 差し展開不向き。"}}\n'
+        f"{race_label}の本命◎○▲3頭のAI予測データです。\n\n"
+        f"{json.dumps(horses_data, ensure_ascii=False)}\n\n"
+        f"各馬について以下の形式で解説してください：\n"
+        f"- AI印を文頭に必ず付ける\n"
+        f"- {MAX_COMMENT_LEN}文字以内で簡潔・断定的に\n"
+        f"- 強みを前面に、懸念は最後に一言\n"
+        f"- 競馬ファンが「買いたい！」と思う表現で\n\n"
+        f"出力：JSONのみ（コードブロック不要）\n"
+        f"キー：馬番（文字列）、値：解説テキスト"
     )
     _dbg(f"Step4 OK: プロンプト {len(prompt)} 文字")
 
@@ -254,6 +254,7 @@ def generate_comments(
                 response = client.messages.create(
                     model=MODEL_ID,
                     max_tokens=1000,
+                    system=system_prompt,
                     messages=[{"role": "user", "content": prompt}],
                 )
                 response_text = response.content[0].text
