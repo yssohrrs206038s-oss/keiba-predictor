@@ -182,121 +182,95 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
     from keiba_predictor.features.feature_engineering import _encode_race_grade
     race_grade_enc = _encode_race_grade(race_name)
 
-    # ── 出馬表テーブル ───────────────────────────────────────
-    # Yahoo!競馬の出馬表テーブルを複数セレクターで試みる
-    table = (
-        soup.select_one("table.denmaTableFrame")
-        or soup.select_one("table#denmaTable")
-        or soup.select_one("table[summary*='出馬']")
-        or soup.select_one("table[summary*='denma']")
-        or soup.select_one("div.denmaTable table")
-        or soup.select_one("div#raceTable table")
-    )
-
-    # テーブル一覧デバッグ出力
-    all_tables = soup.find_all("table")
-    print(f"[DEBUG][Yahoo!] ページ内テーブル数: {len(all_tables)}", flush=True)
-    for i, t in enumerate(all_tables[:10]):
-        print(f"[DEBUG][Yahoo!]   table[{i}] class={t.get('class')} id={t.get('id')} summary={t.get('summary','')[:40]}", flush=True)
-    print(f"[DEBUG][Yahoo!] 出馬表テーブル検出: {table is not None}", flush=True)
-
-    if table is None:
-        logger.warning("[Yahoo!] 出馬表テーブルが見つかりませんでした")
-        return None
-
-    rows = []
-    trs = [tr for tr in table.find_all("tr") if tr.find_all("td")]
-    print(f"[DEBUG][Yahoo!] データ行数: {len(trs)}", flush=True)
+    # ── 出馬表行の取得 ───────────────────────────────────────
+    # tr.HorseList で直接取得（テーブルセレクター不要）
+    trs = soup.select("tr.HorseList")
+    print(f"[DEBUG][Yahoo!] HorseList 行数: {len(trs)}", flush=True)
     if trs:
         first = trs[0]
         for j, td in enumerate(first.find_all("td")):
             print(f"[DEBUG][Yahoo!]   td[{j:02d}] class={td.get('class')} text={td.get_text(strip=True)[:30]!r}", flush=True)
 
+    if not trs:
+        logger.warning("[Yahoo!] tr.HorseList が見つかりませんでした")
+        return None
+
+    rows = []
     for tr in trs:
         tds = tr.find_all("td")
-        if len(tds) < 3:
+
+        def _txt(*sels: str) -> str:
+            for sel in sels:
+                el = tr.select_one(sel)
+                if el:
+                    return el.get_text(strip=True)
+            return ""
+
+        # 馬番（必須）: Umaban1, Umaban2 ... → [class*='Umaban']
+        try:
+            horse_number = int(_txt("td[class*='Umaban']"))
+        except ValueError:
             continue
 
-        def _td_text(td) -> str:
-            return td.get_text(strip=True)
+        # 枠番: Waku1, Waku2 ... → [class*='Waku']
+        try:
+            frame_number = int(_txt("td[class*='Waku']"))
+        except ValueError:
+            frame_number = (horse_number - 1) // 2 + 1
 
-        # 馬番: 最初の数字セルを探す
-        horse_number = None
-        for td in tds[:3]:
-            try:
-                horse_number = int(_td_text(td))
-                break
-            except ValueError:
-                continue
-        if horse_number is None:
-            continue
-
-        # 枠番: 馬番の前か属性から（取れなければ計算）
-        frame_number = (horse_number - 1) // 2 + 1
-
-        # 馬名: <a href="/horse/..."> または <a href*="horse"> を含む td
-        horse_name = ""
-        horse_link = (
-            tr.select_one("a[href*='/horse/']")
-            or tr.select_one("a[href*='horse']")
-        )
-        if horse_link:
-            horse_name = horse_link.get_text(strip=True)
-
+        # 馬名（必須）
+        horse_link = tr.select_one(".HorseInfo a") or tr.select_one(".HorseName a")
+        horse_name = horse_link.get_text(strip=True) if horse_link else ""
         if not horse_name:
             continue
 
-        # 騎手: <a href="/jockey/..."> を含む td
-        jockey = ""
-        jockey_link = (
-            tr.select_one("a[href*='/jockey/']")
-            or tr.select_one("a[href*='jockey']")
-        )
-        if jockey_link:
-            jockey = jockey_link.get_text(strip=True)
+        # 性齢: .Barei
+        sex, age = _parse_sex_age(_txt(".Barei"))
+        sex_enc = _SEX_ENC.get(sex, 0) if sex else 0
 
-        # オッズ: 数値 X.X または X のセルを後ろから探す
-        odds = None
-        for td in reversed(tds):
-            txt = _td_text(td).replace(",", "")
-            m3 = re.fullmatch(r"\d+\.?\d*", txt)
-            if m3:
-                try:
-                    v = float(txt)
-                    if v >= 1.0:  # オッズは1.0以上
-                        odds = v
-                        break
-                except ValueError:
-                    pass
+        # 斤量: td[05]（クラス名なし・インデックス指定）
+        try:
+            weight_carried = float(tds[5].get_text(strip=True)) if len(tds) > 5 else None
+        except (ValueError, IndexError):
+            weight_carried = None
 
-        # 人気: 小さい整数（1〜18）のセルを後ろから探す
-        popularity = None
-        for td in reversed(tds):
-            txt = _td_text(td)
-            m4 = re.fullmatch(r"\d{1,2}", txt)
-            if m4:
-                try:
-                    v = int(txt)
-                    if 1 <= v <= 18:
-                        popularity = v
-                        break
-                except ValueError:
-                    pass
+        # 騎手: .Jockey a
+        jockey_link = tr.select_one(".Jockey a")
+        jockey = jockey_link.get_text(strip=True) if jockey_link else ""
+
+        # 調教師: .Trainer a
+        trainer_link = tr.select_one(".Trainer a")
+        trainer = trainer_link.get_text(strip=True) if trainer_link else ""
+
+        # 馬体重: td.Weight
+        horse_weight, horse_weight_diff = _parse_horse_weight(_txt("td.Weight"))
+
+        # オッズ: td.Txt_R.Popular（Txt_R と Popular を両方持つ td）
+        try:
+            odds = float(_txt("td.Txt_R.Popular").replace(",", ""))
+        except ValueError:
+            odds = None
+
+        # 人気: .Popular_Ninki
+        try:
+            popularity = int(_txt(".Popular_Ninki"))
+        except ValueError:
+            popularity = None
 
         rows.append({
             "horse_number":       horse_number,
             "frame_number":       frame_number,
             "horse_name":         horse_name,
             "horse_id":           "",
-            "sex":                "",
-            "sex_enc":            0,
-            "age":                None,
-            "weight_carried":     None,
-            "horse_weight":       None,
-            "horse_weight_diff":  None,
+            "sex":                sex or "",
+            "sex_enc":            sex_enc,
+            "age":                age,
+            "weight_carried":     weight_carried,
+            "horse_weight":       horse_weight,
+            "horse_weight_diff":  horse_weight_diff,
             "jockey":             jockey,
             "jockey_id":          "",
-            "trainer":            "",
+            "trainer":            trainer,
             "trainer_id":         "",
             "odds":               odds,
             "popularity":         popularity,
