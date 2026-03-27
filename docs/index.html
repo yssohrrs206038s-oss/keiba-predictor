@@ -622,7 +622,7 @@ function renderPredictions(cache) {
         <div class="race-card-header">
           <div>
             <div class="race-name">${esc(shortName)}${course}</div>
-            <div class="race-meta">${esc(r.race_date || '')}</div>
+            <div class="race-meta">${esc(r.race_date || '')}${r.start_time ? '\u3000' + esc(r.start_time) + '発走' : ''}</div>
           </div>
           ${gLabel ? `<span class="grade-badge ${gClass}">${gLabel}</span>` : ''}
         </div>

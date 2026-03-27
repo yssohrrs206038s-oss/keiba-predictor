@@ -484,10 +484,12 @@ def predict_live(
         save_report(report, race_name)
 
     # 予想キャッシュに保存（note_report・結果照合で使用）
-    race_date = shutuba_info.get("race_date", "")
+    race_date  = shutuba_info.get("race_date", "")
+    start_time = shutuba_info.get("start_time", "")
     from keiba_predictor.discord_notify import _store_prediction
     _store_prediction(race_id, race_name, race_date, result,
-                      ai_comments=ai_comments, course_info=course_info)
+                      ai_comments=ai_comments, course_info=course_info,
+                      start_time=start_time)
 
     if notify:
         import os

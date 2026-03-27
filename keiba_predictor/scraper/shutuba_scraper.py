@@ -158,6 +158,12 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
     if m:
         race_date = f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
 
+    # ── 発走時間 ─────────────────────────────────────────────
+    start_time = ""
+    mt = re.search(r"(\d{1,2}):(\d{2})発走", soup.get_text())
+    if mt:
+        start_time = f"{int(mt.group(1)):02d}:{mt.group(2)}"
+
     # ── 会場・コース・距離 ───────────────────────────────────
     venue = VENUE_CODE_MAP.get(str(race_id)[4:6], "")
     distance        = 0
@@ -281,12 +287,13 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
         return None
 
     horses_df = pd.DataFrame(rows)
-    logger.info(f"[Yahoo!] 取得完了: {race_name} {race_date} {course_info} / {len(horses_df)}頭")
+    logger.info(f"[Yahoo!] 取得完了: {race_name} {race_date} {start_time} {course_info} / {len(horses_df)}頭")
 
     return {
         "race_id":         race_id,
         "race_name":       race_name,
         "race_date":       race_date,
+        "start_time":      start_time,
         "venue":           venue,
         "course_info":     course_info,
         "distance":        distance,
@@ -489,6 +496,12 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
     else:
         logger.warning(f"開催日をHTMLから取得できませんでした (race_id={race_id})")
 
+    # 発走時間
+    start_time = ""
+    mt = re.search(r"(\d{1,2}):(\d{2})発走", soup.get_text())
+    if mt:
+        start_time = f"{int(mt.group(1)):02d}:{mt.group(2)}"
+
     # 会場
     venue = VENUE_CODE_MAP.get(str(race_id)[4:6], "")
 
@@ -561,12 +574,13 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
     horses_df = pd.DataFrame(rows) if rows else pd.DataFrame()
 
     logger.info(
-        f"出馬表取得完了: {race_name} {race_date} {course_info} / {len(horses_df)}頭"
+        f"出馬表取得完了: {race_name} {race_date} {start_time} {course_info} / {len(horses_df)}頭"
     )
     return {
         "race_id":         race_id,
         "race_name":       race_name,
         "race_date":       race_date,
+        "start_time":      start_time,
         "venue":           venue,
         "course_info":     course_info,
         "distance":        distance,
