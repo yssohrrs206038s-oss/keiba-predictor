@@ -448,8 +448,7 @@ def flush_reports() -> None:
 
 def _send_report_to_discord(webhook_url: str, race_name: str, text: str) -> None:
     """レポート全文を Discord に送信する。2000字超は自動分割。"""
-    import urllib.request
-    import json as _json
+    import requests
 
     webhook_url = webhook_url.strip()
     header = f"📋 **{race_name} レポート**\n" if race_name else "📋 **レポート**\n"
@@ -457,20 +456,12 @@ def _send_report_to_discord(webhook_url: str, race_name: str, text: str) -> None
     chunks = [full_text[i: i + 1900] for i in range(0, len(full_text), 1900)]
 
     for idx, chunk in enumerate(chunks):
-        payload = _json.dumps({"content": chunk}, ensure_ascii=False).encode("utf-8")
-        req = urllib.request.Request(
-            webhook_url,
-            data=payload,
-            headers={"Content-Type": "application/json; charset=utf-8"},
-            method="POST",
-        )
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                status = resp.status
-            ok = status in (200, 204)
+            resp = requests.post(webhook_url, json={"content": chunk}, timeout=15)
+            ok = resp.status_code in (200, 204)
             print(
                 f"[flush_reports] Discord report送信 chunk {idx+1}/{len(chunks)}: "
-                f"status={status} {'✅ 成功' if ok else '⚠️ 予期しないステータス'}",
+                f"status={resp.status_code} {'✅ 成功' if ok else '⚠️ 予期しないステータス'}",
                 flush=True,
             )
         except Exception as exc:
