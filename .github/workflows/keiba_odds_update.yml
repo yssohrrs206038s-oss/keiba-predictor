@@ -1,0 +1,59 @@
+name: オッズ更新（土日）
+
+on:
+  schedule:
+    - cron: '30 3,4,5,6,7 * * 6,0'  # 土日 12:30/13:30/14:30/15:30/16:30 JST
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  update-odds:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements.txt
+
+      - name: Playwright Chromium をインストール
+        run: |
+          python -m playwright install chromium
+          python -m playwright install-deps chromium
+
+      - name: オッズを更新
+        run: python -m keiba_predictor.odds_updater
+
+      - name: キャッシュをコミット・プッシュ
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add keiba_predictor/data/predictions_cache.json
+          if git diff --staged --quiet; then
+            echo "ℹ️ 変更なし（コミットスキップ）"
+          else
+            git commit -m "chore: オッズ更新 $(date +'%H:%M JST') [skip ci]"
+            git push
+            echo "✅ コミット・プッシュ完了"
+          fi
+
+      - name: ❌ エラーを Discord に通知
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then exit 0; fi
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"⚠️ **オッズ更新ワークフローが失敗しました**\nログ: ${RUN_URL}\"}" \
+            || true
