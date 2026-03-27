@@ -482,10 +482,8 @@ def _build_race_discord_message(race_id: str, r: dict) -> str:
     # レース名に既にグレード表記が含まれている場合は追加しない
     grade_str   = f"（{grade}）" if grade and grade not in race_name else ""
 
-    # course_info "中山 芝2500m" → venue / course に分割
-    parts = course_info.split(" ", 1) if course_info else []
-    venue  = parts[0] if parts else _venue_from_race_id(race_id)
-    course = parts[1] if len(parts) > 1 else course_info
+    venue  = r.get("venue") or _venue_from_race_id(race_id)
+    course = course_info
 
     # EV マップ（馬番 → ev_score, odds, popularity）
     ev_map: dict[int, dict] = {}

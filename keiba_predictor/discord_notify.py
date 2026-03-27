@@ -549,7 +549,8 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
                       result_df: pd.DataFrame,
                       ai_comments: Optional[dict] = None,
                       course_info: str = "",
-                      start_time: str = "") -> None:
+                      start_time: str = "",
+                      venue: str = "") -> None:
     """予想結果をキャッシュに保存する（日曜結果比較・note レポート生成に使用）。"""
     cache = _load_cache()
 
@@ -627,6 +628,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "race_name":           race_name,
         "race_date":           race_date,
         "start_time":          start_time,
+        "venue":               venue,
         "course_info":         course_info,
         "honmei":              _row(result_df, 0),
         "taikou":              _row(result_df, 1),
