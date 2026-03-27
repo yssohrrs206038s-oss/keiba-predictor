@@ -239,6 +239,17 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         logger.error(f"出馬表の取得に失敗: {race_id}")
         return None
 
+    # ── デバッグ: 取得HTMLをファイルに保存 ─────────────────────
+    try:
+        import pathlib
+        _debug_dir = pathlib.Path(__file__).parent.parent / "data" / "debug"
+        _debug_dir.mkdir(parents=True, exist_ok=True)
+        _debug_path = _debug_dir / f"shutuba_{race_id}.html"
+        _debug_path.write_text(soup.prettify(), encoding="utf-8")
+        print(f"[DEBUG] shutuba HTML 保存: {_debug_path} ({_debug_path.stat().st_size} bytes)", flush=True)
+    except Exception as _de:
+        print(f"[DEBUG] HTML保存失敗: {_de}", flush=True)
+
     # ── レース基本情報 ─────────────────────────────────────
     race_name = ""
     for sel in (".RaceName", "h1.RaceName", ".RaceTitle"):
@@ -298,12 +309,26 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         or soup.select_one("table.ShutubaTable")
         or soup.select_one("table[class*='Shutuba']")
     )
+    # デバッグ: テーブルとページ内の全テーブル一覧を出力
+    all_tables = soup.find_all("table")
+    print(f"[DEBUG] ページ内テーブル数: {len(all_tables)}", flush=True)
+    for i, t in enumerate(all_tables[:10]):
+        print(f"[DEBUG]   table[{i}] class={t.get('class')} id={t.get('id')}", flush=True)
+    print(f"[DEBUG] Shutuba_Table 検出: {table is not None}", flush=True)
+
     rows = []
     if table:
         trs = table.select("tr.HorseList, tr[class*='HorseList']")
         # フォールバック: クラス名でマッチしない場合は <td class="Umaban"> を持つ行を探す
         if not trs:
             trs = [tr for tr in table.find_all("tr") if tr.select_one("td.Umaban")]
+        print(f"[DEBUG] HorseList 行数: {len(trs)}", flush=True)
+        if trs:
+            # 最初の行のクラス・td 構造をダンプ
+            first = trs[0]
+            print(f"[DEBUG] 1行目 tr.class={first.get('class')}", flush=True)
+            for td in first.find_all("td"):
+                print(f"[DEBUG]   td.class={td.get('class')} text={td.get_text(strip=True)[:30]!r}", flush=True)
         for tr in trs:
             row = _parse_shutuba_row(tr)
             if row:
@@ -311,7 +336,9 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
     else:
         logger.warning("出馬表テーブルが見つかりませんでした（selector: table.Shutuba_Table）")
         # テーブルが見つからない場合: ページ全体から .HorseList 行を検索
-        for tr in soup.select("tr.HorseList, tr[class*='HorseList']"):
+        horse_trs = soup.select("tr.HorseList, tr[class*='HorseList']")
+        print(f"[DEBUG] ページ全体の HorseList 行数: {len(horse_trs)}", flush=True)
+        for tr in horse_trs:
             row = _parse_shutuba_row(tr)
             if row:
                 rows.append(row)
