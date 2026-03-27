@@ -251,14 +251,35 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
         # 馬体重: td.Weight
         horse_weight, horse_weight_diff = _parse_horse_weight(_txt("td.Weight"))
 
-        # オッズ: tds[9] (class=['Txt_R', 'Popular'])
-        try:
-            odds_text = tds[9].get_text(strip=True)
-            print(f"[DEBUG odds] raw='{odds_text}'", flush=True)
-            odds = float(odds_text.replace(",", ""))
-        except Exception as e:
-            print(f"[DEBUG odds] error: {e}", flush=True)
-            odds = None
+        # オッズ: クラス名ベースで取得（Popular, Txt_R, Odds など）
+        odds = None
+        odds_el = tr.select_one("td.Popular, td.Odds, td[class*='Odds']")
+        if odds_el is None:
+            # フォールバック: クラスに 'Txt_R' を含む td から数値を探す
+            for td in tds:
+                cls = " ".join(td.get("class", []))
+                if "Txt_R" in cls or "Popular" in cls:
+                    txt = td.get_text(strip=True)
+                    if re.match(r"^\d+(\.\d+)?$", txt.replace(",", "")):
+                        odds_el = td
+                        break
+        if odds_el is not None:
+            try:
+                odds_text = odds_el.get_text(strip=True).replace(",", "")
+                print(f"[DEBUG odds] raw='{odds_text}' class={odds_el.get('class')}", flush=True)
+                odds = float(odds_text)
+            except (ValueError, TypeError) as e:
+                print(f"[DEBUG odds] error: {e}", flush=True)
+                odds = None
+        else:
+            # 最終フォールバック: tds[9] を試す（旧構造互換）
+            try:
+                odds_text = tds[9].get_text(strip=True) if len(tds) > 9 else ""
+                if re.match(r"^\d+(\.\d+)?$", odds_text.replace(",", "")):
+                    print(f"[DEBUG odds] fallback tds[9] raw='{odds_text}'", flush=True)
+                    odds = float(odds_text.replace(",", ""))
+            except (ValueError, IndexError):
+                pass
 
         # 人気: .Popular_Ninki
         try:
