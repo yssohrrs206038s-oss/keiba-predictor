@@ -80,6 +80,11 @@ jobs:
           fi
           echo "✅ モデルファイル確認OK: $MODEL_PATH"
 
+      # ── 今週末重賞 CSV を更新 ────────────────────────────────
+      - name: 今週末重賞CSVを更新
+        continue-on-error: true
+        run: python -m keiba_predictor.main update-featured
+
       # ── Discord 予想通知（デバッグモード有効）────────────────
       - name: Discord に予想を送信
         id: notify_predict

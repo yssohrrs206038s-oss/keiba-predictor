@@ -88,13 +88,12 @@ def send_discord(webhook_url: str, content: str) -> bool:
 # ══════════════════════════════════════════════════════════════
 
 def _weekend_dates() -> list[str]:
-    """今週末（土・日）の YYYYMMDD リストを返す。金曜実行前提。"""
+    """今週末（土・日）の YYYYMMDD リストを返す。月〜土曜実行を想定。"""
     today   = date.today()
     wd      = today.weekday()          # 0=月 … 5=土 6=日
-    if   wd == 4: d = 1                # 金 → 翌日=土
-    elif wd == 5: d = 0                # 土
+    if   wd == 5: d = 0                # 土 → 当日
     elif wd == 6: d = -1               # 日 → 昨日=土
-    else:         d = 5 - wd          # 月〜木 → 次の土
+    else:         d = 5 - wd          # 月(4)・火(3)・水(3)・木(2)・金(1) → 今週土
     sat = today + timedelta(days=d)
     sun = sat + timedelta(days=1)
     return [sat.strftime("%Y%m%d"), sun.strftime("%Y%m%d")]
