@@ -114,14 +114,16 @@ def _parse_shutuba_row(tr) -> Optional[dict]:
         return ""
 
     # 馬番（必須）
+    # 実際のクラスは "Umaban1" のように数字付き → [class*='Umaban'] で部分一致
     try:
-        horse_number = int(_txt(".Umaban", "td.Umaban"))
+        horse_number = int(_txt("td[class*='Umaban']", ".Umaban", "td.Umaban"))
     except ValueError:
         return None
 
     # 枠番
+    # 実際のクラスは "Waku1" のように数字付き → [class*='Waku'] で部分一致
     try:
-        frame_number = int(_txt(".Waku", "td.Waku"))
+        frame_number = int(_txt("td[class*='Waku']", ".Waku", "td.Waku"))
     except ValueError:
         frame_number = (horse_number - 1) // 2 + 1
 
@@ -170,8 +172,9 @@ def _parse_shutuba_row(tr) -> Optional[dict]:
     except ValueError:
         odds = None
 
+    # 人気: 実際のクラスは "Popular_Ninki"
     try:
-        popularity = int(_txt(".Popular", "td.Popular", "td.popular_rank"))
+        popularity = int(_txt(".Popular_Ninki", "td.Popular_Ninki", ".Popular", "td.Popular", "td.popular_rank"))
     except ValueError:
         popularity = None
 
@@ -319,9 +322,10 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
     rows = []
     if table:
         trs = table.select("tr.HorseList, tr[class*='HorseList']")
-        # フォールバック: クラス名でマッチしない場合は <td class="Umaban"> を持つ行を探す
+        # フォールバック: クラス名でマッチしない場合は Umaban 系クラスを持つ td を含む行を探す
         if not trs:
-            trs = [tr for tr in table.find_all("tr") if tr.select_one("td.Umaban")]
+            trs = [tr for tr in table.find_all("tr")
+                   if tr.select_one("td[class*='Umaban']") or tr.select_one("td.Umaban")]
         print(f"[DEBUG] HorseList 行数: {len(trs)}", flush=True)
         if trs:
             # 最初の行のクラス・td 構造をダンプ
