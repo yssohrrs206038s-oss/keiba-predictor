@@ -134,10 +134,6 @@ def generate_comments(
         """verbose 不問で常に print するデバッグ専用出力。"""
         print(f"[generate_comments] {msg}", flush=True)
 
-    # ── AI解説 無効化中（有効化するには下の2行を削除） ────────
-    _dbg("AI解説は現在無効化されています（シンプルモード）")
-    return {}
-
     # ── Step 1: API キー確認 ─────────────────────────────────
     key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     if not key:
