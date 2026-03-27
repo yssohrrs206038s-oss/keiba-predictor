@@ -253,8 +253,11 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
 
         # オッズ: tds[9] (class=['Txt_R', 'Popular'])
         try:
-            odds = float(tds[9].get_text(strip=True).replace(",", ""))
-        except (IndexError, ValueError):
+            odds_text = tds[9].get_text(strip=True)
+            print(f"[DEBUG odds] raw='{odds_text}'", flush=True)
+            odds = float(odds_text.replace(",", ""))
+        except Exception as e:
+            print(f"[DEBUG odds] error: {e}", flush=True)
             odds = None
 
         # 人気: .Popular_Ninki
