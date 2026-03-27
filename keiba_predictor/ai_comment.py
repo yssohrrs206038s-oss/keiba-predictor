@@ -451,6 +451,7 @@ def _send_report_to_discord(webhook_url: str, race_name: str, text: str) -> None
     import urllib.request
     import json as _json
 
+    webhook_url = webhook_url.strip()
     header = f"📋 **{race_name} レポート**\n" if race_name else "📋 **レポート**\n"
     full_text = header + text
     chunks = [full_text[i: i + 1900] for i in range(0, len(full_text), 1900)]
