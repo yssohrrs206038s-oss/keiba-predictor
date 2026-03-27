@@ -1,8 +1,12 @@
 """
 出馬表スクレイパー
 
-https://race.netkeiba.com/race/shutuba.html?race_id={race_id}
-から出馬情報・レース基本情報を取得する。
+【優先】Yahoo!競馬
+  https://keiba.yahoo.co.jp/race/denma/{race_id_short}/
+  race_id_short = race_id[2:]  例: 202607010611 → 2607010611
+
+【フォールバック】netkeiba
+  https://race.netkeiba.com/race/shutuba.html?race_id={race_id}
 """
 
 import re
@@ -18,7 +22,14 @@ from keiba_predictor.scraper.netkeiba_scraper import _get, HEADERS, VENUE_CODE_M
 
 logger = logging.getLogger(__name__)
 
-SHUTUBA_URL = "https://race.netkeiba.com/race/shutuba.html"
+SHUTUBA_URL       = "https://race.netkeiba.com/race/shutuba.html"
+YAHOO_DENMA_URL   = "https://keiba.yahoo.co.jp/race/denma/{race_id_short}/"
+YAHOO_HEADERS = {
+    "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
+    "Referer":         "https://keiba.yahoo.co.jp/",
+}
 
 
 def _get_html_with_playwright(url: str) -> Optional[str]:
@@ -94,6 +105,221 @@ def _parse_sex_age(s: str) -> tuple[Optional[str], Optional[int]]:
     if m:
         return m.group(1), int(m.group(2))
     return None, None
+
+
+def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
+    """
+    Yahoo!競馬の出馬表ページから馬情報・レース基本情報を取得する。
+
+    取得フィールド: 馬番, 馬名, 騎手, オッズ, 人気
+    (斤量・馬体重・騎手ID・調教師などは netkeiba フォールバック側で補完)
+
+    Returns:
+        scrape_shutuba() と同じ dict、または取得失敗時は None。
+    """
+    race_id_short = str(race_id)[2:]   # "202607010611" → "2607010611"
+    url = YAHOO_DENMA_URL.format(race_id_short=race_id_short)
+    logger.info(f"[Yahoo!] 出馬表を取得: {url}")
+
+    session = requests.Session()
+    session.headers.update(YAHOO_HEADERS)
+    try:
+        resp = session.get(url, timeout=20)
+        resp.raise_for_status()
+        resp.encoding = resp.apparent_encoding or "utf-8"
+    except Exception as e:
+        logger.warning(f"[Yahoo!] 取得失敗: {e}")
+        return None
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    # ── デバッグ: HTML をファイルに保存 ────────────────────────
+    try:
+        import pathlib
+        _debug_dir = pathlib.Path(__file__).parent.parent / "data" / "debug"
+        _debug_dir.mkdir(parents=True, exist_ok=True)
+        _debug_path = _debug_dir / f"yahoo_shutuba_{race_id}.html"
+        _debug_path.write_text(soup.prettify(), encoding="utf-8")
+        print(f"[DEBUG][Yahoo!] HTML 保存: {_debug_path} ({_debug_path.stat().st_size} bytes)", flush=True)
+    except Exception as _de:
+        print(f"[DEBUG][Yahoo!] HTML 保存失敗: {_de}", flush=True)
+
+    # ── レース名 ────────────────────────────────────────────
+    race_name = ""
+    for sel in ("h1.raceTitle", "h1", ".raceTtl", ".raceNameInner", ".RaceName"):
+        el = soup.select_one(sel)
+        if el:
+            race_name = el.get_text(strip=True)
+            break
+
+    # ── 開催日 ──────────────────────────────────────────────
+    race_date = ""
+    m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", soup.get_text())
+    if m:
+        race_date = f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+
+    # ── 会場・コース・距離 ───────────────────────────────────
+    venue = VENUE_CODE_MAP.get(str(race_id)[4:6], "")
+    distance        = 0
+    course_type_enc = 1
+    course_info     = ""
+    for sel in (".raceData", ".raceCourse", ".RaceData01", ".raceInfo"):
+        el = soup.select_one(sel)
+        if el:
+            txt = el.get_text()
+            m2 = re.search(r"(\d{3,4})m", txt)
+            if m2:
+                distance = int(m2.group(1))
+            if "ダート" in txt or "ダ" in txt:
+                course_type_enc = 0
+                course_info = f"ダート{distance}m"
+            else:
+                course_type_enc = 1
+                course_info = f"芝{distance}m"
+            break
+
+    # ── レース格 ────────────────────────────────────────────
+    from keiba_predictor.features.feature_engineering import _encode_race_grade
+    race_grade_enc = _encode_race_grade(race_name)
+
+    # ── 出馬表テーブル ───────────────────────────────────────
+    # Yahoo!競馬の出馬表テーブルを複数セレクターで試みる
+    table = (
+        soup.select_one("table.denmaTableFrame")
+        or soup.select_one("table#denmaTable")
+        or soup.select_one("table[summary*='出馬']")
+        or soup.select_one("table[summary*='denma']")
+        or soup.select_one("div.denmaTable table")
+        or soup.select_one("div#raceTable table")
+    )
+
+    # テーブル一覧デバッグ出力
+    all_tables = soup.find_all("table")
+    print(f"[DEBUG][Yahoo!] ページ内テーブル数: {len(all_tables)}", flush=True)
+    for i, t in enumerate(all_tables[:10]):
+        print(f"[DEBUG][Yahoo!]   table[{i}] class={t.get('class')} id={t.get('id')} summary={t.get('summary','')[:40]}", flush=True)
+    print(f"[DEBUG][Yahoo!] 出馬表テーブル検出: {table is not None}", flush=True)
+
+    if table is None:
+        logger.warning("[Yahoo!] 出馬表テーブルが見つかりませんでした")
+        return None
+
+    rows = []
+    trs = [tr for tr in table.find_all("tr") if tr.find_all("td")]
+    print(f"[DEBUG][Yahoo!] データ行数: {len(trs)}", flush=True)
+    if trs:
+        first = trs[0]
+        for j, td in enumerate(first.find_all("td")):
+            print(f"[DEBUG][Yahoo!]   td[{j:02d}] class={td.get('class')} text={td.get_text(strip=True)[:30]!r}", flush=True)
+
+    for tr in trs:
+        tds = tr.find_all("td")
+        if len(tds) < 3:
+            continue
+
+        def _td_text(td) -> str:
+            return td.get_text(strip=True)
+
+        # 馬番: 最初の数字セルを探す
+        horse_number = None
+        for td in tds[:3]:
+            try:
+                horse_number = int(_td_text(td))
+                break
+            except ValueError:
+                continue
+        if horse_number is None:
+            continue
+
+        # 枠番: 馬番の前か属性から（取れなければ計算）
+        frame_number = (horse_number - 1) // 2 + 1
+
+        # 馬名: <a href="/horse/..."> または <a href*="horse"> を含む td
+        horse_name = ""
+        horse_link = (
+            tr.select_one("a[href*='/horse/']")
+            or tr.select_one("a[href*='horse']")
+        )
+        if horse_link:
+            horse_name = horse_link.get_text(strip=True)
+
+        if not horse_name:
+            continue
+
+        # 騎手: <a href="/jockey/..."> を含む td
+        jockey = ""
+        jockey_link = (
+            tr.select_one("a[href*='/jockey/']")
+            or tr.select_one("a[href*='jockey']")
+        )
+        if jockey_link:
+            jockey = jockey_link.get_text(strip=True)
+
+        # オッズ: 数値 X.X または X のセルを後ろから探す
+        odds = None
+        for td in reversed(tds):
+            txt = _td_text(td).replace(",", "")
+            m3 = re.fullmatch(r"\d+\.?\d*", txt)
+            if m3:
+                try:
+                    v = float(txt)
+                    if v >= 1.0:  # オッズは1.0以上
+                        odds = v
+                        break
+                except ValueError:
+                    pass
+
+        # 人気: 小さい整数（1〜18）のセルを後ろから探す
+        popularity = None
+        for td in reversed(tds):
+            txt = _td_text(td)
+            m4 = re.fullmatch(r"\d{1,2}", txt)
+            if m4:
+                try:
+                    v = int(txt)
+                    if 1 <= v <= 18:
+                        popularity = v
+                        break
+                except ValueError:
+                    pass
+
+        rows.append({
+            "horse_number":       horse_number,
+            "frame_number":       frame_number,
+            "horse_name":         horse_name,
+            "horse_id":           "",
+            "sex":                "",
+            "sex_enc":            0,
+            "age":                None,
+            "weight_carried":     None,
+            "horse_weight":       None,
+            "horse_weight_diff":  None,
+            "jockey":             jockey,
+            "jockey_id":          "",
+            "trainer":            "",
+            "trainer_id":         "",
+            "odds":               odds,
+            "popularity":         popularity,
+        })
+
+    if not rows:
+        logger.warning(f"[Yahoo!] 馬データが 0 件です (race_id={race_id})")
+        return None
+
+    horses_df = pd.DataFrame(rows)
+    logger.info(f"[Yahoo!] 取得完了: {race_name} {race_date} {course_info} / {len(horses_df)}頭")
+
+    return {
+        "race_id":         race_id,
+        "race_name":       race_name,
+        "race_date":       race_date,
+        "venue":           venue,
+        "course_info":     course_info,
+        "distance":        distance,
+        "course_type_enc": course_type_enc,
+        "race_grade_enc":  race_grade_enc,
+        "horses":          horses_df,
+    }
 
 
 def _parse_shutuba_row(tr) -> Optional[dict]:
@@ -216,19 +442,27 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         }
         取得失敗時は None。
     """
-    url = f"{SHUTUBA_URL}?race_id={race_id}"
-    logger.info(f"出馬表を取得: {url}")
+    # ── 取得方法1: Yahoo!競馬（優先）──────────────────────────
+    result = _scrape_yahoo_shutuba(race_id)
+    if result is not None and not result["horses"].empty:
+        logger.info(f"[Yahoo!] 出馬表取得成功: {result['race_name']} / {len(result['horses'])}頭")
+        return result
 
-    # ── 取得方法1: Playwright (JS レンダリング対応) ────────────
+    logger.warning(f"[Yahoo!] 取得失敗または馬データなし → netkeiba にフォールバック (race_id={race_id})")
+
+    # ── 取得方法2: netkeiba Playwright ────────────────────────
+    url = f"{SHUTUBA_URL}?race_id={race_id}"
+    logger.info(f"[netkeiba] 出馬表を取得: {url}")
+
     soup = None
     html = _get_html_with_playwright(url)
     if html:
         soup = BeautifulSoup(html, "html.parser")
-        logger.info("Playwright で HTML 取得成功")
+        logger.info("[netkeiba] Playwright で HTML 取得成功")
 
-    # ── 取得方法2: requests フォールバック ─────────────────────
+    # ── 取得方法3: netkeiba requests ──────────────────────────
     if soup is None:
-        logger.info("requests にフォールバック")
+        logger.info("[netkeiba] requests にフォールバック")
         session = requests.Session()
         session.headers.update(HEADERS)
         try:
@@ -239,7 +473,7 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         soup = _get(url, session)
 
     if soup is None:
-        logger.error(f"出馬表の取得に失敗: {race_id}")
+        logger.error(f"[netkeiba] 出馬表の取得に失敗: {race_id}")
         return None
 
     # ── デバッグ: 取得HTMLをファイルに保存 ─────────────────────
@@ -249,9 +483,9 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         _debug_dir.mkdir(parents=True, exist_ok=True)
         _debug_path = _debug_dir / f"shutuba_{race_id}.html"
         _debug_path.write_text(soup.prettify(), encoding="utf-8")
-        print(f"[DEBUG] shutuba HTML 保存: {_debug_path} ({_debug_path.stat().st_size} bytes)", flush=True)
+        print(f"[DEBUG][netkeiba] HTML 保存: {_debug_path} ({_debug_path.stat().st_size} bytes)", flush=True)
     except Exception as _de:
-        print(f"[DEBUG] HTML保存失敗: {_de}", flush=True)
+        print(f"[DEBUG][netkeiba] HTML 保存失敗: {_de}", flush=True)
 
     # ── レース基本情報 ─────────────────────────────────────
     race_name = ""
