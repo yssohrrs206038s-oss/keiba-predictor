@@ -263,7 +263,7 @@ def generate_comments(
             try:
                 response = client.messages.create(
                     model=MODEL_ID,
-                    max_tokens=1024,
+                    max_tokens=2000,
                     messages=[{"role": "user", "content": prompt}],
                 )
                 response_text = response.content[0].text
