@@ -60,26 +60,33 @@ def update_odds_for_race(race_id: str, entry: dict) -> dict:
 
     horses_df = shutuba["horses"]
 
+    # デバッグ: 先頭行のフィールドと値を出力して構造を確認
+    if not horses_df.empty:
+        print(f"[DEBUG][{race_id}] horses columns: {list(horses_df.columns)}", flush=True)
+        print(f"[DEBUG][{race_id}] horses[0]: {horses_df.iloc[0].to_dict()}", flush=True)
+
     # horse_number → odds / popularity のマップを構築
     odds_map: dict[int, float] = {}
     pop_map:  dict[int, int]   = {}
     for _, row in horses_df.iterrows():
-        num = row.get("horse_number")
+        num = row["horse_number"]
         if not pd.notna(num):
             continue
         num = int(num)
         try:
-            o = row.get("odds")
-            if o is not None:
+            o = pd.to_numeric(row["odds"], errors="coerce")
+            if pd.notna(o):
                 odds_map[num] = float(o)
-        except (ValueError, TypeError):
+        except (KeyError, TypeError):
             pass
         try:
-            p = row.get("popularity")
-            if p is not None:
+            p = pd.to_numeric(row["popularity"], errors="coerce")
+            if pd.notna(p):
                 pop_map[num] = int(p)
-        except (ValueError, TypeError):
+        except (KeyError, TypeError):
             pass
+
+    print(f"[DEBUG][{race_id}] odds_map: {odds_map}", flush=True)
 
     if not odds_map:
         logger.warning(f"[{race_id}] オッズデータが0件 → スキップ")
