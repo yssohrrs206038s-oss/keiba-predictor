@@ -365,7 +365,7 @@ def generate_report_text(
     for num in sorted(comments_dict.keys(), key=_sort_key):
         comment = comments_dict[num]
         horse_name = name_map.get(num, f"{num}番")
-        lines.append(f"{horse_name}")
+        lines.append(f"{num}番 {horse_name}")
         lines.append(f"  {comment}")
         lines.append("")
 
