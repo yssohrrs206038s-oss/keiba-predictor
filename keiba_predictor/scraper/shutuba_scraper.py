@@ -170,6 +170,14 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
     session = requests.Session()
     session.headers.update(HEADERS)
 
+    # Cookie 取得のためトップページに事前アクセス（netkeiba.com はセッションCookieが必要）
+    try:
+        import time as _time
+        session.get("https://race.netkeiba.com/", headers=HEADERS, timeout=15)
+        _time.sleep(1.0)
+    except Exception:
+        pass
+
     url = f"{SHUTUBA_URL}?race_id={race_id}"
     logger.info(f"出馬表を取得: {url}")
     soup = _get(url, session)
@@ -227,15 +235,26 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
     table = (
         soup.select_one("table.Shutuba_Table")
         or soup.select_one("table#shutuba_table")
+        or soup.select_one("table.ShutubaTable")
+        or soup.select_one("table[class*='Shutuba']")
     )
     rows = []
     if table:
-        for tr in table.select("tr.HorseList, tr[class*='HorseList']"):
+        trs = table.select("tr.HorseList, tr[class*='HorseList']")
+        # フォールバック: クラス名でマッチしない場合は <td class="Umaban"> を持つ行を探す
+        if not trs:
+            trs = [tr for tr in table.find_all("tr") if tr.select_one("td.Umaban")]
+        for tr in trs:
             row = _parse_shutuba_row(tr)
             if row:
                 rows.append(row)
     else:
         logger.warning("出馬表テーブルが見つかりませんでした（selector: table.Shutuba_Table）")
+        # テーブルが見つからない場合: ページ全体から .HorseList 行を検索
+        for tr in soup.select("tr.HorseList, tr[class*='HorseList']"):
+            row = _parse_shutuba_row(tr)
+            if row:
+                rows.append(row)
 
     if not rows:
         logger.warning(f"出馬表の行データが 0 件です（race_id={race_id}）")
