@@ -7,9 +7,11 @@ https://race.netkeiba.com/race/shutuba.html?race_id={race_id}
 
 import re
 import logging
+import time
 from typing import Optional
 
 import requests
+from bs4 import BeautifulSoup
 import pandas as pd
 
 from keiba_predictor.scraper.netkeiba_scraper import _get, HEADERS, VENUE_CODE_MAP
@@ -17,6 +19,50 @@ from keiba_predictor.scraper.netkeiba_scraper import _get, HEADERS, VENUE_CODE_M
 logger = logging.getLogger(__name__)
 
 SHUTUBA_URL = "https://race.netkeiba.com/race/shutuba.html"
+
+
+def _get_html_with_playwright(url: str) -> Optional[str]:
+    """
+    Playwright (Chromium) で JS レンダリング後の HTML を返す。
+    playwright 未インストール時は None を返す。
+    """
+    try:
+        from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+    except ImportError:
+        logger.warning("playwright 未インストール → requests にフォールバック")
+        return None
+
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            ctx = browser.new_context(
+                user_agent=HEADERS["User-Agent"],
+                locale="ja-JP",
+                extra_http_headers={
+                    "Accept-Language": HEADERS["Accept-Language"],
+                    "Accept": HEADERS["Accept"],
+                },
+            )
+            page = ctx.new_page()
+            # トップページで Cookie を取得してから出馬表へ
+            page.goto("https://race.netkeiba.com/", wait_until="domcontentloaded", timeout=20000)
+            time.sleep(1)
+            page.goto(url, wait_until="networkidle", timeout=30000)
+            # 出馬表テーブルが描画されるまで最大10秒待機
+            try:
+                page.wait_for_selector(
+                    "table.Shutuba_Table, tr.HorseList, td.Umaban",
+                    timeout=10000,
+                )
+            except PWTimeout:
+                logger.warning("Playwright: 出馬表セレクタのタイムアウト（HTML をそのまま使用）")
+            html = page.content()
+            browser.close()
+            logger.info(f"Playwright 取得成功: {len(html)} bytes")
+            return html
+    except Exception as e:
+        logger.warning(f"Playwright 取得失敗: {e}")
+        return None
 
 # 性別エンコード（data_cleaner.py と合わせる）
 _SEX_ENC = {"牡": 0, "牝": 1, "セ": 2, "騸": 2}
@@ -167,20 +213,28 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         }
         取得失敗時は None。
     """
-    session = requests.Session()
-    session.headers.update(HEADERS)
-
-    # Cookie 取得のためトップページに事前アクセス（netkeiba.com はセッションCookieが必要）
-    try:
-        import time as _time
-        session.get("https://race.netkeiba.com/", headers=HEADERS, timeout=15)
-        _time.sleep(1.0)
-    except Exception:
-        pass
-
     url = f"{SHUTUBA_URL}?race_id={race_id}"
     logger.info(f"出馬表を取得: {url}")
-    soup = _get(url, session)
+
+    # ── 取得方法1: Playwright (JS レンダリング対応) ────────────
+    soup = None
+    html = _get_html_with_playwright(url)
+    if html:
+        soup = BeautifulSoup(html, "html.parser")
+        logger.info("Playwright で HTML 取得成功")
+
+    # ── 取得方法2: requests フォールバック ─────────────────────
+    if soup is None:
+        logger.info("requests にフォールバック")
+        session = requests.Session()
+        session.headers.update(HEADERS)
+        try:
+            session.get("https://race.netkeiba.com/", headers=HEADERS, timeout=15)
+            time.sleep(1.0)
+        except Exception:
+            pass
+        soup = _get(url, session)
+
     if soup is None:
         logger.error(f"出馬表の取得に失敗: {race_id}")
         return None

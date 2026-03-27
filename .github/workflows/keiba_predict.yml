@@ -50,6 +50,12 @@ jobs:
           pip install -r requirements.txt
           echo "✅ pip install 完了"
 
+      - name: Playwright Chromium をインストール
+        run: |
+          python -m playwright install chromium
+          python -m playwright install-deps chromium
+          echo "✅ Playwright Chromium インストール完了"
+
       # ── featured_races.csv 確認・生成 ────────────────────────
       - name: featured_races.csv を確認・生成
         run: |
