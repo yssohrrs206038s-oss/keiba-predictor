@@ -2,6 +2,7 @@
   "202606030111": {
     "race_name": "日経賞",
     "race_date": "2026-03-28",
+    "start_time": "15:45",
     "course_info": "芝2500m",
     "honmei": {
       "horse_number": 15,
@@ -60,6 +61,7 @@
   "202609020111": {
     "race_name": "毎日杯",
     "race_date": "2026-03-28",
+    "start_time": "15:30",
     "course_info": "芝1800m",
     "honmei": {
       "horse_number": 7,
@@ -118,6 +120,7 @@
   "202606030211": {
     "race_name": "マーチS",
     "race_date": "2026-03-29",
+    "start_time": "15:25",
     "course_info": "芝1800m",
     "honmei": {
       "horse_number": 12,
@@ -176,6 +179,7 @@
   "202607010611": {
     "race_name": "高松宮記念",
     "race_date": "2026-03-29",
+    "start_time": "15:40",
     "course_info": "芝1200m",
     "honmei": {
       "horse_number": 14,
