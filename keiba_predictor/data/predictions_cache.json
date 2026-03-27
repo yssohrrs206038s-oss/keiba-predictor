@@ -1,1 +1,234 @@
-{}
+{
+  "202606030111": {
+    "race_name": "日経賞",
+    "race_date": "2026-03-28",
+    "course_info": "芝2500m",
+    "honmei": {
+      "horse_number": 15,
+      "horse_name": "マイユニバース",
+      "prob": 0.523369312286377
+    },
+    "taikou": {
+      "horse_number": 10,
+      "horse_name": "シャイニングソード",
+      "prob": 0.4714539647102356
+    },
+    "ana": {
+      "horse_number": 3,
+      "horse_name": "クリスマスパレード",
+      "prob": 0.443590372800827
+    },
+    "predicted_top3_nums": [
+      15,
+      10,
+      3
+    ],
+    "predicted_top5_nums": [
+      15,
+      10,
+      3,
+      9,
+      11
+    ],
+    "ana_horse_num": 1,
+    "ev_top3": [
+      {
+        "horse_number": 15,
+        "horse_name": "マイユニバース",
+        "ev_score": 12.666,
+        "prob": 0.5234,
+        "odds": 24.2
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "シャイニングソード",
+        "ev_score": 11.409,
+        "prob": 0.4715,
+        "odds": 24.2
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "クリスマスパレード",
+        "ev_score": 10.735,
+        "prob": 0.4436,
+        "odds": 24.2
+      }
+    ],
+    "dangerous_horses": [],
+    "ai_comments": {}
+  },
+  "202609020111": {
+    "race_name": "毎日杯",
+    "race_date": "2026-03-28",
+    "course_info": "芝1800m",
+    "honmei": {
+      "horse_number": 7,
+      "horse_name": "シーズザスローン",
+      "prob": 0.6696114540100098
+    },
+    "taikou": {
+      "horse_number": 2,
+      "horse_name": "カフジエメンタール",
+      "prob": 0.6131706237792969
+    },
+    "ana": {
+      "horse_number": 6,
+      "horse_name": "ウップヘリーア",
+      "prob": 0.5912826657295227
+    },
+    "predicted_top3_nums": [
+      7,
+      2,
+      6
+    ],
+    "predicted_top5_nums": [
+      7,
+      2,
+      6,
+      4,
+      3
+    ],
+    "ana_horse_num": 1,
+    "ev_top3": [
+      {
+        "horse_number": 7,
+        "horse_name": "シーズザスローン",
+        "ev_score": 16.205,
+        "prob": 0.6696,
+        "odds": 24.2
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "カフジエメンタール",
+        "ev_score": 14.839,
+        "prob": 0.6132,
+        "odds": 24.2
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "ウップヘリーア",
+        "ev_score": 14.309,
+        "prob": 0.5913,
+        "odds": 24.2
+      }
+    ],
+    "dangerous_horses": [],
+    "ai_comments": {}
+  },
+  "202606030211": {
+    "race_name": "マーチS",
+    "race_date": "2026-03-29",
+    "course_info": "芝1800m",
+    "honmei": {
+      "horse_number": 12,
+      "horse_name": "ハナウマビーチ",
+      "prob": 0.5602304935455322
+    },
+    "taikou": {
+      "horse_number": 15,
+      "horse_name": "サンデーファンデー",
+      "prob": 0.5366619229316711
+    },
+    "ana": {
+      "horse_number": 14,
+      "horse_name": "チュウワクリスエス",
+      "prob": 0.5254967212677002
+    },
+    "predicted_top3_nums": [
+      12,
+      15,
+      14
+    ],
+    "predicted_top5_nums": [
+      12,
+      15,
+      14,
+      16,
+      11
+    ],
+    "ana_horse_num": 1,
+    "ev_top3": [
+      {
+        "horse_number": 12,
+        "horse_name": "ハナウマビーチ",
+        "ev_score": 13.558,
+        "prob": 0.5602,
+        "odds": 24.2
+      },
+      {
+        "horse_number": 15,
+        "horse_name": "サンデーファンデー",
+        "ev_score": 12.987,
+        "prob": 0.5367,
+        "odds": 24.2
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "チュウワクリスエス",
+        "ev_score": 12.717,
+        "prob": 0.5255,
+        "odds": 24.2
+      }
+    ],
+    "dangerous_horses": [],
+    "ai_comments": {}
+  },
+  "202607010611": {
+    "race_name": "高松宮記念",
+    "race_date": "2026-03-29",
+    "course_info": "芝1200m",
+    "honmei": {
+      "horse_number": 14,
+      "horse_name": "レイピア",
+      "prob": 0.4353391230106354
+    },
+    "taikou": {
+      "horse_number": 12,
+      "horse_name": "ピューロマジック",
+      "prob": 0.39201509952545166
+    },
+    "ana": {
+      "horse_number": 18,
+      "horse_name": "ジューンブレア",
+      "prob": 0.39115723967552185
+    },
+    "predicted_top3_nums": [
+      14,
+      12,
+      18
+    ],
+    "predicted_top5_nums": [
+      14,
+      12,
+      18,
+      7,
+      5
+    ],
+    "ana_horse_num": 13,
+    "ev_top3": [
+      {
+        "horse_number": 14,
+        "horse_name": "レイピア",
+        "ev_score": 10.535,
+        "prob": 0.4353,
+        "odds": 24.2
+      },
+      {
+        "horse_number": 12,
+        "horse_name": "ピューロマジック",
+        "ev_score": 9.487,
+        "prob": 0.392,
+        "odds": 24.2
+      },
+      {
+        "horse_number": 18,
+        "horse_name": "ジューンブレア",
+        "ev_score": 9.466,
+        "prob": 0.3912,
+        "odds": 24.2
+      }
+    ],
+    "dangerous_horses": [],
+    "ai_comments": {}
+  }
+}
