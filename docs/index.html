@@ -586,14 +586,26 @@ function renderPredictions(cache) {
     }
 
     // 買い目
-    const pnums = (r.predicted_top3_nums || []).filter(n => n != null);
+    const pnums  = (r.predicted_top3_nums || []).filter(n => n != null);
+    const p5nums = (r.predicted_top5_nums || pnums).filter(n => n != null);
+    const anaNum = r.ana_horse_num != null ? r.ana_horse_num : null;
     let betHTML = '';
     if (pnums.length >= 2) {
       const combos = [];
       for (let i = 0; i < Math.min(pnums.length, 3); i++)
         for (let j = i + 1; j < Math.min(pnums.length, 3); j++)
           combos.push(`${pnums[i]}-${pnums[j]}`);
-      const sanren = pnums.length >= 3 ? `軸${pnums[0]} × ${pnums.slice(1).join('/')}` : '';
+
+      let sanren = '';
+      if (p5nums.length >= 3) {
+        const axis = p5nums[0];
+        const partners = p5nums.slice(1);  // 2〜5番目
+        const partnerParts = partners.map(n => n === anaNum ? `${n}（穴）` : String(n));
+        if (anaNum != null && !partners.includes(anaNum)) {
+          partnerParts.push(`${anaNum}（穴）`);
+        }
+        sanren = `軸${axis} × ${partnerParts.join('/')}`;
+      }
       betHTML = `
         <div class="bet-box">
           <div class="bet-box-title">💰 推奨買い目</div>
