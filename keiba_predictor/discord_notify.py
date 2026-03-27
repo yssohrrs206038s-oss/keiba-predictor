@@ -329,8 +329,26 @@ def _load_featured_race_ids_for_weekend(
         logger.warning(f"featured_races.csv 読み込み失敗: {e}")
         return []
 
-    if "race_id" not in df.columns or "race_date" not in df.columns:
+    if "race_id" not in df.columns:
         return []
+
+    # race_date 列がない新フォーマット（race_id, race_name, grade）の場合は全件返す
+    if "race_date" not in df.columns:
+        dates = _weekend_dates()
+        sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
+        result = []
+        for _, row in df.drop_duplicates(subset=["race_id"]).iterrows():
+            result.append({
+                "race_id":   str(row["race_id"]),
+                "race_name": str(row.get("race_name", row["race_id"])),
+                "race_date": sat,
+            })
+        if result:
+            logger.info(
+                f"[featured fallback] {len(result)} レース "
+                f"({', '.join(r['race_name'] for r in result)})"
+            )
+        return result
 
     dates = _weekend_dates()  # ["YYYYMMDD", "YYYYMMDD"]
     weekend_dates = {
@@ -680,11 +698,9 @@ def run_predict_notify(
     df_all = pd.read_csv(featured_path, encoding="utf-8-sig")
 
     # --test-race-id が指定された場合は重賞検索をスキップ
+    from_featured = False
     if test_race_id:
         race_name = str(test_race_id)
-        race_df = df_all[df_all["race_id"].astype(str) == test_race_id].copy()
-        if not race_df.empty and "race_name" in race_df.columns:
-            race_name = race_df["race_name"].iloc[0]
         grade_races = [{"race_id": test_race_id, "race_name": race_name, "race_date": "（テスト）"}]
         logger.info(f"テストモード: race_id={test_race_id} race_name={race_name}")
         send_discord(webhook_url, f"🧪 **テスト送信** race_id={test_race_id}  {race_name}")
@@ -714,6 +730,7 @@ def run_predict_notify(
                 )
                 send_discord(webhook_url, msg)
                 return
+            from_featured = True
             send_discord(webhook_url,
                 f"⚠️ スクレイピング失敗 → featured_races.csv から {len(grade_races)} レースを使用")
         dates_str = " / ".join(sorted({r["race_date"] for r in grade_races}))
@@ -724,67 +741,76 @@ def run_predict_notify(
     for race in grade_races:
         race_id, race_name, race_date = race["race_id"], race["race_name"], race["race_date"]
 
-        # ── ライブ取得を試みる（use_live=True 時） ──────────────
-        race_df = pd.DataFrame()
-        course_info = ""
-        if use_live:
+        # ── predict_live() で出馬表をリアルタイム取得（featured or --live 時） ──
+        if from_featured or use_live:
             try:
-                from keiba_predictor.scraper.shutuba_scraper import scrape_shutuba
-                from keiba_predictor.features.live_features import build_live_features
-                shutuba_info = scrape_shutuba(race_id)
-                if shutuba_info is None or shutuba_info["horses"].empty:
-                    raise ValueError("出馬表未確定または取得失敗")
-                race_df = build_live_features(shutuba_info)
-                if race_df.empty:
-                    raise ValueError("特徴量生成失敗")
-                course_info = shutuba_info.get("course_info", "")
-                logger.info(f"  ライブ取得成功: {race_name} ({race_id})")
+                from keiba_predictor.model.predict import predict_live
+                result = predict_live(race_id, notify=False, model_path=model_path)
+                # predict_live() がキャッシュ保存済み → ai_comments/course_info を取得
+                _cached = _load_cache().get(race_id, {})
+                ai_comments = _cached.get("ai_comments", {})
+                course_info = _cached.get("course_info", "")
+                race_name   = _cached.get("race_name", race_name)
+                race_date   = _cached.get("race_date", race_date)
+                logger.info(f"  predict_live 成功: {race_name} ({race_id})")
             except Exception as e:
-                logger.warning(
-                    f"  ライブ取得失敗 ({e}) → CSVにフォールバック: {race_name} ({race_id})"
-                )
-                race_df = pd.DataFrame()  # フォールバックへ
-
-        # ── CSV フォールバック ──────────────────────────────────
-        if race_df.empty:
+                logger.warning(f"  predict_live 失敗 ({e}): {race_name} ({race_id})")
+                if from_featured:
+                    send_discord(webhook_url,
+                        f"⚠️ **{race_name}** の出馬表取得に失敗しました: {e}")
+                    continue
+                # use_live かつ失敗 → CSV フォールバック
+                race_df = df_all[df_all["race_id"].astype(str) == race_id].copy()
+                if race_df.empty:
+                    logger.info(f"  スキップ(データなし): {race_name} ({race_id})")
+                    continue
+                course_info = _build_course_info(race_id, race_df)
+                result = predict_race(race_df, model_bundle)
+                result = calc_ev_and_flags(result)
+                ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
+                try:
+                    _store_prediction(race_id, race_name, race_date, result,
+                                      ai_comments=ai_comments, course_info=course_info)
+                except Exception as _e:
+                    import traceback
+                    print(f"[_store_prediction] ❌ 例外発生: {type(_e).__name__}: {_e}", flush=True)
+                    print(traceback.format_exc(), flush=True)
+        else:
+            # ── CSV から取得 ────────────────────────────────────
             race_df = df_all[df_all["race_id"].astype(str) == race_id].copy()
             if race_df.empty:
                 logger.info(f"  スキップ(データなし): {race_name} ({race_id})")
                 continue
             course_info = _build_course_info(race_id, race_df)
+            result = predict_race(race_df, model_bundle)
+            result = calc_ev_and_flags(result)
+            ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
+            print(f"[_store_prediction] 呼び出し: race_id={race_id}  PRED_CACHE={PRED_CACHE.resolve()}", flush=True)
+            try:
+                _store_prediction(race_id, race_name, race_date, result,
+                                  ai_comments=ai_comments, course_info=course_info)
+            except Exception as _e:
+                import traceback
+                print(f"[_store_prediction] ❌ 例外発生: {type(_e).__name__}: {_e}", flush=True)
+                print(traceback.format_exc(), flush=True)
+
         print(f"[DEBUG] {race_name} course_info={course_info!r}", flush=True)
-
-        result = predict_race(race_df, model_bundle)
-        result = calc_ev_and_flags(result)
-
-        # ① generate_comments() で解説を生成（1回だけ）
-        ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
         print(f"[AI解説] {race_name}: {len(ai_comments)}頭分 keys={sorted(ai_comments.keys())}", flush=True)
 
-        # キャッシュに保存（ai_comments・course_info を含む）
-        print(f"[_store_prediction] 呼び出し: race_id={race_id}  PRED_CACHE={PRED_CACHE.resolve()}", flush=True)
-        try:
-            _store_prediction(race_id, race_name, race_date, result,
-                              ai_comments=ai_comments, course_info=course_info)
-        except Exception as _e:
-            import traceback
-            print(f"[_store_prediction] ❌ 例外発生: {type(_e).__name__}: {_e}", flush=True)
-            print(traceback.format_exc(), flush=True)
-
-        # ② format_prediction() でメッセージを生成（ai_comments・course_info を渡す）
+        # ① format_prediction() でメッセージを生成
         msg1, msg2 = format_prediction(result, race_name=race_name,
                                        ai_comments=ai_comments, course_info=course_info)
         print(msg1, flush=True)
         print(msg2, flush=True)
 
-        # ③ 予想メッセージ → 買い目メッセージの順に Discord に送信
+        # ② 予想メッセージ → 買い目メッセージの順に Discord に送信
         ok = send_discord(webhook_url, msg1)
         if ok:
             send_discord(webhook_url, msg2)
             notified += 1
             logger.info(f"  送信完了: {race_name}")
 
-        # ④ X（Twitter）に予想を投稿
+        # ③ X（Twitter）に予想を投稿
         try:
             from keiba_predictor.x_post import post_predict_tweet
             cache_entry = _load_cache().get(race_id, {})
