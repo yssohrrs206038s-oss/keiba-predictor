@@ -247,19 +247,25 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
             race_name = el.get_text(strip=True)
             break
 
-    # 日付: race_id[0:8] = YYYYMMDD（最優先）
-    raw_date = str(race_id)[:8]
-    if len(raw_date) == 8 and raw_date.isdigit():
-        race_date = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
+    # 日付: ページHTMLから取得（race_id の構造は YYYY+場コード+開催回+日目+レース番号 のため
+    # race_id から日付は導出できない）
+    race_date = ""
+    for sel in (".RaceData01", ".Race_Date", ".RaceInfo", ".RaceList_DataItem"):
+        el = soup.select_one(sel)
+        if el:
+            m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", el.get_text())
+            if m:
+                race_date = f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+                break
+    if not race_date:
+        # フォールバック: ページ全体から日付パターンを検索
+        m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", soup.get_text())
+        if m:
+            race_date = f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+    if race_date:
+        logger.info(f"開催日をHTMLから取得: {race_date}")
     else:
-        race_date = ""
-        for sel in (".RaceData01", ".Race_Date", ".RaceInfo"):
-            el = soup.select_one(sel)
-            if el:
-                m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", el.get_text())
-                if m:
-                    race_date = f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
-                    break
+        logger.warning(f"開催日をHTMLから取得できませんでした (race_id={race_id})")
 
     # 会場
     venue = VENUE_CODE_MAP.get(str(race_id)[4:6], "")
