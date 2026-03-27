@@ -122,6 +122,16 @@ def cmd_report(args: argparse.Namespace) -> None:
     print(report_text[:200] + "\n…（レポート生成完了）")
 
 
+def cmd_update_featured(args: argparse.Namespace) -> None:
+    """翌週末の重賞レースをスクレイピングして featured_races.csv に保存する。"""
+    from keiba_predictor.discord_notify import update_featured_races_csv
+    count = update_featured_races_csv()
+    if count == 0:
+        logger.warning("重賞レースが見つかりませんでした。featured_races.csv は更新されませんでした。")
+        sys.exit(1)
+    logger.info(f"featured_races.csv 更新完了: {count} レース")
+
+
 def cmd_notify(args: argparse.Namespace) -> None:
     import os
     if getattr(args, "debug", False):
@@ -240,6 +250,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="出力先ファイルパス（省略時: data/reports/report_YYYYMMDD.md）",
     )
     p_report.set_defaults(func=cmd_report)
+
+    # ── update-featured ────────────────────────────────────
+    p_uf = sub.add_parser(
+        "update-featured",
+        help="翌週末の重賞レースを自動取得して featured_races.csv に保存"
+    )
+    p_uf.set_defaults(func=cmd_update_featured)
 
     # ── notify ─────────────────────────────────────────────
     p_notify = sub.add_parser("notify", help="Discord 週末重賞通知")

@@ -100,47 +100,68 @@ def _weekend_dates() -> list[str]:
     return [sat.strftime("%Y%m%d"), sun.strftime("%Y%m%d")]
 
 
-def _is_grade_race(el) -> bool:
-    """BeautifulSoup要素（<li>など）が GI/GII/GIII かどうかを判定する。
+def _detect_grade(el) -> str:
+    """BeautifulSoup要素からグレード（"GI"/"GII"/"GIII"）を検出して返す。
 
     対象クラス（完全一致）:
-      Icon_GradeType1 → GI
-      Icon_GradeType2 → GII
-      Icon_GradeType3 → GIII
-    Icon_GradeType16/17/18 などリステッド・オープン・地方重賞はスキップ。
+      icon_gradetype1 → GI
+      icon_gradetype2 → GII
+      icon_gradetype3 → GIII
+    Icon_GradeType16/17/18 などリステッド・オープン・地方重賞はスキップ（""を返す）。
     """
-    # 1. クラス名の完全一致で判定（部分一致させない）
-    JRA_GRADE_CLASSES = {"icon_gradetype1", "icon_gradetype2", "icon_gradetype3"}
+    # クラス名 → グレード文字列のマッピング
+    CLASS_GRADE = {"icon_gradetype1": "GI", "icon_gradetype2": "GII", "icon_gradetype3": "GIII"}
+    # テキスト/alt → グレード文字列のマッピング（正規表現でマッチ後に判定）
+    TEXT_GRADE = {
+        re.compile(r"G[Ⅰ1]|GI$"):   "GI",
+        re.compile(r"G[Ⅱ2]|GII$"):  "GII",
+        re.compile(r"G[Ⅲ3]|GIII$"): "GIII",
+    }
+
+    # 1. クラス名の完全一致で判定
     for child in el.find_all(True):
         classes = {c.lower() for c in child.get("class", [])}
-        if classes & JRA_GRADE_CLASSES:
-            return True
+        for cls, grade in CLASS_GRADE.items():
+            if cls in classes:
+                return grade
 
     # 2. 旧形式テキストアイコン: gradeicon-g1/g2/g3
-    GRADE_CLS_RE = re.compile(r"\bgradeicon-g[123]\b", re.I)
+    GRADE_CLS_RE = re.compile(r"\bgradeicon-g([123])\b", re.I)
     for child in el.find_all(True):
         cls_str = " ".join(child.get("class", []))
-        if GRADE_CLS_RE.search(cls_str):
-            return True
+        m = GRADE_CLS_RE.search(cls_str)
+        if m:
+            return {"1": "GI", "2": "GII", "3": "GIII"}.get(m.group(1), "")
 
-    # 3. 全テキストに括弧付きグレード表記 (G1)/(G2)/(G3)/(GⅠ)/(GⅡ)/(GⅢ)
+    # 3. 全テキストに括弧付きグレード表記 (G1)/(GⅠ)/(GII)/(GⅡ)/(GIII)/(GⅢ)
     text = el.get_text(" ", strip=True)
-    if GRADE_RE.search(text):
-        return True
+    m3 = re.search(r"\(G([Ⅰ1])\)|\(GI\)|\(G([Ⅱ2])\)|\(GII\)|\(G([Ⅲ3])\)|\(GIII\)", text)
+    if m3:
+        full = m3.group(0)
+        if re.search(r"GI{3}|GⅢ|G3", full): return "GIII"
+        if re.search(r"GI{2}|GⅡ|G2",  full): return "GII"
+        return "GI"
 
-    # 4. 単体テキストが "G1"/"G2"/"G3"/"GⅠ" 等の子孫要素があるか
+    # 4. 単体テキストが "G1"/"GⅠ" 等の子孫要素
     for child in el.find_all(True):
         stext = child.get_text(strip=True)
-        if re.fullmatch(r"G[Ⅰ-Ⅲ1-3]|GI{1,3}", stext):
-            return True
+        if re.fullmatch(r"G[Ⅲ3]|GIII", stext): return "GIII"
+        if re.fullmatch(r"G[Ⅱ2]|GII",  stext): return "GII"
+        if re.fullmatch(r"G[Ⅰ1]|GI",   stext): return "GI"
 
-    # 5. 画像 alt 属性に "G1"/"G2"/"G3" があるか
+    # 5. 画像 alt 属性
     for img in el.find_all("img", alt=True):
         alt = img["alt"].strip()
-        if re.fullmatch(r"G[Ⅰ-Ⅲ1-3]|GI{1,3}", alt):
-            return True
+        if re.fullmatch(r"G[Ⅲ3]|GIII", alt): return "GIII"
+        if re.fullmatch(r"G[Ⅱ2]|GII",  alt): return "GII"
+        if re.fullmatch(r"G[Ⅰ1]|GI",   alt): return "GI"
 
-    return False
+    return ""
+
+
+def _is_grade_race(el) -> bool:
+    """BeautifulSoup要素（<li>など）が GI/GII/GIII かどうかを判定する。"""
+    return bool(_detect_grade(el))
 
 
 def _dump_html_for_debug(soup, kaisai_date: str) -> None:
@@ -302,6 +323,136 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
 
     logger.info(f"重賞合計: {len(found)} レース")
     return found
+
+
+def update_featured_races_csv(
+    path: Optional[Path] = None,
+    session: Optional[requests.Session] = None,
+) -> int:
+    """翌週末（土日）の重賞レースを netkeiba からスクレイピングし、
+    featured_races.csv（形式: race_id,race_name,grade）に上書き保存する。
+
+    Returns:
+        保存したレース数（0 の場合はスクレイピング失敗 or 重賞なし）
+    """
+    if path is None:
+        path = DATA_DIR / "featured_races.csv"
+    if session is None:
+        session = requests.Session()
+
+    dates = _weekend_dates()
+    logger.info(f"[update_featured] 対象日付: {dates[0]} (土) / {dates[1]} (日)")
+
+    LIST_PATHS = ["race_list_sub.html", "race_list.html"]
+    found: list[dict] = []
+    seen: set[str] = set()
+
+    for kaisai_date in dates:
+        found_this_day: list[dict] = []
+
+        for list_path in LIST_PATHS:
+            url = f"https://race.netkeiba.com/top/{list_path}?kaisai_date={kaisai_date}"
+            logger.info(f"[update_featured] 取得中: {url}")
+            soup = _get(url, session)
+            if soup is None:
+                logger.warning(f"[update_featured] 取得失敗: {url}")
+                continue
+
+            items = soup.select("li.RaceList_DataItem")
+            logger.info(f"[update_featured] {kaisai_date}: {len(items)} アイテム ({list_path})")
+
+            for li in items:
+                a_tag = None
+                for a in li.select("a[href]"):
+                    if re.search(r"race_id=\d{12}", a.get("href", "")):
+                        a_tag = a
+                        break
+                if a_tag is None:
+                    continue
+                m = re.search(r"race_id=(\d{12})", a_tag.get("href", ""))
+                if not m:
+                    continue
+                race_id = m.group(1)
+                if race_id in seen:
+                    continue
+                # JRA 競馬場コードのみ（NAR はスキップ）
+                if race_id[4:6] not in {"01","02","03","04","05","06","07","08","09","10"}:
+                    continue
+
+                name_el = (
+                    li.select_one(".Race_Name")
+                    or li.select_one(".RaceName")
+                    or li.select_one(".RaceList_ItemTitle")
+                    or li.select_one(".ItemTitle")
+                )
+                race_name = (
+                    name_el.get_text(strip=True) if name_el
+                    else a_tag.get_text(" ", strip=True)
+                )
+
+                grade = _detect_grade(li)
+                logger.debug(f"[update_featured]   {race_id} [{race_name!r}] grade={grade!r}")
+
+                if grade:
+                    seen.add(race_id)
+                    found_this_day.append({
+                        "race_id":   race_id,
+                        "race_name": race_name,
+                        "grade":     grade,
+                    })
+                    logger.info(f"[update_featured] ★ {grade} {race_name} ({race_id})")
+
+            # フォールバック: RaceList_DataItem がない場合
+            if not items:
+                for a in soup.select("a[href*='race_id=']"):
+                    m = re.search(r"race_id=(\d{12})", a.get("href", ""))
+                    if not m:
+                        continue
+                    race_id = m.group(1)
+                    if race_id in seen:
+                        continue
+                    if race_id[4:6] not in {"01","02","03","04","05","06","07","08","09","10"}:
+                        continue
+                    container = a
+                    for anc in a.parents:
+                        if anc.name in ("li", "div", "tr", "td"):
+                            container = anc
+                            break
+                    name_el = (
+                        container.select_one(".Race_Name")
+                        or container.select_one(".RaceName")
+                        or container.select_one(".RaceList_ItemTitle")
+                    )
+                    race_name = (
+                        name_el.get_text(strip=True) if name_el
+                        else a.get_text(" ", strip=True)
+                    )
+                    grade = _detect_grade(container)
+                    if grade:
+                        seen.add(race_id)
+                        found_this_day.append({
+                            "race_id":   race_id,
+                            "race_name": race_name,
+                            "grade":     grade,
+                        })
+                        logger.info(f"[update_featured] ★(fallback) {grade} {race_name} ({race_id})")
+
+            if found_this_day:
+                break
+
+        found.extend(found_this_day)
+        _sleep()
+
+    if not found:
+        logger.warning("[update_featured] 重賞レースが見つかりませんでした。featured_races.csv は更新しません。")
+        return 0
+
+    # CSV 保存
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [f"{r['race_id']},{r['race_name']},{r['grade']}" for r in found]
+    path.write_text("race_id,race_name,grade\n" + "\n".join(rows) + "\n", encoding="utf-8-sig")
+    logger.info(f"[update_featured] featured_races.csv 保存完了: {len(found)} レース → {path}")
+    return len(found)
 
 
 def _load_featured_race_ids_for_weekend(
