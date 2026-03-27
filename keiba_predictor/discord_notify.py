@@ -304,6 +304,58 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
     return found
 
 
+def _load_featured_race_ids_for_weekend(
+    featured_path: Optional[Path] = None,
+) -> list[dict]:
+    """
+    featured_races.csv から今週末（土日）の日付に一致するレースIDを返す。
+
+    scrape_grade_race_ids() のフォールバック用。
+    今週末のレースIDを手動で featured_races.csv に登録しておくことで
+    スクレイピング失敗時でも予想が動くようになる。
+
+    Returns:
+        [{"race_id": str, "race_name": str, "race_date": str}, ...]
+    """
+    if featured_path is None:
+        featured_path = DATA_DIR / "featured_races.csv"
+    if not featured_path.exists():
+        logger.warning(f"featured_races.csv が見つかりません: {featured_path}")
+        return []
+
+    try:
+        df = pd.read_csv(featured_path, encoding="utf-8-sig", dtype={"race_id": str})
+    except Exception as e:
+        logger.warning(f"featured_races.csv 読み込み失敗: {e}")
+        return []
+
+    if "race_id" not in df.columns or "race_date" not in df.columns:
+        return []
+
+    dates = _weekend_dates()  # ["YYYYMMDD", "YYYYMMDD"]
+    weekend_dates = {
+        f"{d[:4]}-{d[4:6]}-{d[6:]}" for d in dates
+    }
+
+    mask = df["race_date"].astype(str).str[:10].isin(weekend_dates)
+    weekend_df = df[mask].drop_duplicates(subset=["race_id"])
+
+    result = []
+    for _, row in weekend_df.iterrows():
+        result.append({
+            "race_id":   str(row["race_id"]),
+            "race_name": str(row.get("race_name", row["race_id"])),
+            "race_date": str(row["race_date"])[:10],
+        })
+
+    if result:
+        logger.info(
+            f"[featured fallback] {len(result)} レース "
+            f"({', '.join(r['race_name'] for r in result)})"
+        )
+    return result
+
+
 # ══════════════════════════════════════════════════════════════
 # 予想キャッシュ
 # ══════════════════════════════════════════════════════════════
@@ -644,20 +696,26 @@ def run_predict_notify(
             dates = _weekend_dates()
             sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
             sun = f"{dates[1][:4]}-{dates[1][4:6]}-{dates[1][6:]}"
-            msg = (
-                f"🏇 今週末（{sat} / {sun}）の重賞レース情報が取得できませんでした。\n"
-                "以下のいずれかが原因の可能性があります:\n"
-                "• netkeibaへのアクセス失敗（ネットワーク/レート制限）\n"
-                "• 今週末に重賞レースがない\n"
-                "• HTMLの構造変更によりレース名が取得できていない\n\n"
-                "デバッグ用ログ確認:\n"
-                "```\n"
-                "python -m keiba_predictor.main notify --mode predict --debug\n"
-                "```"
-            )
-            logger.warning(f"重賞レース0件: {sat} / {sun}")
-            send_discord(webhook_url, msg)
-            return
+            logger.warning(f"スクレイピングで重賞0件 ({sat}/{sun}) → featured_races.csv にフォールバック")
+            grade_races = _load_featured_race_ids_for_weekend(featured_path)
+            if not grade_races:
+                msg = (
+                    f"🏇 今週末（{sat} / {sun}）の重賞レース情報が取得できませんでした。\n"
+                    "以下のいずれかが原因の可能性があります:\n"
+                    "• netkeibaへのアクセス失敗（ネットワーク/レート制限）\n"
+                    "• 今週末に重賞レースがない\n"
+                    "• HTMLの構造変更によりレース名が取得できていない\n\n"
+                    "💡 featured_races.csv に今週のレースIDを手動登録することで\n"
+                    "スクレイピング失敗時でも予想を実行できます。\n\n"
+                    "デバッグ用ログ確認:\n"
+                    "```\n"
+                    "python -m keiba_predictor.main notify --mode predict --debug\n"
+                    "```"
+                )
+                send_discord(webhook_url, msg)
+                return
+            send_discord(webhook_url,
+                f"⚠️ スクレイピング失敗 → featured_races.csv から {len(grade_races)} レースを使用")
         dates_str = " / ".join(sorted({r["race_date"] for r in grade_races}))
         send_discord(webhook_url,
             f"🏇 **今週末の重賞予想** ({dates_str})  全{len(grade_races)}レース")
@@ -758,13 +816,18 @@ def run_result_notify(
         dates = _weekend_dates()
         sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
         sun = f"{dates[1][:4]}-{dates[1][4:6]}-{dates[1][6:]}"
-        msg = (
-            f"🏆 今週末（{sat} / {sun}）の重賞レース情報が取得できませんでした。\n"
-            "netkeibaへのアクセス失敗または重賞レースなしの可能性があります。"
-        )
-        logger.warning(msg)
-        send_discord(webhook_url, msg)
-        return
+        logger.warning(f"スクレイピングで重賞0件 ({sat}/{sun}) → featured_races.csv にフォールバック")
+        grade_races = _load_featured_race_ids_for_weekend()
+        if not grade_races:
+            msg = (
+                f"🏆 今週末（{sat} / {sun}）の重賞レース情報が取得できませんでした。\n"
+                "netkeibaへのアクセス失敗または重賞レースなしの可能性があります。"
+            )
+            logger.warning(msg)
+            send_discord(webhook_url, msg)
+            return
+        send_discord(webhook_url,
+            f"⚠️ スクレイピング失敗 → featured_races.csv から {len(grade_races)} レースを使用")
 
     dates_str = " / ".join(sorted({r["race_date"] for r in grade_races}))
     send_discord(webhook_url,
