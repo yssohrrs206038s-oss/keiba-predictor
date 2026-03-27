@@ -337,7 +337,9 @@ def predict_from_csv(
     if featured_path is None:
         featured_path = DATA_DIR / "featured_races.csv"
 
-    df = pd.read_csv(featured_path, encoding="utf-8-sig", parse_dates=["race_date"])
+    df = pd.read_csv(featured_path, encoding="utf-8-sig")
+    if "race_date" in df.columns:
+        df["race_date"] = pd.to_datetime(df["race_date"], errors="coerce")
     race_df = df[df["race_id"].astype(str) == str(race_id)].copy()
 
     if race_df.empty:
