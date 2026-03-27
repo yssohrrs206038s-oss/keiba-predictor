@@ -251,10 +251,10 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
         # 馬体重: td.Weight
         horse_weight, horse_weight_diff = _parse_horse_weight(_txt("td.Weight"))
 
-        # オッズ: td.Txt_R.Popular（Txt_R と Popular を両方持つ td）
+        # オッズ: tds[9] (class=['Txt_R', 'Popular'])
         try:
-            odds = float(_txt("td.Txt_R.Popular").replace(",", ""))
-        except ValueError:
+            odds = float(tds[9].get_text(strip=True).replace(",", ""))
+        except (IndexError, ValueError):
             odds = None
 
         # 人気: .Popular_Ninki
