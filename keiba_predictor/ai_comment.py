@@ -37,6 +37,9 @@ MODEL_ID = "claude-haiku-4-5-20251001"
 # ── 1頭あたりの最大解説文字数（Discord の行幅に合わせて調整） ──
 MAX_COMMENT_LEN = 50
 
+# ── レポート送信先 Webhook URL（環境変数未設定時のフォールバック）──
+_REPORT_WEBHOOK_FALLBACK = "https://discord.com/api/webhooks/1487080315951386684/OgkHwqxsA6KgaQ4msUQIvIU-JIByzjy4sxcS0RPcgReFIYOTXx7JxYpOWMw5AypKBC5R"
+
 
 # ══════════════════════════════════════════════════════════════
 # Windows 互換出力ヘルパー
@@ -420,6 +423,7 @@ def flush_reports() -> None:
     predict_from_csv / predict_live の最後に呼ぶことで、
     他のログと混ざらずにまとめて表示される。
     """
+    _setup_utf8_stdout()  # 絵文字等のUnicodeEncodeError対策
     if not _pending_reports:
         return
 
@@ -434,15 +438,10 @@ def flush_reports() -> None:
         print(f"▼▼▼  END OF REPORT  ▼▼▼", flush=True)
         print(f"{_FENCE}\n", flush=True)
 
-        # 自分宛 Discord チャンネルへ送信（DISCORD_REPORT_WEBHOOK_URL が設定されている場合）
-        report_url = os.environ.get("DISCORD_REPORT_WEBHOOK_URL")
-        if report_url is None:
-            print("[flush_reports] DISCORD_REPORT_WEBHOOK_URL = None（未設定）→ Discord送信スキップ", flush=True)
-        elif report_url == "":
-            print("[flush_reports] DISCORD_REPORT_WEBHOOK_URL = ''（空文字）→ Discord送信スキップ", flush=True)
-        else:
-            print(f"[flush_reports] Sending to direct URL: {report_url[:10]}...", flush=True)
-            _send_report_to_discord(report_url, race_name, text)
+        # 自分宛 Discord チャンネルへ送信
+        report_url = os.environ.get("DISCORD_REPORT_WEBHOOK_URL") or _REPORT_WEBHOOK_FALLBACK
+        print(f"[flush_reports] Sending to URL: {report_url[:40]}...", flush=True)
+        _send_report_to_discord(report_url, race_name, text)
 
     _pending_reports.clear()
 
