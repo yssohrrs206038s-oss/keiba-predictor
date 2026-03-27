@@ -33,3 +33,5 @@ Thumbs.db
 .env
 keiba_notify.bat
 logs/
+keiba_predictor/data/predictions_cache.json
+keiba_predictor/data/debug/

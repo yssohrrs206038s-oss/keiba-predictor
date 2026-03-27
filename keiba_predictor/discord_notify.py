@@ -741,58 +741,24 @@ def run_predict_notify(
     for race in grade_races:
         race_id, race_name, race_date = race["race_id"], race["race_name"], race["race_date"]
 
-        # ── predict_live() で出馬表をリアルタイム取得（featured or --live 時） ──
-        if from_featured or use_live:
-            try:
-                from keiba_predictor.model.predict import predict_live
-                result = predict_live(race_id, notify=False, model_path=model_path)
-                # predict_live() がキャッシュ保存済み → ai_comments/course_info を取得
-                _cached = _load_cache().get(race_id, {})
-                ai_comments = _cached.get("ai_comments", {})
-                course_info = _cached.get("course_info", "")
-                race_name   = _cached.get("race_name", race_name)
-                race_date   = _cached.get("race_date", race_date)
-                logger.info(f"  predict_live 成功: {race_name} ({race_id})")
-            except Exception as e:
-                logger.warning(f"  predict_live 失敗 ({e}): {race_name} ({race_id})")
-                if from_featured:
-                    send_discord(webhook_url,
-                        f"⚠️ **{race_name}** の出馬表取得に失敗しました: {e}")
-                    continue
-                # use_live かつ失敗 → CSV フォールバック
-                race_df = df_all[df_all["race_id"].astype(str) == race_id].copy()
-                if race_df.empty:
-                    logger.info(f"  スキップ(データなし): {race_name} ({race_id})")
-                    continue
-                course_info = _build_course_info(race_id, race_df)
-                result = predict_race(race_df, model_bundle)
-                result = calc_ev_and_flags(result)
-                ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
-                try:
-                    _store_prediction(race_id, race_name, race_date, result,
-                                      ai_comments=ai_comments, course_info=course_info)
-                except Exception as _e:
-                    import traceback
-                    print(f"[_store_prediction] ❌ 例外発生: {type(_e).__name__}: {_e}", flush=True)
-                    print(traceback.format_exc(), flush=True)
-        else:
-            # ── CSV から取得 ────────────────────────────────────
-            race_df = df_all[df_all["race_id"].astype(str) == race_id].copy()
-            if race_df.empty:
-                logger.info(f"  スキップ(データなし): {race_name} ({race_id})")
-                continue
-            course_info = _build_course_info(race_id, race_df)
-            result = predict_race(race_df, model_bundle)
-            result = calc_ev_and_flags(result)
-            ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
-            print(f"[_store_prediction] 呼び出し: race_id={race_id}  PRED_CACHE={PRED_CACHE.resolve()}", flush=True)
-            try:
-                _store_prediction(race_id, race_name, race_date, result,
-                                  ai_comments=ai_comments, course_info=course_info)
-            except Exception as _e:
-                import traceback
-                print(f"[_store_prediction] ❌ 例外発生: {type(_e).__name__}: {_e}", flush=True)
-                print(traceback.format_exc(), flush=True)
+        # ── 常に predict_live() で出馬表をリアルタイム取得 ────────
+        # featured_races.csv は race_id/name/grade のみで特徴量なし。
+        # キャッシュの古いデータを使わず、毎回出馬表を取得して予想する。
+        try:
+            from keiba_predictor.model.predict import predict_live
+            result = predict_live(race_id, notify=False, model_path=model_path)
+            # predict_live() 内で _store_prediction() 済み → キャッシュから補完
+            _cached = _load_cache().get(race_id, {})
+            ai_comments = _cached.get("ai_comments", {})
+            course_info = _cached.get("course_info", "")
+            race_name   = _cached.get("race_name", race_name)
+            race_date   = _cached.get("race_date", race_date)
+            logger.info(f"  predict_live 成功: {race_name} ({race_id})")
+        except Exception as e:
+            logger.warning(f"  predict_live 失敗 ({e}): {race_name} ({race_id})")
+            send_discord(webhook_url,
+                f"⚠️ **{race_name}** の出馬表取得に失敗しました: {e}")
+            continue
 
         print(f"[DEBUG] {race_name} course_info={course_info!r}", flush=True)
         print(f"[AI解説] {race_name}: {len(ai_comments)}頭分 keys={sorted(ai_comments.keys())}", flush=True)
