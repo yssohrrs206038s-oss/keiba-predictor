@@ -157,28 +157,21 @@ def generate_comments(
     # EV上位で予想印外の馬を「穴」扱いにする閾値
     EV_ANA_THRESHOLD = 2.0
 
+    MARKS = {1: "◎🔥", 2: "○✨", 3: "▲⚡"}
+
     horses_data = []
     for _, row in result_df.iterrows():
-        num = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "?"
         rank = int(sorted_idx.loc[row.name]) if row.name in sorted_idx.index else 99
-        ev_val = float(row["ev_score"]) if pd.notna(row.get("ev_score")) else 0.0
+        if rank > 3:
+            continue  # ◎○▲の3頭のみ処理
 
-        # 印・絵文字をPython側で確定してAIに渡す
-        if rank == 1:
-            mark = "◎🔥"
-        elif rank == 2:
-            mark = "○✨"
-        elif rank == 3:
-            mark = "▲⚡"
-        elif rank > 3 and ev_val >= EV_ANA_THRESHOLD:
-            mark = "穴🚀"
-        else:
-            mark = ""
+        num = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "?"
+        ev_val = float(row["ev_score"]) if pd.notna(row.get("ev_score")) else 0.0
 
         entry: dict = {
             "馬番": num,
             "馬名": str(row.get("horse_name", "不明"))[:12],
-            "AI印": mark,          # ← AIはこの印を解説の先頭に必ず付ける
+            "AI印": MARKS[rank],
             "AI3着以内確率": f"{row['prob_top3'] * 100:.1f}%",
             "EVスコア": f"{ev_val:.2f}" if ev_val else "N/A",
             "人気": str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "?",
@@ -215,7 +208,7 @@ def generate_comments(
 
         horses_data.append(entry)
 
-    _dbg(f"Step3 OK: {len(horses_data)} 頭分データ組み立て完了")
+    _dbg(f"Step3 OK: {len(horses_data)} 頭分データ組み立て完了（◎○▲のみ）")
 
     # ── Step 4: プロンプト生成 ────────────────────────────────
     race_label = race_name or "今回のレース"
@@ -224,24 +217,21 @@ def generate_comments(
 
     prompt = (
         f"あなたは競馬予測AIの解説アシスタントです。\n"
-        f"以下は「{race_label}」の予測データです。\n\n"
-        f"各馬のデータ（JSON配列）:\n"
+        f"以下は「{race_label}」の◎○▲3頭の予測データです。\n\n"
+        f"対象馬データ（JSON配列）:\n"
         f"{json.dumps(horses_data, ensure_ascii=False, indent=2)}\n\n"
-        f"上記データを基に、各馬について競馬ファン向けの自然な日本語解説を生成してください。\n\n"
+        f"上記3頭について競馬ファン向けの自然な日本語解説を生成してください。\n\n"
         f"【重要ルール】\n"
-        f"各馬のデータに「AI印」フィールドがあります。解説テキストの先頭に必ずその印をそのまま付けること。\n"
-        f"（例: AI印が '◎🔥' なら解説は '◎🔥 ...' で始める。空文字の場合は印なし）\n\n"
-        f"【解説の必須要素】\n"
-        f"統計学的なXGBoostスコアに加え、プロの相馬眼を持つ視点で以下を必ず含めること：\n"
-        f"1. 【展開】位置取り（逃げ・先行・差し・追い込み）とペース適性を簡潔に\n"
-        f"2. 【血統】コース適性・距離適性を血統背景から簡潔に\n"
-        f"3. 穴🚀の馬はEVが高い激走理由を強調して推奨\n"
-        f"4. 人気でも危険な馬には忖度なしの毒舌で懸念を明記\n\n"
+        f"各馬の「AI印」を解説テキストの先頭に必ずそのまま付けること。\n"
+        f"（例: AI印が '◎🔥' なら解説は '◎🔥 ...' で始める）\n\n"
+        f"【解説の必須要素（各馬{MAX_COMMENT_LEN}文字以内）】\n"
+        f"1. 展開・位置取り適性を簡潔に\n"
+        f"2. コース・距離適性を簡潔に\n"
+        f"3. 人気でも危険な馬には懸念を明記\n\n"
         f"出力形式:\n"
-        f"- 必ず以下のJSONオブジェクトのみを返す（コードブロック不要、JSON以外の文字列不要）\n"
+        f"- JSONオブジェクトのみを返す（コードブロック不要）\n"
         f"- キー: 馬番（文字列）、値: 解説テキスト（最大{MAX_COMMENT_LEN}文字、改行なし）\n\n"
-        f'例: {{"1": "◎🔥 前走快勝の勢い。先行策が叶えば前残り濃厚。父譲りの持続力あり。", '
-        f'"3": "○✨ 差し届かず展開不向き。母父ダート寄りで芝は疑問。消し推奨。"}}\n'
+        f'例: {{"1": "◎🔥 先行策が叶えば前残り濃厚。持続力あり。", "3": "○✨ 差し展開不向き。"}}\n'
     )
     _dbg(f"Step4 OK: プロンプト {len(prompt)} 文字")
 
@@ -263,7 +253,7 @@ def generate_comments(
             try:
                 response = client.messages.create(
                     model=MODEL_ID,
-                    max_tokens=2000,
+                    max_tokens=1000,
                     messages=[{"role": "user", "content": prompt}],
                 )
                 response_text = response.content[0].text
