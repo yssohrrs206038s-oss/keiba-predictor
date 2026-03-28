@@ -79,6 +79,24 @@ def _get_html_with_playwright(url: str) -> Optional[str]:
 _SEX_ENC = {"牡": 0, "牝": 1, "セ": 2, "騸": 2}
 
 
+def _is_cancel_row(tr) -> bool:
+    """tr が取消馬かどうかを判定する。"""
+    tr_classes = tr.get("class", [])
+    if "Cancel" in tr_classes:
+        return True
+    for td in tr.find_all("td"):
+        td_cls = td.get("class") or []
+        if isinstance(td_cls, list):
+            td_cls_str = " ".join(td_cls)
+        else:
+            td_cls_str = str(td_cls)
+        if "Cancel" in td_cls_str:
+            return True
+        if td.get_text(strip=True) == "取消":
+            return True
+    return False
+
+
 def _parse_horse_weight(s: str) -> tuple[Optional[float], Optional[float]]:
     """
     "486(+2)"  → (486.0,  2.0)
@@ -204,28 +222,14 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
     rows = []
     for tr in trs:
         # 取消馬をスキップ
-        tr_classes = tr.get("class", [])
-        tds = tr.find_all("td")
-        all_td_classes = " ".join(
-            " ".join(td.get("class") or []) if isinstance(td.get("class"), list)
-            else str(td.get("class") or "")
-            for td in tds
-        )
-        all_td_text = " ".join(td.get_text(strip=True) for td in tds)
-
-        # 馬名を先に取得（デバッグ用）
         _horse_el = tr.select_one(".HorseInfo a") or tr.select_one(".HorseName a")
         _horse_name_dbg = _horse_el.get_text(strip=True) if _horse_el else "?"
-
-        is_cancel = (
-            "Cancel" in tr_classes
-            or "Cancel" in all_td_classes
-            or "取消" in all_td_text
-        )
-        print(f"[DEBUG cancel][Yahoo] {_horse_name_dbg}: tr_classes={tr_classes} cancel_in_td_classes={'Cancel' in all_td_classes} has_torikeshi={'取消' in all_td_text} → skip={is_cancel}", flush=True)
-        if is_cancel:
+        if _is_cancel_row(tr):
+            print(f"[CANCEL SKIP][Yahoo] {_horse_name_dbg}: tr.class={tr.get('class', [])}", flush=True)
             logger.info(f"[Yahoo!] 取消馬スキップ: {_horse_name_dbg}")
             continue
+
+        tds = tr.find_all("td")
 
         def _txt(*sels: str) -> str:
             for sel in sels:
@@ -352,22 +356,11 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
 def _parse_shutuba_row(tr) -> Optional[dict]:
     """<tr class="HorseList"> 1行から馬情報を抽出する。取消馬は None を返す。"""
     # 取消馬をスキップ
-    tr_classes = tr.get("class", [])
-    tds_all = tr.find_all("td")
-    all_td_classes = " ".join(
-        " ".join(td.get("class") or []) if isinstance(td.get("class"), list)
-        else str(td.get("class") or "")
-        for td in tds_all
-    )
-    all_td_text = " ".join(td.get_text(strip=True) for td in tds_all)
-
-    _horse_el = tr.select_one(".HorseName a") or tr.select_one(".HorseInfo a")
-    _horse_name_dbg = _horse_el.get_text(strip=True) if _horse_el else "?"
-
-    is_cancel = "Cancel" in tr_classes or "Cancel" in all_td_classes or "取消" in all_td_text
-    print(f"[DEBUG cancel][netkeiba] {_horse_name_dbg}: tr_classes={tr_classes} cancel_in_td_classes={'Cancel' in all_td_classes} has_torikeshi={'取消' in all_td_text} → skip={is_cancel}", flush=True)
-    if is_cancel:
-        logger.info(f"[netkeiba] 取消馬スキップ: {_horse_name_dbg}")
+    if _is_cancel_row(tr):
+        _horse_el = tr.select_one(".HorseName a") or tr.select_one(".HorseInfo a")
+        _name = _horse_el.get_text(strip=True) if _horse_el else "?"
+        print(f"[CANCEL SKIP][netkeiba] {_name}: tr.class={tr.get('class', [])}", flush=True)
+        logger.info(f"[netkeiba] 取消馬スキップ: {_name}")
         return None
 
     def _txt(*sels):
