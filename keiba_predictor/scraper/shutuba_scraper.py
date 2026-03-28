@@ -206,21 +206,25 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
         # 取消馬をスキップ
         tr_classes = tr.get("class", [])
         tds = tr.find_all("td")
-        # 各tdのclass属性を文字列結合して Cancel を検索（部分一致対応）
         all_td_classes = " ".join(
             " ".join(td.get("class") or []) if isinstance(td.get("class"), list)
             else str(td.get("class") or "")
             for td in tds
         )
-        # テキストに「取消」を含むかもチェック
         all_td_text = " ".join(td.get_text(strip=True) for td in tds)
+
+        # 馬名を先に取得（デバッグ用）
+        _horse_el = tr.select_one(".HorseInfo a") or tr.select_one(".HorseName a")
+        _horse_name_dbg = _horse_el.get_text(strip=True) if _horse_el else "?"
+
         is_cancel = (
             "Cancel" in tr_classes
             or "Cancel" in all_td_classes
             or "取消" in all_td_text
         )
-        print(f"[DEBUG cancel] tr_classes={tr_classes} td_classes='{all_td_classes[:80]}' has_torikeshi='{'取消' in all_td_text}' → skip={is_cancel}", flush=True)
+        print(f"[DEBUG cancel][Yahoo] {_horse_name_dbg}: tr_classes={tr_classes} cancel_in_td_classes={'Cancel' in all_td_classes} has_torikeshi={'取消' in all_td_text} → skip={is_cancel}", flush=True)
         if is_cancel:
+            logger.info(f"[Yahoo!] 取消馬スキップ: {_horse_name_dbg}")
             continue
 
         def _txt(*sels: str) -> str:
@@ -356,7 +360,14 @@ def _parse_shutuba_row(tr) -> Optional[dict]:
         for td in tds_all
     )
     all_td_text = " ".join(td.get_text(strip=True) for td in tds_all)
-    if "Cancel" in tr_classes or "Cancel" in all_td_classes or "取消" in all_td_text:
+
+    _horse_el = tr.select_one(".HorseName a") or tr.select_one(".HorseInfo a")
+    _horse_name_dbg = _horse_el.get_text(strip=True) if _horse_el else "?"
+
+    is_cancel = "Cancel" in tr_classes or "Cancel" in all_td_classes or "取消" in all_td_text
+    print(f"[DEBUG cancel][netkeiba] {_horse_name_dbg}: tr_classes={tr_classes} cancel_in_td_classes={'Cancel' in all_td_classes} has_torikeshi={'取消' in all_td_text} → skip={is_cancel}", flush=True)
+    if is_cancel:
+        logger.info(f"[netkeiba] 取消馬スキップ: {_horse_name_dbg}")
         return None
 
     def _txt(*sels):
