@@ -154,9 +154,6 @@ def generate_comments(
 
     # prob_top3 降順でランク付け（1位=◎🔥 2位=○✨ 3位=▲⚡）
     sorted_idx = result_df["prob_top3"].rank(ascending=False, method="first")
-    # EV上位で予想印外の馬を「穴」扱いにする閾値
-    EV_ANA_THRESHOLD = 2.0
-
     MARKS = {1: "◎🔥", 2: "○✨", 3: "▲⚡"}
 
     horses_data = []
@@ -166,43 +163,22 @@ def generate_comments(
             continue  # ◎○▲の3頭のみ処理
 
         num = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "?"
-        ev_val = float(row["ev_score"]) if pd.notna(row.get("ev_score")) else 0.0
 
         entry: dict = {
             "馬番": num,
             "馬名": str(row.get("horse_name", "不明"))[:12],
             "AI印": MARKS[rank],
             "AI3着以内確率": f"{row['prob_top3'] * 100:.1f}%",
-            "EVスコア": f"{ev_val:.2f}" if ev_val else "N/A",
             "人気": str(int(row["popularity"])) + "番人気" if pd.notna(row.get("popularity")) else "?",
         }
 
-        for col, key_jp in [
-            ("prev_finish_pos", "前走着順"),
-        ]:
-            val = pd.to_numeric(row.get(col), errors="coerce")
-            if pd.notna(val):
-                entry[key_jp] = float(val)
+        pfp = pd.to_numeric(row.get("prev_finish_pos"), errors="coerce")
+        if pd.notna(pfp):
+            entry["前走着順"] = int(pfp)
 
         jfr = pd.to_numeric(row.get("jockey_fukusho_rate"), errors="coerce")
         if pd.notna(jfr):
             entry["騎手複勝率"] = f"{jfr:.3f}"
-
-        ctype = row.get("course_type_enc")
-        if pd.notna(ctype):
-            entry["コース種別"] = "芝" if int(ctype) == 0 else "ダート"
-
-        for col, key_jp in [
-            ("dist_diff_prev",    "前走距離差m"),
-            ("horse_weight_diff", "馬体重増減kg"),
-        ]:
-            val = pd.to_numeric(row.get(col), errors="coerce")
-            if pd.notna(val):
-                entry[key_jp] = int(val)
-
-        danger = row.get("danger_reasons", [])
-        if danger:
-            entry["危険フラグ"] = danger
 
         horses_data.append(entry)
 
