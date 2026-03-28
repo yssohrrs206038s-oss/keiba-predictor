@@ -164,10 +164,34 @@ def generate_comments(
 
         num = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "?"
 
+        # prob_top3 → カテゴリ変換
+        prob = float(row["prob_top3"]) if pd.notna(row.get("prob_top3")) else 0.0
+        if prob > 0.5:
+            prob_label = "非常に高い（本命級）"
+        elif prob > 0.4:
+            prob_label = "高い"
+        elif prob > 0.3:
+            prob_label = "中程度"
+        else:
+            prob_label = "低い"
+
+        # ev_score → カテゴリ変換
+        ev = float(row["ev_score"]) if pd.notna(row.get("ev_score")) else 0.0
+        if ev > 3.0:
+            ev_label = "期待値抜群"
+        elif ev > 2.0:
+            ev_label = "期待値高い"
+        elif ev > 1.0:
+            ev_label = "期待値あり"
+        else:
+            ev_label = "期待値低い"
+
         entry: dict = {
             "馬番": num,
             "馬名": str(row.get("horse_name", "不明"))[:12],
             "AI印": MARKS[rank],
+            "AI確率評価": prob_label,
+            "期待値評価": ev_label,
             "人気": str(int(row["popularity"])) + "番人気" if pd.notna(row.get("popularity")) else "?",
         }
 
