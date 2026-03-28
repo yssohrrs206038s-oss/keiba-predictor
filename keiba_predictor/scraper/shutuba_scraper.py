@@ -221,15 +221,18 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
 
     rows = []
     for tr in trs:
-        # 取消馬をスキップ
-        _horse_el = tr.select_one(".HorseInfo a") or tr.select_one(".HorseName a")
-        _horse_name_dbg = _horse_el.get_text(strip=True) if _horse_el else "?"
-        if _is_cancel_row(tr):
-            print(f"[CANCEL SKIP][Yahoo] {_horse_name_dbg}: tr.class={tr.get('class', [])}", flush=True)
-            logger.info(f"[Yahoo!] 取消馬スキップ: {_horse_name_dbg}")
+        # 取消馬をスキップ（インライン判定）
+        tr_classes = tr.get("class", [])
+        if "Cancel" in tr_classes:
+            print(f"[SKIP][Yahoo] Cancel馬をスキップ: tr.class={tr_classes}", flush=True)
             continue
-
         tds = tr.find_all("td")
+        if any("Cancel" in str(td.get("class", "")) for td in tds):
+            print(f"[SKIP][Yahoo] Cancel_Txt馬をスキップ", flush=True)
+            continue
+        if any(td.get_text(strip=True) == "取消" for td in tds):
+            print(f"[SKIP][Yahoo] 取消テキスト馬をスキップ", flush=True)
+            continue
 
         def _txt(*sels: str) -> str:
             for sel in sels:
@@ -612,6 +615,17 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
             for td in first.find_all("td"):
                 print(f"[DEBUG]   td.class={td.get('class')} text={td.get_text(strip=True)[:30]!r}", flush=True)
         for tr in trs:
+            tr_classes = tr.get("class", [])
+            if "Cancel" in tr_classes:
+                print(f"[SKIP][netkeiba] Cancel馬をスキップ: tr.class={tr_classes}", flush=True)
+                continue
+            _tds = tr.find_all("td")
+            if any("Cancel" in str(td.get("class", "")) for td in _tds):
+                print(f"[SKIP][netkeiba] Cancel_Txt馬をスキップ", flush=True)
+                continue
+            if any(td.get_text(strip=True) == "取消" for td in _tds):
+                print(f"[SKIP][netkeiba] 取消テキスト馬をスキップ", flush=True)
+                continue
             row = _parse_shutuba_row(tr)
             if row:
                 rows.append(row)
@@ -621,6 +635,17 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         horse_trs = soup.select("tr.HorseList, tr[class*='HorseList']")
         print(f"[DEBUG] ページ全体の HorseList 行数: {len(horse_trs)}", flush=True)
         for tr in horse_trs:
+            tr_classes = tr.get("class", [])
+            if "Cancel" in tr_classes:
+                print(f"[SKIP][netkeiba] Cancel馬をスキップ: tr.class={tr_classes}", flush=True)
+                continue
+            _tds = tr.find_all("td")
+            if any("Cancel" in str(td.get("class", "")) for td in _tds):
+                print(f"[SKIP][netkeiba] Cancel_Txt馬をスキップ", flush=True)
+                continue
+            if any(td.get_text(strip=True) == "取消" for td in _tds):
+                print(f"[SKIP][netkeiba] 取消テキスト馬をスキップ", flush=True)
+                continue
             row = _parse_shutuba_row(tr)
             if row:
                 rows.append(row)
