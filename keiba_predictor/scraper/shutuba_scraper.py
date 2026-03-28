@@ -210,28 +210,38 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
     # tr.HorseList で直接取得（テーブルセレクター不要）
     trs = soup.select("tr.HorseList")
     print(f"[DEBUG][Yahoo!] HorseList 行数: {len(trs)}", flush=True)
-    if trs:
-        first = trs[0]
-        for j, td in enumerate(first.find_all("td")):
-            print(f"[DEBUG][Yahoo!]   td[{j:02d}] class={td.get('class')} text={td.get_text(strip=True)[:30]!r}", flush=True)
-
     if not trs:
         logger.warning("[Yahoo!] tr.HorseList が見つかりませんでした")
         return None
 
+    # 全行のtr.classを出力して取消馬を確認
+    for idx, tr in enumerate(trs):
+        _hel = tr.select_one(".HorseInfo a") or tr.select_one(".HorseName a")
+        _hn = _hel.get_text(strip=True) if _hel else "?"
+        print(f"[DEBUG][Yahoo!] tr[{idx}] class={tr.get('class')} horse={_hn}", flush=True)
+        if idx == 0:
+            for j, td in enumerate(tr.find_all("td")):
+                print(f"[DEBUG][Yahoo!]   td[{j:02d}] class={td.get('class')} text={td.get_text(strip=True)[:30]!r}", flush=True)
+
     rows = []
     for tr in trs:
-        # 取消馬をスキップ（インライン判定）
+        # 取消馬をスキップ
         tr_classes = tr.get("class", [])
-        if "Cancel" in tr_classes:
-            print(f"[SKIP][Yahoo] Cancel馬をスキップ: tr.class={tr_classes}", flush=True)
-            continue
         tds = tr.find_all("td")
-        if any("Cancel" in str(td.get("class", "")) for td in tds):
-            print(f"[SKIP][Yahoo] Cancel_Txt馬をスキップ", flush=True)
+        _hel = tr.select_one(".HorseInfo a") or tr.select_one(".HorseName a")
+        _hn = _hel.get_text(strip=True) if _hel else "?"
+
+        # 判定1: tr自体のクラス
+        if "Cancel" in tr_classes:
+            print(f"[SKIP][Yahoo] {_hn}: tr.classにCancel検出 → スキップ", flush=True)
             continue
+        # 判定2: td内のクラス
+        if any("Cancel" in str(td.get("class", "")) for td in tds):
+            print(f"[SKIP][Yahoo] {_hn}: tdにCancel系クラス検出 → スキップ", flush=True)
+            continue
+        # 判定3: tdテキストに「取消」
         if any(td.get_text(strip=True) == "取消" for td in tds):
-            print(f"[SKIP][Yahoo] 取消テキスト馬をスキップ", flush=True)
+            print(f"[SKIP][Yahoo] {_hn}: tdに「取消」テキスト検出 → スキップ", flush=True)
             continue
 
         def _txt(*sels: str) -> str:
