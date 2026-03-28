@@ -168,7 +168,6 @@ def generate_comments(
             "馬番": num,
             "馬名": str(row.get("horse_name", "不明"))[:12],
             "AI印": MARKS[rank],
-            "AI3着以内確率": f"{row['prob_top3'] * 100:.1f}%",
             "人気": str(int(row["popularity"])) + "番人気" if pd.notna(row.get("popularity")) else "?",
         }
 
