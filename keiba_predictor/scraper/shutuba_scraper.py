@@ -203,6 +203,13 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
 
     rows = []
     for tr in trs:
+        # 取消馬をスキップ
+        tr_classes = tr.get("class", [])
+        if "Cancel" in tr_classes:
+            continue
+        if tr.select_one("td.Cancel_Txt") or tr.select_one("td[class*='Cancel']"):
+            continue
+
         tds = tr.find_all("td")
 
         def _txt(*sels: str) -> str:
@@ -328,7 +335,13 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
 
 
 def _parse_shutuba_row(tr) -> Optional[dict]:
-    """<tr class="HorseList"> 1行から馬情報を抽出する。"""
+    """<tr class="HorseList"> 1行から馬情報を抽出する。取消馬は None を返す。"""
+    # 取消馬をスキップ
+    tr_classes = tr.get("class", [])
+    if "Cancel" in tr_classes:
+        return None
+    if tr.select_one("td.Cancel_Txt") or tr.select_one("td[class*='Cancel']"):
+        return None
 
     def _txt(*sels):
         for sel in sels:
