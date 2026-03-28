@@ -562,6 +562,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
             "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
             "horse_name":   str(r.get("horse_name", "")),
             "prob":         float(r["prob_top3"]),
+            "odds":         float(pd.to_numeric(r.get("odds"), errors="coerce") or 0),
         }
 
     # 穴馬: 3位以降でオッズ10倍以上の最高確率
