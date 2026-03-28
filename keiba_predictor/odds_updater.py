@@ -96,6 +96,13 @@ def update_odds_for_race(race_id: str, entry: dict) -> dict:
 
     logger.info(f"[{race_id}] オッズ取得: {len(odds_map)}頭分")
 
+    # honmei / taikou / ana のオッズも更新
+    for role in ("honmei", "taikou", "ana"):
+        h = entry.get(role, {})
+        num = h.get("horse_number")
+        if num and num in odds_map:
+            h["odds"] = round(odds_map[num], 1)
+
     # ev_top3 の EV を再計算
     ev_top3 = entry.get("ev_top3", [])
     for h in ev_top3:
