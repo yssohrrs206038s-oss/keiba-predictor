@@ -8,55 +8,74 @@
     "honmei": {
       "horse_number": 15,
       "horse_name": "マイユニバース",
-      "prob": 0.523369312286377
+      "prob": 0.5812138319015503
     },
     "taikou": {
       "horse_number": 10,
       "horse_name": "シャイニングソード",
-      "prob": 0.4714539647102356
+      "prob": 0.5046787858009338
     },
     "ana": {
-      "horse_number": 3,
-      "horse_name": "クリスマスパレード",
-      "prob": 0.443590372800827
+      "horse_number": 1,
+      "horse_name": "ミクニインスパイア",
+      "prob": 0.4584673345088959
     },
     "predicted_top3_nums": [
       15,
       10,
-      3
+      1
     ],
     "predicted_top5_nums": [
       15,
       10,
+      1,
       3,
-      9,
-      11
+      7
     ],
-    "ana_horse_num": 1,
+    "ana_horse_num": 9,
     "ev_top3": [
       {
         "horse_number": 15,
         "horse_name": "マイユニバース",
-        "ev_score": 12.666,
-        "prob": 0.5234,
+        "ev_score": 14.065,
+        "prob": 0.5812,
         "odds": 24.2
       },
       {
         "horse_number": 10,
         "horse_name": "シャイニングソード",
-        "ev_score": 11.409,
-        "prob": 0.4715,
+        "ev_score": 12.213,
+        "prob": 0.5047,
         "odds": 24.2
       },
       {
-        "horse_number": 3,
-        "horse_name": "クリスマスパレード",
-        "ev_score": 10.735,
-        "prob": 0.4436,
+        "horse_number": 1,
+        "horse_name": "ミクニインスパイア",
+        "ev_score": 11.095,
+        "prob": 0.4585,
         "odds": 24.2
       }
     ],
-    "dangerous_horses": [],
+    "dangerous_horses": [
+      {
+        "horse_number": 7,
+        "horse_name": "コスモキュランダ",
+        "popularity": 1,
+        "prob": 0.4166,
+        "reasons": [
+          "1〜2番人気だが前走8着"
+        ]
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "ローシャムパーク",
+        "popularity": 3,
+        "prob": 0.3035,
+        "reasons": [
+          "AI確率30%（3番人気以内なのに低い）"
+        ]
+      }
+    ],
     "ai_comments": {}
   },
   "202609020111": {
@@ -126,34 +145,41 @@
     "venue": "中山",
     "course_info": "芝1800m",
     "honmei": {
+      "horse_number": 1,
+      "horse_name": "ハピ",
+      "prob": 0.6429609060287476
+    },
+    "taikou": {
       "horse_number": 14,
       "horse_name": "チュウワクリスエス",
       "prob": 0.5954453349113464
     },
-    "taikou": {
+    "ana": {
       "horse_number": 6,
       "horse_name": "ヴァルツァーシャル",
       "prob": 0.5580788254737854
     },
-    "ana": {
-      "horse_number": 12,
-      "horse_name": "ハナウマビーチ",
-      "prob": 0.5435055494308472
-    },
     "predicted_top3_nums": [
+      1,
       14,
-      6,
-      12
+      6
     ],
     "predicted_top5_nums": [
+      1,
       14,
       6,
       12,
-      7,
-      15
+      7
     ],
-    "ana_horse_num": 2,
+    "ana_horse_num": 15,
     "ev_top3": [
+      {
+        "horse_number": 1,
+        "horse_name": "ハピ",
+        "ev_score": 15.56,
+        "prob": 0.643,
+        "odds": 24.2
+      },
       {
         "horse_number": 14,
         "horse_name": "チュウワクリスエス",
@@ -166,13 +192,6 @@
         "horse_name": "ヴァルツァーシャル",
         "ev_score": 13.506,
         "prob": 0.5581,
-        "odds": 24.2
-      },
-      {
-        "horse_number": 12,
-        "horse_name": "ハナウマビーチ",
-        "ev_score": 13.153,
-        "prob": 0.5435,
         "odds": 24.2
       }
     ],
@@ -207,12 +226,12 @@
     "honmei": {
       "horse_number": 14,
       "horse_name": "レイピア",
-      "prob": 0.4353391230106354
+      "prob": 0.48894065618515015
     },
     "taikou": {
-      "horse_number": 12,
-      "horse_name": "ピューロマジック",
-      "prob": 0.39201509952545166
+      "horse_number": 13,
+      "horse_name": "ナムラクレア",
+      "prob": 0.3944154679775238
     },
     "ana": {
       "horse_number": 18,
@@ -221,30 +240,30 @@
     },
     "predicted_top3_nums": [
       14,
-      12,
+      13,
       18
     ],
     "predicted_top5_nums": [
       14,
-      12,
+      13,
       18,
-      7,
-      5
+      10,
+      17
     ],
-    "ana_horse_num": 13,
+    "ana_horse_num": 15,
     "ev_top3": [
       {
         "horse_number": 14,
         "horse_name": "レイピア",
-        "ev_score": 10.535,
-        "prob": 0.4353,
+        "ev_score": 11.832,
+        "prob": 0.4889,
         "odds": 24.2
       },
       {
-        "horse_number": 12,
-        "horse_name": "ピューロマジック",
-        "ev_score": 9.487,
-        "prob": 0.392,
+        "horse_number": 13,
+        "horse_name": "ナムラクレア",
+        "ev_score": 9.545,
+        "prob": 0.3944,
         "odds": 24.2
       },
       {
@@ -255,7 +274,35 @@
         "odds": 24.2
       }
     ],
-    "dangerous_horses": [],
+    "dangerous_horses": [
+      {
+        "horse_number": 13,
+        "horse_name": "ナムラクレア",
+        "popularity": 1,
+        "prob": 0.3944,
+        "reasons": [
+          "AI確率39%（3番人気以内なのに低い）"
+        ]
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "サトノレーヴ",
+        "popularity": 2,
+        "prob": 0.2968,
+        "reasons": [
+          "AI確率30%（3番人気以内なのに低い）"
+        ]
+      },
+      {
+        "horse_number": 1,
+        "horse_name": "パンジャタワー",
+        "popularity": 3,
+        "prob": 0.282,
+        "reasons": [
+          "AI確率28%（3番人気以内なのに低い）"
+        ]
+      }
+    ],
     "ai_comments": {}
   }
 }
