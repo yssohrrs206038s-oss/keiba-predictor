@@ -164,61 +164,25 @@ def generate_comments(
 
         num = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "?"
 
-        # prob_top3 → カテゴリ変換
         prob = float(row["prob_top3"]) if pd.notna(row.get("prob_top3")) else 0.0
-        if prob > 0.5:
-            prob_label = "非常に高い（本命級）"
-        elif prob > 0.4:
-            prob_label = "高い"
-        elif prob > 0.3:
-            prob_label = "中程度"
-        else:
-            prob_label = "低い"
-
-        # ev_score → カテゴリ変換
-        ev = float(row["ev_score"]) if pd.notna(row.get("ev_score")) else 0.0
-        if ev > 3.0:
-            ev_label = "期待値抜群"
-        elif ev > 2.0:
-            ev_label = "期待値高い"
-        elif ev > 1.0:
-            ev_label = "期待値あり"
-        else:
-            ev_label = "期待値低い"
+        ev_val = float(row["ev_score"]) if pd.notna(row.get("ev_score")) else 0.0
 
         entry: dict = {
             "馬番": num,
             "馬名": str(row.get("horse_name", "不明"))[:12],
             "AI印": MARKS[rank],
-            "AI確率評価": prob_label,
-            "期待値評価": ev_label,
+            "AI3着以内確率": f"{prob * 100:.1f}%",
+            "EVスコア": f"{ev_val:.2f}",
             "人気": str(int(row["popularity"])) + "番人気" if pd.notna(row.get("popularity")) else "?",
         }
 
         pfp = pd.to_numeric(row.get("prev_finish_pos"), errors="coerce")
         if pd.notna(pfp):
-            pfp_int = int(pfp)
-            if pfp_int == 1:
-                entry["前走結果"] = "勝利"
-            elif pfp_int == 2:
-                entry["前走結果"] = "2着"
-            elif pfp_int == 3:
-                entry["前走結果"] = "3着"
-            elif pfp_int <= 5:
-                entry["前走結果"] = "掲示板内"
-            else:
-                entry["前走結果"] = "大敗"
+            entry["前走着順"] = int(pfp)
 
         jfr = pd.to_numeric(row.get("jockey_fukusho_rate"), errors="coerce")
         if pd.notna(jfr):
-            if jfr >= 0.35:
-                entry["騎手信頼度"] = "非常に高い"
-            elif jfr >= 0.25:
-                entry["騎手信頼度"] = "高い"
-            elif jfr >= 0.15:
-                entry["騎手信頼度"] = "普通"
-            else:
-                entry["騎手信頼度"] = "やや低め"
+            entry["騎手複勝率"] = f"{jfr:.3f}"
 
         horses_data.append(entry)
 
@@ -232,19 +196,14 @@ def generate_comments(
         race_label += f"（{course_info}）"
 
     system_prompt = (
-        "あなたはKEIBA EDGEの競馬解説AIです。\n\n"
-        "【絶対禁止ルール】\n"
-        "- 数字を一切使わないこと（%、倍、着、人気の数字も禁止）\n"
-        "- オッズ、EV、確率の具体的な数値を絶対に書かないこと\n"
-        "- 捏造・推測した数値を使わないこと\n\n"
-        "【使用可能な表現】\n"
-        "- AI印（◎○▲）\n"
-        "- 「本命級」「高評価」「中程度」「低評価」\n"
-        "- 「期待値抜群」「妙味あり」\n"
-        "- 「上位人気」「中穴」「大穴」\n"
-        "- 前走の結果（勝利、2着、大敗など）\n"
-        "- 騎手の信頼度（「複勝率が高い」「やや低め」など）\n\n"
-        "数字を使いたくなったら、必ず言葉に置き換えること。"
+        "あなたはKEIBA EDGEの専属AIアナリストです。\n"
+        "10万件の競馬データで学習したXGBoostモデルの予測結果を\n"
+        "競馬ファンに向けて魅力的に解説します。\n"
+        "語尾は断定的・自信ありげに。絵文字を効果的に使用。\n\n"
+        "【重要ルール】\n"
+        "提供されたデータの数値のみを使うこと。\n"
+        "データにない数値は絶対に使わないこと。\n"
+        "特にオッズや配当金額はデータに含まれていないため、絶対に書かないこと。"
     )
 
     prompt = (
@@ -256,7 +215,8 @@ def generate_comments(
         f"- 強みを前面に、懸念は最後に一言\n"
         f"- 競馬ファンが「買いたい！」と思う表現で\n"
         f"- 解説テキスト内に馬名を含めないこと。馬名は別途見出しに表示されます\n"
-        f"- 【禁止】数字を一切使わないこと。提供データのカテゴリ表現（本命級、期待値抜群等）をそのまま活用すること\n\n"
+        f"- 提供データの数値（確率・EV・人気・着順・複勝率）はそのまま使ってよい\n"
+        f"- オッズや配当金額はデータに含まれていないため絶対に書かないこと\n\n"
         f"出力：JSONのみ（コードブロック不要）\n"
         f"キー：馬番（文字列）、値：解説テキスト"
     )
