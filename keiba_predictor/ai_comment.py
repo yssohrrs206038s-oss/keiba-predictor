@@ -174,13 +174,11 @@ def generate_comments(
             "AI印": MARKS[rank],
             "AI3着以内確率": f"{row['prob_top3'] * 100:.1f}%",
             "EVスコア": f"{ev_val:.2f}" if ev_val else "N/A",
-            "人気": str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "?",
-            "オッズ": str(row.get("odds", "?")),
+            "人気": str(int(row["popularity"])) + "番人気" if pd.notna(row.get("popularity")) else "?",
         }
 
         for col, key_jp in [
             ("prev_finish_pos", "前走着順"),
-            ("prev_odds",       "前走オッズ"),
         ]:
             val = pd.to_numeric(row.get(col), errors="coerce")
             if pd.notna(val):
@@ -230,7 +228,8 @@ def generate_comments(
         f"- {MAX_COMMENT_LEN}文字以内で簡潔・断定的に\n"
         f"- 強みを前面に、懸念は最後に一言\n"
         f"- 競馬ファンが「買いたい！」と思う表現で\n"
-        f"- 解説テキスト内に馬名を含めないこと。馬名は別途見出しに表示されます。\n\n"
+        f"- 解説テキスト内に馬名を含めないこと。馬名は別途見出しに表示されます。\n"
+        f"- オッズの具体的な数値は絶対に使わないこと（刻々と変わるため）。代わりに「○番人気」「高配当」「低配当」などの表現を使う\n\n"
         f"出力：JSONのみ（コードブロック不要）\n"
         f"キー：馬番（文字列）、値：解説テキスト"
     )
