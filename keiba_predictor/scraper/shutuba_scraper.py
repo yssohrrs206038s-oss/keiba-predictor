@@ -618,23 +618,24 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
             trs = [tr for tr in table.find_all("tr")
                    if tr.select_one("td[class*='Umaban']") or tr.select_one("td.Umaban")]
         print(f"[DEBUG] HorseList 行数: {len(trs)}", flush=True)
-        if trs:
-            # 最初の行のクラス・td 構造をダンプ
-            first = trs[0]
-            print(f"[DEBUG] 1行目 tr.class={first.get('class')}", flush=True)
-            for td in first.find_all("td"):
-                print(f"[DEBUG]   td.class={td.get('class')} text={td.get_text(strip=True)[:30]!r}", flush=True)
+        # 全行のtr.classと馬名を出力
+        for idx, tr in enumerate(trs):
+            _hel = tr.select_one(".HorseName a") or tr.select_one(".HorseInfo a")
+            _hn = _hel.get_text(strip=True) if _hel else "?"
+            print(f"[DEBUG][netkeiba] tr[{idx}] class={tr.get('class')} horse={_hn}", flush=True)
         for tr in trs:
             tr_classes = tr.get("class", [])
-            if "Cancel" in tr_classes:
-                print(f"[SKIP][netkeiba] Cancel馬をスキップ: tr.class={tr_classes}", flush=True)
-                continue
             _tds = tr.find_all("td")
+            _hel = tr.select_one(".HorseName a") or tr.select_one(".HorseInfo a")
+            _hn = _hel.get_text(strip=True) if _hel else "?"
+            if "Cancel" in tr_classes:
+                print(f"[SKIP][netkeiba] {_hn}: tr.classにCancel検出 → スキップ", flush=True)
+                continue
             if any("Cancel" in str(td.get("class", "")) for td in _tds):
-                print(f"[SKIP][netkeiba] Cancel_Txt馬をスキップ", flush=True)
+                print(f"[SKIP][netkeiba] {_hn}: tdにCancel系クラス検出 → スキップ", flush=True)
                 continue
             if any(td.get_text(strip=True) == "取消" for td in _tds):
-                print(f"[SKIP][netkeiba] 取消テキスト馬をスキップ", flush=True)
+                print(f"[SKIP][netkeiba] {_hn}: tdに「取消」テキスト検出 → スキップ", flush=True)
                 continue
             row = _parse_shutuba_row(tr)
             if row:
@@ -644,17 +645,23 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         # テーブルが見つからない場合: ページ全体から .HorseList 行を検索
         horse_trs = soup.select("tr.HorseList, tr[class*='HorseList']")
         print(f"[DEBUG] ページ全体の HorseList 行数: {len(horse_trs)}", flush=True)
+        for idx, tr in enumerate(horse_trs):
+            _hel = tr.select_one(".HorseName a") or tr.select_one(".HorseInfo a")
+            _hn = _hel.get_text(strip=True) if _hel else "?"
+            print(f"[DEBUG][netkeiba-fb] tr[{idx}] class={tr.get('class')} horse={_hn}", flush=True)
         for tr in horse_trs:
             tr_classes = tr.get("class", [])
-            if "Cancel" in tr_classes:
-                print(f"[SKIP][netkeiba] Cancel馬をスキップ: tr.class={tr_classes}", flush=True)
-                continue
             _tds = tr.find_all("td")
+            _hel = tr.select_one(".HorseName a") or tr.select_one(".HorseInfo a")
+            _hn = _hel.get_text(strip=True) if _hel else "?"
+            if "Cancel" in tr_classes:
+                print(f"[SKIP][netkeiba-fb] {_hn}: tr.classにCancel検出 → スキップ", flush=True)
+                continue
             if any("Cancel" in str(td.get("class", "")) for td in _tds):
-                print(f"[SKIP][netkeiba] Cancel_Txt馬をスキップ", flush=True)
+                print(f"[SKIP][netkeiba-fb] {_hn}: tdにCancel系クラス検出 → スキップ", flush=True)
                 continue
             if any(td.get_text(strip=True) == "取消" for td in _tds):
-                print(f"[SKIP][netkeiba] 取消テキスト馬をスキップ", flush=True)
+                print(f"[SKIP][netkeiba-fb] {_hn}: tdに「取消」テキスト検出 → スキップ", flush=True)
                 continue
             row = _parse_shutuba_row(tr)
             if row:
