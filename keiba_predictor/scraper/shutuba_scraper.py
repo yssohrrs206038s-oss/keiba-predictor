@@ -203,12 +203,24 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
 
     rows = []
     for tr in trs:
-        # 取消馬をスキップ（td内のクラスで判定）
+        # 取消馬をスキップ
         tr_classes = tr.get("class", [])
-        if "Cancel" in tr_classes:
-            continue
         tds = tr.find_all("td")
-        if any("Cancel_Txt" in (td.get("class") or []) for td in tds):
+        # 各tdのclass属性を文字列結合して Cancel を検索（部分一致対応）
+        all_td_classes = " ".join(
+            " ".join(td.get("class") or []) if isinstance(td.get("class"), list)
+            else str(td.get("class") or "")
+            for td in tds
+        )
+        # テキストに「取消」を含むかもチェック
+        all_td_text = " ".join(td.get_text(strip=True) for td in tds)
+        is_cancel = (
+            "Cancel" in tr_classes
+            or "Cancel" in all_td_classes
+            or "取消" in all_td_text
+        )
+        print(f"[DEBUG cancel] tr_classes={tr_classes} td_classes='{all_td_classes[:80]}' has_torikeshi='{'取消' in all_td_text}' → skip={is_cancel}", flush=True)
+        if is_cancel:
             continue
 
         def _txt(*sels: str) -> str:
@@ -335,12 +347,16 @@ def _scrape_yahoo_shutuba(race_id: str) -> Optional[dict]:
 
 def _parse_shutuba_row(tr) -> Optional[dict]:
     """<tr class="HorseList"> 1行から馬情報を抽出する。取消馬は None を返す。"""
-    # 取消馬をスキップ（td内のクラスで判定）
+    # 取消馬をスキップ
     tr_classes = tr.get("class", [])
-    if "Cancel" in tr_classes:
-        return None
     tds_all = tr.find_all("td")
-    if any("Cancel_Txt" in (td.get("class") or []) for td in tds_all):
+    all_td_classes = " ".join(
+        " ".join(td.get("class") or []) if isinstance(td.get("class"), list)
+        else str(td.get("class") or "")
+        for td in tds_all
+    )
+    all_td_text = " ".join(td.get_text(strip=True) for td in tds_all)
+    if "Cancel" in tr_classes or "Cancel" in all_td_classes or "取消" in all_td_text:
         return None
 
     def _txt(*sels):
