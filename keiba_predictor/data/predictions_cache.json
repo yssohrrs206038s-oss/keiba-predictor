@@ -154,19 +154,19 @@
       "horse_number": 5,
       "horse_name": "レヴォントゥレット",
       "prob": 0.6065043210983276,
-      "odds": null
+      "odds": 6.9
     },
     "taikou": {
       "horse_number": 14,
       "horse_name": "チュウワクリスエス",
       "prob": 0.5869494676589966,
-      "odds": null
+      "odds": 6.9
     },
     "ana": {
       "horse_number": 6,
       "horse_name": "ヴァルツァーシャル",
       "prob": 0.5639752745628357,
-      "odds": null
+      "odds": 6.1
     },
     "predicted_top3_nums": [
       5,
@@ -185,23 +185,26 @@
       {
         "horse_number": 5,
         "horse_name": "レヴォントゥレット",
-        "ev_score": 11.706,
+        "ev_score": 4.185,
         "prob": 0.6065,
-        "odds": null
+        "odds": 6.9,
+        "popularity": 3
       },
       {
         "horse_number": 14,
         "horse_name": "チュウワクリスエス",
-        "ev_score": 11.328,
+        "ev_score": 4.05,
         "prob": 0.5869,
-        "odds": null
+        "odds": 6.9,
+        "popularity": 4
       },
       {
         "horse_number": 6,
         "horse_name": "ヴァルツァーシャル",
-        "ev_score": 10.885,
+        "ev_score": 3.44,
         "prob": 0.564,
-        "odds": null
+        "odds": 6.1,
+        "popularity": 2
       }
     ],
     "dangerous_horses": [
@@ -236,19 +239,19 @@
       "horse_number": 13,
       "horse_name": "ナムラクレア",
       "prob": 0.5561978220939636,
-      "odds": null
+      "odds": 4.1
     },
     "taikou": {
       "horse_number": 14,
       "horse_name": "レイピア",
       "prob": 0.5530202984809875,
-      "odds": null
+      "odds": 16.3
     },
     "ana": {
       "horse_number": 18,
       "horse_name": "ジューンブレア",
       "prob": 0.5244607329368591,
-      "odds": null
+      "odds": 15.3
     },
     "predicted_top3_nums": [
       13,
@@ -297,25 +300,28 @@
     ],
     "ev_top3": [
       {
-        "horse_number": 13,
-        "horse_name": "ナムラクレア",
-        "ev_score": 10.735,
-        "prob": 0.5562,
-        "odds": null
-      },
-      {
         "horse_number": 14,
         "horse_name": "レイピア",
-        "ev_score": 10.673,
+        "ev_score": 9.014,
         "prob": 0.553,
-        "odds": null
+        "odds": 16.3,
+        "popularity": 6
       },
       {
         "horse_number": 18,
         "horse_name": "ジューンブレア",
-        "ev_score": 10.122,
+        "ev_score": 8.025,
         "prob": 0.5245,
-        "odds": null
+        "odds": 15.3,
+        "popularity": 5
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "ナムラクレア",
+        "ev_score": 2.28,
+        "prob": 0.5562,
+        "odds": 4.1,
+        "popularity": 2
       }
     ],
     "dangerous_horses": [
@@ -414,19 +420,19 @@
       "horse_number": 13,
       "horse_name": "バレエマスター",
       "prob": 0.5905486941337585,
-      "odds": null
+      "odds": 37.3
     },
     "taikou": {
       "horse_number": 9,
       "horse_name": "ブルーミンデザイン",
       "prob": 0.4920288622379303,
-      "odds": null
+      "odds": 4.7
     },
     "ana": {
       "horse_number": 4,
       "horse_name": "アクートゥス",
       "prob": 0.48412638902664185,
-      "odds": null
+      "odds": 20.3
     },
     "predicted_top3_nums": [
       13,
@@ -445,23 +451,26 @@
       {
         "horse_number": 13,
         "horse_name": "バレエマスター",
-        "ev_score": 11.398,
+        "ev_score": 22.026,
         "prob": 0.5905,
-        "odds": null
-      },
-      {
-        "horse_number": 9,
-        "horse_name": "ブルーミンデザイン",
-        "ev_score": 9.496,
-        "prob": 0.492,
-        "odds": null
+        "odds": 37.3,
+        "popularity": 12
       },
       {
         "horse_number": 4,
         "horse_name": "アクートゥス",
-        "ev_score": 9.344,
+        "ev_score": 9.827,
         "prob": 0.4841,
-        "odds": null
+        "odds": 20.3,
+        "popularity": 9
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "ブルーミンデザイン",
+        "ev_score": 2.312,
+        "prob": 0.492,
+        "odds": 4.7,
+        "popularity": 2
       }
     ],
     "dangerous_horses": [
