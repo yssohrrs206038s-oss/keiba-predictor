@@ -85,6 +85,36 @@ def cmd_train(args: argparse.Namespace) -> None:
     train(n_splits=args.cv_splits, league=getattr(args, "league", "jra"))
 
 
+def cmd_tune(args: argparse.Namespace) -> None:
+    import json
+    import pandas as pd
+    from keiba_predictor.model.train import (
+        tune_hyperparameters, BEST_PARAMS_PATH, DATA_DIR,
+    )
+    from keiba_predictor.features.feature_engineering import FEATURE_COLS
+
+    featured_path = DATA_DIR / "featured_races.csv"
+    df = pd.read_csv(featured_path, encoding="utf-8-sig", parse_dates=["race_date"])
+    df = df.dropna(subset=["top3"]).reset_index(drop=True)
+    df = df.sort_values("race_date").reset_index(drop=True)
+
+    league = getattr(args, "league", "jra")
+    if league.lower() != "all" and "league" in df.columns:
+        df = df[df["league"].str.upper() == league.upper()].reset_index(drop=True)
+
+    available_cols = [c for c in FEATURE_COLS if c in df.columns]
+    best_params = tune_hyperparameters(
+        df, available_cols,
+        n_trials=args.n_trials,
+        n_splits=args.cv_splits,
+    )
+
+    BEST_PARAMS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(BEST_PARAMS_PATH, "w") as f:
+        json.dump(best_params, f, indent=2, ensure_ascii=False)
+    logger.info(f"最良パラメータ保存: {BEST_PARAMS_PATH}")
+
+
 def cmd_predict(args: argparse.Namespace) -> None:
     webhook = getattr(args, "webhook_url", None)
     notify  = getattr(args, "notify", False)
@@ -235,6 +265,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="学習対象リーグ: jra=JRAのみ(デフォルト) / nar=NARのみ / all=全データ"
     )
     p_train.set_defaults(func=cmd_train)
+
+    # ── tune ──────────────────────────────────────────────
+    p_tune = sub.add_parser("tune", help="Optunaでハイパーパラメータを自動チューニング")
+    p_tune.add_argument(
+        "--n-trials", type=int, default=100,
+        help="Optunaの試行回数 (デフォルト: 100)"
+    )
+    p_tune.add_argument(
+        "--cv-splits", type=int, default=5,
+        help="TimeSeriesSplit の分割数 (デフォルト: 5)"
+    )
+    p_tune.add_argument(
+        "--league", choices=["jra", "nar", "all"], default="jra",
+        help="対象リーグ (デフォルト: jra)"
+    )
+    p_tune.set_defaults(func=cmd_tune)
 
     # ── predict ────────────────────────────────────────────
     p_pred = sub.add_parser("predict", help="指定レースの予測")

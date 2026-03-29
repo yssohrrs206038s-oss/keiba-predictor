@@ -6,6 +6,7 @@ XGBoostによる3着以内予測モデルの学習モジュール
 - Feature Importance の表示・保存
 """
 
+import json
 import logging
 import pickle
 from pathlib import Path
@@ -33,6 +34,7 @@ MODEL_DIR = Path(__file__).parent
 MODEL_PATH = MODEL_DIR / "xgb_model.pkl"
 IMPORTANCE_PATH = DATA_DIR / "feature_importance.csv"
 IMPORTANCE_PLOT_PATH = DATA_DIR / "feature_importance.png"
+BEST_PARAMS_PATH = MODEL_DIR / "best_params.json"
 
 # 距離帯の定義
 DISTANCE_BANDS = {
@@ -117,6 +119,85 @@ def evaluate_per_race(
     }
 
 
+def tune_hyperparameters(
+    df: pd.DataFrame,
+    feature_cols: list[str],
+    n_trials: int = 100,
+    n_splits: int = 5,
+) -> dict:
+    """
+    Optunaで最適なXGBoostパラメータを探索する。
+
+    Args:
+        df:           学習データ（top3列・race_date列を含む）
+        feature_cols: 使用する特徴量列名
+        n_trials:     試行回数
+        n_splits:     交差検証の分割数
+
+    Returns:
+        最良パラメータ辞書
+    """
+    import optuna
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+    X = df[feature_cols].astype(float)
+    y = df["top3"].astype(int)
+    tscv = TimeSeriesSplit(n_splits=n_splits)
+
+    def objective(trial: optuna.Trial) -> float:
+        params = {
+            "objective": "binary:logistic",
+            "eval_metric": "auc",
+            "max_depth": trial.suggest_int("max_depth", 3, 10),
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+            "n_estimators": trial.suggest_int("n_estimators", 100, 1000, step=50),
+            "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+            "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
+            "gamma": trial.suggest_float("gamma", 0.0, 5.0),
+            "reg_alpha": 0.1,
+            "reg_lambda": 1.0,
+            "scale_pos_weight": 2.0,
+            "random_state": 42,
+            "n_jobs": -1,
+            "use_label_encoder": False,
+            "verbosity": 0,
+        }
+
+        auc_scores = []
+        for train_idx, val_idx in tscv.split(X):
+            X_tr, X_val = X.iloc[train_idx], X.iloc[val_idx]
+            y_tr, y_val = y.iloc[train_idx], y.iloc[val_idx]
+            model = xgb.XGBClassifier(**params)
+            model.fit(X_tr, y_tr, eval_set=[(X_val, y_val)], verbose=False)
+            y_prob = model.predict_proba(X_val)[:, 1]
+            auc_scores.append(roc_auc_score(y_val, y_prob))
+        return float(np.mean(auc_scores))
+
+    study = optuna.create_study(direction="maximize")
+
+    # 10試行ごとに進捗ログ
+    def _log_progress(study: optuna.Study, trial: optuna.trial.FrozenTrial) -> None:
+        if (trial.number + 1) % 10 == 0:
+            logger.info(
+                f"  Trial {trial.number + 1}/{n_trials}: "
+                f"AUC={trial.value:.4f} (best={study.best_value:.4f})"
+            )
+
+    logger.info(f"Optuna ハイパーパラメータ探索開始 ({n_trials} trials)...")
+    study.optimize(objective, n_trials=n_trials, callbacks=[_log_progress])
+
+    best = study.best_params
+    logger.info(f"\n=== Optuna 探索完了 ===")
+    logger.info(f"Best AUC: {study.best_value:.4f}")
+    logger.info(f"Best params: {best}")
+
+    # 固定パラメータをマージして返す
+    full_params = DEFAULT_PARAMS.copy()
+    full_params.update(best)
+    return full_params
+
+
 def train(
     featured_path: Path | None = None,
     model_path: Path | None = None,
@@ -142,7 +223,12 @@ def train(
     if model_path is None:
         model_path = MODEL_PATH
     if params is None:
-        params = DEFAULT_PARAMS.copy()
+        if BEST_PARAMS_PATH.exists():
+            with open(BEST_PARAMS_PATH) as f:
+                params = json.load(f)
+            logger.info(f"Optunaチューニング済みパラメータを使用: {BEST_PARAMS_PATH}")
+        else:
+            params = DEFAULT_PARAMS.copy()
 
     # ── データ読み込み ───────────────────────────────────────
     df = pd.read_csv(featured_path, encoding="utf-8-sig", parse_dates=["race_date"])
