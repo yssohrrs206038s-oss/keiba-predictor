@@ -146,6 +146,7 @@ jobs:
         continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
         run: python -m keiba_predictor.credit_monitor
 
       # ── エラー時の Discord 通知 ──────────────────────────────
