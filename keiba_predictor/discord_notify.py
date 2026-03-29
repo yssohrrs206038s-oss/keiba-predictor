@@ -639,6 +639,19 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
             "reasons":      list(r.get("danger_reasons", [])),
         })
 
+    # 上位5頭の詳細情報（Discord通知用）
+    predicted_top5: list[dict] = []
+    for i in range(min(5, len(result_df))):
+        r = result_df.iloc[i]
+        raw_o = pd.to_numeric(r.get("odds"), errors="coerce")
+        o_val = None if (not pd.notna(raw_o) or _all_same) else round(float(raw_o), 1)
+        predicted_top5.append({
+            "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
+            "horse_name":   str(r.get("horse_name", "")),
+            "prob":         round(float(r["prob_top3"]), 4),
+            "odds":         o_val,
+        })
+
     cache[race_id] = {
         "race_name":           race_name,
         "race_date":           race_date,
@@ -651,6 +664,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "predicted_top3_nums": top3_nums,
         "predicted_top5_nums": top5_nums,
         "ana_horse_num":       ana_horse_num,
+        "predicted_top5":      predicted_top5,
         "ev_top3":             ev_top3,
         "dangerous_horses":    dangerous,
         "ai_comments":         ai_comments or {},
@@ -841,13 +855,19 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
     MARKS = ["◎", "○", "▲", "△", "　"]
     top5_nums = entry.get("predicted_top5_nums", [])
 
-    # honmei/taikou/ana + ev_top3 から上位馬情報を構築
-    role_map: dict[int, dict] = {}  # horse_number → info
+    # predicted_top5（上位5頭の詳細情報）を馬番→infoのマップに変換
+    top5_detail: dict[int, dict] = {}
+    for h in entry.get("predicted_top5", []):
+        num = h.get("horse_number")
+        if num is not None:
+            top5_detail[int(num)] = h
+
+    # honmei/taikou/ana からも補完
     for role in ("honmei", "taikou", "ana"):
         p = entry.get(role, {})
         num = p.get("horse_number")
-        if num is not None:
-            role_map[int(num)] = p
+        if num is not None and int(num) not in top5_detail:
+            top5_detail[int(num)] = p
 
     ev_map: dict[int, dict] = {}
     for e in entry.get("ev_top3", []):
@@ -857,7 +877,7 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
 
     for rank, num in enumerate(top5_nums):
         mark = MARKS[rank] if rank < len(MARKS) else "　"
-        info = role_map.get(num, ev_map.get(num, {}))
+        info = top5_detail.get(num, ev_map.get(num, {}))
         name = info.get("horse_name", f"{num}番")
         prob = info.get("prob", 0) * 100
         ev_entry = ev_map.get(num, {})
