@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 MODEL_ID = "claude-haiku-4-5-20251001"
 
 # ── 1頭あたりの最大解説文字数（Discord の行幅に合わせて調整） ──
-MAX_COMMENT_LEN = 200
+MAX_COMMENT_LEN = 150
 
 
 # ══════════════════════════════════════════════════════════════
@@ -208,6 +208,28 @@ def _generate_comments_inner(
         if pd.notna(jfr):
             entry["騎手複勝率"] = f"{jfr:.3f}"
 
+        # 脚質
+        rs = pd.to_numeric(row.get("running_style_enc"), errors="coerce")
+        if pd.notna(rs):
+            _RS_MAP = {0: "逃げ", 1: "先行", 2: "差し", 3: "追込"}
+            entry["脚質"] = _RS_MAP.get(int(rs), "不明")
+
+        # 馬場状態適性
+        tcr = pd.to_numeric(row.get("horse_track_fukusho_rate"), errors="coerce")
+        if pd.notna(tcr):
+            entry["馬場適性複勝率"] = f"{tcr:.3f}"
+
+        # 期待値の妙味判定
+        if ev_val >= 3.0:
+            entry["期待値評価"] = "妙味あり"
+        elif ev_val >= 1.5:
+            entry["期待値評価"] = "標準"
+
+        # 人気薄×高確率 = 穴馬候補
+        _pop = pd.to_numeric(row.get("popularity"), errors="coerce")
+        if pd.notna(_pop) and _pop >= 6 and prob >= 0.35:
+            entry["穴馬候補"] = True
+
         # SHAP値による予測根拠を追加
         shap_top = row.get("shap_top")
         if isinstance(shap_top, list) and shap_top:
@@ -228,28 +250,31 @@ def _generate_comments_inner(
         race_label += f"（{course_info}）"
 
     system_prompt = (
-        "あなたはKEIBA EDGEの専属AIアナリストです。\n"
-        "10万件の競馬データで学習したXGBoostモデルの予測結果を\n"
-        "競馬ファンに向けて魅力的に解説します。\n"
-        "語尾は断定的・自信ありげに。絵文字を効果的に使用。\n\n"
+        "あなたは「データ・展開・馬場・騎手・オッズ」を網羅したトップ競馬アナリストです。\n"
+        "2026年現在の日本競馬のトレンド（高速馬場化、特定の種牡馬の傾向）を踏まえ、\n"
+        "長期回収率を最大化するための「期待値重視」の分析を行います。\n\n"
         "【重要ルール】\n"
-        "提供されたデータの数値のみを使うこと。\n"
-        "データにない数値は絶対に使わないこと。\n"
-        "特にオッズや配当金額はデータに含まれていないため、絶対に書かないこと。"
+        "・提供されたデータの数値のみを使うこと\n"
+        "・データにない数値（オッズ・配当金額）は絶対に書かないこと\n"
+        "・語尾は断定的・自信ありげに。絵文字を効果的に使用\n"
+        "・馬名は解説テキスト内に含めないこと（見出しに別途表示）"
     )
 
     prompt = (
         f"{race_label}の本命◎○▲3頭のAI予測データです。\n\n"
         f"{json.dumps(horses_data, ensure_ascii=False)}\n\n"
-        f"各馬について以下の形式で解説してください：\n"
-        f"- AI印を文頭に必ず付ける\n"
-        f"- {MAX_COMMENT_LEN}文字以内で簡潔・断定的に\n"
-        f"- 「AI判定の強み」「AI判定の懸念」があれば解説に自然に織り込む\n"
-        f"- 強みを前面に、懸念は最後に一言\n"
-        f"- 競馬ファンが「買いたい！」と思う表現で\n"
-        f"- 解説テキスト内に馬名を含めないこと。馬名は別途見出しに表示されます\n"
-        f"- 提供データの数値（確率・EV・人気・着順・複勝率）はそのまま使ってよい\n"
-        f"- オッズや配当金額はデータに含まれていないため絶対に書かないこと\n\n"
+        f"各馬について{MAX_COMMENT_LEN}文字以内で解説してください。\n\n"
+        f"【必須要素】\n"
+        f"1. AI印（◎🔥/○✨/▲⚡）を文頭に付ける\n"
+        f"2. 展開予測：脚質から展開を予測し有利/不利を言及\n"
+        f"3. 馬場適性：馬場状態やコース特性との相性\n"
+        f"4. 騎手評価：騎手複勝率を活用した評価\n"
+        f"5. 期待値評価：「期待値評価」が「妙味あり」なら明記、「穴馬候補」があれば強調\n"
+        f"6. 懸念点：「AI判定の懸念」があれば最後に1つだけ言及\n\n"
+        f"【禁止】\n"
+        f"・馬名を含めない\n"
+        f"・オッズや配当金額\n"
+        f"・データにない数値の捏造\n\n"
         f"出力：JSONのみ（コードブロック不要）\n"
         f"キー：馬番（文字列）、値：解説テキスト"
     )
