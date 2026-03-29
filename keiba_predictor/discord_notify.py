@@ -753,7 +753,10 @@ def _fmt_result(race_name: str, race_date: str,
         if num is not None:
             pred_num_to_mark[int(num)] = mark
 
+    # manual_results.json の predicted_top3_nums があれば優先
     predicted_nums = pred.get("predicted_top3_nums", [])
+    if manual and manual.get("predicted_top3_nums"):
+        predicted_nums = manual["predicted_top3_nums"]
 
     # 馬番→馬名マップを予想キャッシュから構築（結果に馬名がない場合の補完用）
     num_to_name: dict[int, str] = {}
@@ -770,6 +773,12 @@ def _fmt_result(race_name: str, race_date: str,
         enum = e.get("horse_number")
         if enum is not None and int(enum) not in num_to_name:
             num_to_name[int(enum)] = e.get("horse_name", "")
+    # actual_df からも馬名を補完
+    for _, r in actual_df.iterrows():
+        anum = r.get("horse_number")
+        aname = str(r.get("horse_name", ""))
+        if pd.notna(anum) and aname and int(anum) not in num_to_name:
+            num_to_name[int(anum)] = aname
 
     # 確定 1〜3 着
     df_copy = actual_df.copy()
@@ -790,6 +799,15 @@ def _fmt_result(race_name: str, race_date: str,
 
     lines.append(RULE)
 
+    # honmei: manual > predicted_nums[0] > pred["honmei"]
+    if manual and manual.get("honmei") is not None:
+        honmei_num = int(manual["honmei"])
+    elif predicted_nums:
+        honmei_num = predicted_nums[0]
+    else:
+        honmei_num = pred.get("honmei", {}).get("horse_number")
+    honmei_name = num_to_name.get(honmei_num, "") if honmei_num else ""
+
     # manual_results.json のフラグがあればそちらを優先
     if manual and "fukusho_hit" in manual:
         fukusho_hit = manual["fukusho_hit"]
@@ -798,12 +816,8 @@ def _fmt_result(race_name: str, race_date: str,
         manual_pay  = manual.get("payouts", {})
         umaren_pay  = f"¥{manual_pay['umaren']:,}" if manual_pay.get("umaren") else ""
         sanren_pay  = f"¥{manual_pay['sanrenpuku']:,}" if manual_pay.get("sanrenpuku") else ""
-        honmei_num  = predicted_nums[0] if predicted_nums else None
-        honmei_name = pred.get("honmei", {}).get("horse_name", "")
     else:
         # 自動判定
-        honmei_num = predicted_nums[0] if predicted_nums else None
-        honmei_name = pred.get("honmei", {}).get("horse_name", "")
         fukusho_hit = (honmei_num is not None) and (int(honmei_num) in actual_top3_nums)
         umaren_hit, umaren_pay = _check_umaren_raw(predicted_nums, actual_top3_nums, payouts)
         ana_horse_num = pred.get("ana_horse_num")
