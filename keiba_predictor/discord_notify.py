@@ -764,6 +764,14 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "dangerous_horses":    dangerous,
         "ai_comments":         ai_comments or {},
     }
+
+    # 買い目自動決定
+    try:
+        from keiba_predictor.model.predict import _decide_bet_strategy
+        cache[race_id]["bet_strategy"] = _decide_bet_strategy(result_df)
+    except Exception as e:
+        logger.warning(f"買い目自動決定失敗: {e}")
+
     _save_cache(cache)
 
 
@@ -1136,42 +1144,78 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
     lines1.append(sep)
     msg1 = "\n".join(lines1)
 
-    # ── Message 2: 買い目 ─────────────────────────────────────
+    # ── Message 2: 買い目（bet_strategy があれば使用）──────────
     _SEP = "━" * 20
-    nums = top5_nums
-    if len(nums) < 2:
-        return msg1, ""
+    bs = entry.get("bet_strategy")
 
-    hon = nums[0]
-    hon_name = entry.get("honmei", {}).get("horse_name", "")
+    if bs and bs.get("total_points", 0) > 0:
+        header = f"💰 {race_name}  買い目（AI自動決定）" if race_name else "💰 買い目（AI自動決定）"
+        lines2 = [_SEP, header, _SEP]
 
-    umaren_pairs = list(combinations(nums[:3], 2))
-    umaren_str = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
+        # 複勝
+        if bs.get("fukusho"):
+            f = bs["fukusho"][0]
+            lines2 += [
+                f"■ 複勝（{len(bs['fukusho'])}点）",
+                f"　{f['num']}番 {f.get('name', '')}",
+            ]
 
-    partners = nums[1:5]
-    ana_buy = entry.get("ana_horse_num")
-    if ana_buy and ana_buy not in partners:
-        partners = partners + [ana_buy]
-    sanren_pt = len(list(combinations(partners, 2)))
-    partners_str = "/".join(
-        f"{n}（穴）" if n == ana_buy else str(n) for n in partners
-    )
-    total = 1 + len(umaren_pairs) + sanren_pt
+        # 馬連 or ワイド
+        if bs.get("use_wide") and bs.get("wide"):
+            wide_str = " / ".join(f"{w['nums'][0]}-{w['nums'][1]}" for w in bs["wide"])
+            lines2 += [f"■ ワイド（{len(bs['wide'])}点）", f"　{wide_str}"]
+        if bs.get("umaren"):
+            umaren_str = " / ".join(f"{u['nums'][0]}-{u['nums'][1]}" for u in bs["umaren"])
+            lines2 += [f"■ 馬連（{len(bs['umaren'])}点）", f"　{umaren_str}"]
 
-    header = f"💰 {race_name}  買い目" if race_name else "💰 買い目"
-    lines2 = [
-        _SEP, header, _SEP,
-        "■ 複勝（1点）",
-        f"　{hon}番 {hon_name}",
-        f"■ 馬連（{len(umaren_pairs)}点）",
-        f"　{umaren_str}",
-        f"■ 3連複（{sanren_pt}点）",
-        f"　軸 {hon}番",
-        f"　× {partners_str}",
-        _SEP,
-        f"合計 {total}点",
-        _SEP,
-    ]
+        # 3連複
+        sr = bs.get("sanrenpuku", {})
+        if sr:
+            jiku = sr.get("jiku", [])
+            aite = sr.get("aite", [])
+            if len(jiku) == 1:
+                sr_pt = len(list(combinations(aite, 2)))
+                lines2 += [
+                    f"■ 3連複（{sr_pt}点）",
+                    f"　軸 {jiku[0]}番",
+                    f"　× {'/'.join(str(n) for n in aite)}",
+                ]
+            elif len(jiku) == 2:
+                sr_pt = len(aite)
+                lines2 += [
+                    f"■ 3連複（{sr_pt}点）",
+                    f"　軸 {jiku[0]}-{jiku[1]}番",
+                    f"　× {'/'.join(str(n) for n in aite)}",
+                ]
+
+        lines2 += [_SEP, f"合計 {bs['total_points']}点", _SEP]
+        if bs.get("strategy_note"):
+            lines2.append(f"💡 {bs['strategy_note']}")
+    else:
+        # フォールバック: 従来の固定買い目
+        nums = top5_nums
+        if len(nums) < 2:
+            return msg1, ""
+        hon = nums[0]
+        hon_name = entry.get("honmei", {}).get("horse_name", "")
+        umaren_pairs = list(combinations(nums[:3], 2))
+        umaren_str = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
+        partners = nums[1:5]
+        ana_buy = entry.get("ana_horse_num")
+        if ana_buy and ana_buy not in partners:
+            partners = partners + [ana_buy]
+        sanren_pt = len(list(combinations(partners, 2)))
+        partners_str = "/".join(str(n) for n in partners)
+        total = 1 + len(umaren_pairs) + sanren_pt
+        header = f"💰 {race_name}  買い目" if race_name else "💰 買い目"
+        lines2 = [
+            _SEP, header, _SEP,
+            "■ 複勝（1点）", f"　{hon}番 {hon_name}",
+            f"■ 馬連（{len(umaren_pairs)}点）", f"　{umaren_str}",
+            f"■ 3連複（{sanren_pt}点）", f"　軸 {hon}番", f"　× {partners_str}",
+            _SEP, f"合計 {total}点", _SEP,
+        ]
+
     msg2 = "\n".join(lines2)
     return msg1, msg2
 

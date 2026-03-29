@@ -281,6 +281,127 @@ def predict_race(
     return result
 
 
+def _decide_bet_strategy(result_df: pd.DataFrame) -> dict:
+    """
+    予測結果DataFrameから最適な買い目を自動決定する。
+
+    判断ロジック:
+    【複勝】本命EV>1.0 & 1番人気でない → 買い
+    【馬連/ワイド】上位3頭の確率差5%以内 → ワイド、それ以外 → 馬連
+    【3連複】本命確率50%以上→軸1×相手4(6点)、40-50%→軸1×相手5(10点)、拮抗→2頭軸×3(3点)
+    【穴馬】穴馬EV≥10 → 穴馬軸の馬連1点追加
+    """
+    from itertools import combinations as _comb
+
+    if len(result_df) < 3:
+        return {
+            "fukusho": [], "umaren": [], "wide": [],
+            "sanrenpuku": {}, "total_points": 0,
+            "strategy_note": "出走頭数不足", "use_wide": False,
+        }
+
+    top5 = result_df.head(5)
+    nums = [int(r["horse_number"]) for _, r in top5.iterrows()
+            if pd.notna(r.get("horse_number"))]
+    names = {}
+    for _, r in result_df.iterrows():
+        n = r.get("horse_number")
+        if pd.notna(n):
+            names[int(n)] = str(r.get("horse_name", ""))
+
+    hon = nums[0]
+    hon_prob = float(result_df.iloc[0]["prob_top3"])
+    hon_ev = float(result_df.iloc[0].get("ev_score", 0)) if pd.notna(result_df.iloc[0].get("ev_score")) else 0
+    hon_pop = pd.to_numeric(result_df.iloc[0].get("popularity"), errors="coerce")
+
+    probs = [float(result_df.iloc[i]["prob_top3"]) for i in range(min(3, len(result_df)))]
+    prob_spread = max(probs) - min(probs) if len(probs) >= 3 else 1.0
+    is_tight = prob_spread < 0.05  # 5%以内 = 拮抗
+
+    # 穴馬
+    ana_num = None
+    ana_ev = 0
+    top5_set = set(nums)
+    if len(result_df) > 5:
+        rest = result_df.iloc[5:]
+        rest_prob = pd.to_numeric(rest.get("prob_top3", pd.Series(dtype=float)), errors="coerce")
+        rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
+        cands = rest[(rest_prob >= 0.35) & (rest_pop >= 6)]
+        if not cands.empty:
+            best = cands.nlargest(1, "prob_top3").iloc[0]
+            v = best.get("horse_number")
+            if pd.notna(v) and int(v) not in top5_set:
+                ana_num = int(v)
+                ana_ev = float(best.get("ev_score", 0)) if pd.notna(best.get("ev_score")) else 0
+
+    strategy = {
+        "fukusho": [],
+        "umaren": [],
+        "wide": [],
+        "sanrenpuku": {},
+        "total_points": 0,
+        "strategy_note": "",
+        "use_wide": is_tight,
+    }
+    notes = []
+
+    # 【複勝】
+    if hon_ev > 1.0 and (pd.isna(hon_pop) or hon_pop > 1):
+        strategy["fukusho"] = [{"num": hon, "name": names.get(hon, "")}]
+        notes.append("複勝")
+
+    # 【馬連 or ワイド】
+    use_wide = is_tight
+    if use_wide:
+        pairs = [{"nums": list(p)} for p in _comb(nums[:3], 2)]
+        strategy["wide"] = pairs
+        notes.append("ワイド（上位拮抗）")
+    else:
+        pairs = [{"nums": list(p)} for p in _comb(nums[:3], 2)]
+        strategy["umaren"] = pairs
+        notes.append("馬連")
+
+    # 【穴馬絡み馬連】
+    if ana_num and ana_ev >= 10:
+        strategy["umaren"].append({"nums": [hon, ana_num]})
+        notes.append("穴馬馬連追加")
+
+    # 【3連複】
+    if hon_prob >= 0.50:
+        # 軸1頭×相手4頭 = C(4,2) = 6点
+        aite = nums[1:5]
+        strategy["sanrenpuku"] = {"jiku": [hon], "aite": aite}
+        notes.append("3連複軸1×4")
+    elif hon_prob >= 0.40:
+        # 軸1頭×相手5頭 = C(5,2) = 10点
+        aite = nums[1:5]
+        if ana_num and ana_num not in aite:
+            aite = aite + [ana_num]
+        strategy["sanrenpuku"] = {"jiku": [hon], "aite": aite}
+        notes.append("3連複軸1×5")
+    elif is_tight and len(nums) >= 5:
+        # 2頭軸×3頭 = C(3,1)*1 = 3点
+        strategy["sanrenpuku"] = {"jiku": nums[:2], "aite": nums[2:5]}
+        notes.append("3連複2頭軸×3")
+
+    # 合計点数
+    total = len(strategy["fukusho"])
+    total += len(strategy["umaren"])
+    total += len(strategy["wide"])
+    sr = strategy["sanrenpuku"]
+    if sr:
+        jiku = sr.get("jiku", [])
+        aite = sr.get("aite", [])
+        if len(jiku) == 1:
+            total += len(list(_comb(aite, 2)))
+        elif len(jiku) == 2:
+            total += len(aite)
+    strategy["total_points"] = total
+    strategy["strategy_note"] = " + ".join(notes) if notes else "見送り"
+
+    return strategy
+
+
 def _build_buy_lines(result_df: pd.DataFrame, race_name: str = "") -> list[str]:
     """
     買い目リストを返す。

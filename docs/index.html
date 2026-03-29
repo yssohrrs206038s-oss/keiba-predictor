@@ -624,36 +624,65 @@ function renderPredictions(cache) {
       }
     }
 
-    // 買い目
-    const pnums  = (r.predicted_top3_nums || []).filter(n => n != null);
-    const p5nums = (r.predicted_top5_nums || pnums).filter(n => n != null);
-    const anaNum = r.ana_horse_num != null ? r.ana_horse_num : null;
+    // 買い目（bet_strategy があれば使用）
+    const bs = r.bet_strategy;
     let betHTML = '';
-    if (pnums.length >= 2) {
-      const combos = [];
-      for (let i = 0; i < Math.min(pnums.length, 3); i++)
-        for (let j = i + 1; j < Math.min(pnums.length, 3); j++)
-          combos.push(`${pnums[i]}-${pnums[j]}`);
+    if (bs && bs.total_points > 0) {
+      const rows = [];
 
-      let sanren = '';
-      if (p5nums.length >= 3) {
-        const axis = p5nums[0];
-        const partners = p5nums.slice(1);  // 2〜5番目
-        const partnerParts = partners.map(n => n === anaNum ? `${n}（穴）` : String(n));
-        if (anaNum != null && !partners.includes(anaNum)) {
-          partnerParts.push(`${anaNum}（穴）`);
-        }
-        sanren = `軸${axis} × ${partnerParts.join('/')}`;
+      // 複勝
+      if (bs.fukusho && bs.fukusho.length) {
+        rows.push(`<div class="bet-row"><span class="bet-label">複勝</span>${bs.fukusho[0].num}番 ${esc(bs.fukusho[0].name || '')}</div>`);
       }
+
+      // ワイド or 馬連
+      if (bs.use_wide && bs.wide && bs.wide.length) {
+        const wideStr = bs.wide.map(w => `${w.nums[0]}-${w.nums[1]}`).join(' / ');
+        rows.push(`<div class="bet-row"><span class="bet-label">ワイド</span>${wideStr}</div>`);
+      }
+      if (bs.umaren && bs.umaren.length) {
+        const umarenStr = bs.umaren.map(u => `${u.nums[0]}-${u.nums[1]}`).join(' / ');
+        rows.push(`<div class="bet-row"><span class="bet-label">馬連</span>${umarenStr}</div>`);
+      }
+
+      // 3連複
+      const sr = bs.sanrenpuku;
+      if (sr && sr.jiku && sr.aite) {
+        const jikuStr = sr.jiku.length === 1 ? `軸${sr.jiku[0]}` : `軸${sr.jiku[0]}-${sr.jiku[1]}`;
+        const aiteStr = sr.aite.join('/');
+        rows.push(`<div class="bet-row"><span class="bet-label">3連複</span>${jikuStr} × ${aiteStr}</div>`);
+      }
+
+      const noteHTML = bs.strategy_note ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">💡 ${esc(bs.strategy_note)}</div>` : '';
       betHTML = `
         <div class="bet-box">
-          <div class="bet-box-title">💰 推奨買い目</div>
-          <div class="bet-rows">
-            <div class="bet-row"><span class="bet-label">複勝</span>${pnums[0]}番</div>
-            <div class="bet-row"><span class="bet-label">馬連</span>${combos.join(' / ')}</div>
-            ${sanren ? `<div class="bet-row"><span class="bet-label">3連複</span>${sanren}</div>` : ''}
-          </div>
+          <div class="bet-box-title">💰 AI自動買い目（${bs.total_points}点）</div>
+          <div class="bet-rows">${rows.join('')}</div>
+          ${noteHTML}
         </div>`;
+    } else {
+      // フォールバック: 従来の固定買い目
+      const pnums  = (r.predicted_top3_nums || []).filter(n => n != null);
+      const p5nums = (r.predicted_top5_nums || pnums).filter(n => n != null);
+      if (pnums.length >= 2) {
+        const combos = [];
+        for (let i = 0; i < Math.min(pnums.length, 3); i++)
+          for (let j = i + 1; j < Math.min(pnums.length, 3); j++)
+            combos.push(`${pnums[i]}-${pnums[j]}`);
+        let sanren = '';
+        if (p5nums.length >= 3) {
+          sanren = `軸${p5nums[0]} × ${p5nums.slice(1).join('/')}`;
+        }
+        betHTML = `
+          <div class="bet-box">
+            <div class="bet-box-title">💰 推奨買い目</div>
+            <div class="bet-rows">
+              <div class="bet-row"><span class="bet-label">複勝</span>${pnums[0]}番</div>
+              <div class="bet-row"><span class="bet-label">馬連</span>${combos.join(' / ')}</div>
+              ${sanren ? `<div class="bet-row"><span class="bet-label">3連複</span>${sanren}</div>` : ''}
+            </div>
+          </div>`;
+      }
     }
 
     return `
