@@ -426,8 +426,15 @@ def generate_note_report(output_path: Optional[Path] = None) -> str:
         race_name   = r.get("race_name", race_id)
         course_info = r.get("course_info", "")
 
-        print(f"[note_report] {race_name} の AI分析を生成中...", flush=True)
-        analysis = _generate_race_analysis(r, race_name, course_info, api_key)
+        # キャッシュの ai_comments から analysis を構築（APIコール不要）
+        ai_comments = r.get("ai_comments", {})
+        if ai_comments:
+            logger.info(f"[note_report] {race_name}: キャッシュのAI解説を使用（{len(ai_comments)}頭分）")
+            analysis = {"tenkai": "", "horses": ai_comments, "ev_analysis": ""}
+        else:
+            # ai_comments が空の場合のみ API コールでフォールバック
+            logger.info(f"[note_report] {race_name}: AI解説なし → API呼び出しでフォールバック")
+            analysis = _generate_race_analysis(r, race_name, course_info, api_key)
 
         report = _build_note_race_markdown(race_id, r, analysis)
         all_reports.append(report)

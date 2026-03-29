@@ -131,8 +131,10 @@ def generate_comments(
         _p(f"  [AI ERROR] {msg}")
 
     def _dbg(msg: str) -> None:
-        """verbose 不問で常に print するデバッグ専用出力。"""
-        print(f"[generate_comments] {msg}", flush=True)
+        """デバッグ出力。verbose時のみprint、それ以外はlogger.debug。"""
+        logger.debug(f"[generate_comments] {msg}")
+        if verbose:
+            _p(f"  [AI] {msg}")
 
     # ── Step 1: API キー確認 ─────────────────────────────────
     key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
@@ -241,11 +243,7 @@ def generate_comments(
                 wait = 10 * attempt  # 10s, 20s
                 _dbg(f"Step5: リトライ {attempt}/2  {wait}秒待機中...")
                 time.sleep(wait)
-            else:
-                time.sleep(2)  # 初回も念のため2秒待機
             _dbg(f"Step5: API 呼び出し (attempt={attempt+1}/3, model={MODEL_ID!r})")
-            print("### Claude API Call Started ###", flush=True)
-            print(f"  model={MODEL_ID!r}  attempt={attempt+1}/3  prompt_len={len(prompt)}", flush=True)
             try:
                 response = client.messages.create(
                     model=MODEL_ID,
@@ -254,10 +252,9 @@ def generate_comments(
                     messages=[{"role": "user", "content": prompt}],
                 )
                 response_text = response.content[0].text
-                print(f"### Claude Response Length: {len(response_text)} characters ###", flush=True)
+                logger.debug(f"Claude response: {len(response_text)} chars")
             except Exception as api_exc:
-                print(f"### Claude API Error: {type(api_exc).__name__}: {api_exc} ###", flush=True)
-                print(traceback.format_exc(), flush=True)
+                logger.debug(f"Claude API Error: {type(api_exc).__name__}: {api_exc}")
                 raise  # 上位の except に委譲
             raw = response_text.strip()
             _dbg(f"Step5 OK: API 応答 {len(raw)} 文字")
@@ -274,19 +271,19 @@ def generate_comments(
                 return {}
             # 429: レート制限 → 60秒待機してリトライ
             if "429" in err_str or "quota" in err_str or "rate" in err_str:
-                print(f"[Claude] 429エラー: 60秒待機してリトライ ({attempt+1}/3)", flush=True)
+                logger.warning(f"[Claude] 429エラー: 60秒待機してリトライ ({attempt+1}/3)")
                 time.sleep(60)
                 if attempt < 2:
                     continue
-                print("[Claude] 3回失敗 スキップします", flush=True)
+                logger.warning("[Claude] 3回失敗 スキップします")
                 return {}
             _err(f"Step5 attempt {attempt+1} 失敗: {type(e).__name__}: {e}")
             if attempt == 2:
                 _err(f"  traceback:\n{traceback.format_exc()}")
                 return {}
         else:
-            if raw:
-                print("[Claude] リトライ成功", flush=True) if attempt > 0 else None
+            if raw and attempt > 0:
+                logger.info("[Claude] リトライ成功")
 
     if not raw:
         _err(f"Step5: レスポンスが空  last_exc={last_exc}")
