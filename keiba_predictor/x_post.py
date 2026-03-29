@@ -121,7 +121,7 @@ def build_predict_tweet(race_name: str, cache_entry: dict) -> str:
     for d in cache_entry.get("dangerous_horses", [])[:1]:
         lines.append(f"⚠️{d['horse_number']}番{d['horse_name']}({d['popularity']}人気)")
 
-    lines.append(f"#競馬予想 #{short} #KEIBAREDGE")
+    lines.append(f"#競馬予想 #{short} #KEIBA_EDGE")
 
     return "\n".join(lines)
 
@@ -179,7 +179,7 @@ def build_result_tweet(
     if roi_pct > 0:
         lines.append(f"累計回収率{roi_pct:.0f}%")
 
-    lines.append(f"#競馬 #{'的中' if sanren_hit else 'AI予想'} #{short} #KEIBAREDGE")
+    lines.append(f"#競馬 #{'的中' if sanren_hit else 'AI予想'} #{short} #KEIBA_EDGE")
     return "\n".join(lines)
 
 
