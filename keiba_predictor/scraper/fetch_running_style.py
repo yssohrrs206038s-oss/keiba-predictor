@@ -126,7 +126,7 @@ def fetch_passing_for_races(df: pd.DataFrame) -> pd.DataFrame:
                     json.dumps(cache, ensure_ascii=False), encoding="utf-8"
                 )
 
-            time.sleep(1)
+            time.sleep(0.5)
 
         except Exception as e:
             logger.warning(f"  {rid} 取得失敗: {e}")
