@@ -117,12 +117,18 @@ def _detect_grade(el) -> str:
         re.compile(r"G[Ⅲ3]|GIII$"): "GIII",
     }
 
-    # 1. クラス名の完全一致で判定
+    # 1. クラス名で判定（Icon_GradeType1/2/3 のみ。5以上はリステッド等で除外）
+    GRADE_TYPE_RE = re.compile(r"^icon_gradetype(\d+)$", re.I)
     for child in el.find_all(True):
-        classes = {c.lower() for c in child.get("class", [])}
-        for cls, grade in CLASS_GRADE.items():
-            if cls in classes:
-                return grade
+        for cls in child.get("class", []):
+            m = GRADE_TYPE_RE.match(cls.lower())
+            if m:
+                num = int(m.group(1))
+                if num == 1: return "GI"
+                if num == 2: return "GII"
+                if num == 3: return "GIII"
+                # 4以上（リステッド・オープン等）は重賞ではない
+                return ""
 
     # 2. 旧形式テキストアイコン: gradeicon-g1/g2/g3
     GRADE_CLS_RE = re.compile(r"\bgradeicon-g([123])\b", re.I)
@@ -1042,6 +1048,23 @@ def run_predict_notify(
 
     notified = 0
     cache = _load_cache()
+
+    # 当週土日以外のレースをキャッシュから除外
+    dates = _weekend_dates()
+    weekend_set = {
+        f"{d[:4]}-{d[4:6]}-{d[6:]}" for d in dates
+    }
+    stale_ids = [
+        rid for rid, entry in cache.items()
+        if entry.get("race_date") and entry["race_date"] not in weekend_set
+    ]
+    if stale_ids:
+        for rid in stale_ids:
+            name = cache[rid].get("race_name", rid)
+            logger.info(f"  先週レース除外: {name} ({cache[rid].get('race_date')})")
+            del cache[rid]
+        _save_cache(cache)
+        logger.info(f"  {len(stale_ids)} 件の先週レースをキャッシュから削除")
 
     # 当日のレースのみ通知（土曜実行→土曜レース、日曜実行→日曜レース）
     today_str = date.today().isoformat()  # "YYYY-MM-DD"
