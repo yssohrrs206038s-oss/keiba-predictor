@@ -311,8 +311,8 @@ def generate_note_report(output_path: Optional[Path] = None) -> str:
 
         lines += [f"### 🏇 {race_name}{grade_str}{venue_str}{course_str}", ""]
 
-        # Gemini 分析生成
-        print(f"[note_report] {race_name} の Gemini分析を生成中...", flush=True)
+        # Claude AI 分析生成
+        print(f"[note_report] {race_name} の AI分析を生成中...", flush=True)
         analysis = _generate_race_analysis(r, race_name, course_info, api_key)
 
         ev_map: dict[int, float] = {
@@ -350,8 +350,8 @@ def generate_note_report(output_path: Optional[Path] = None) -> str:
         lines.append(analysis["tenkai"] if analysis["tenkai"] else "（展開予測データなし）")
         lines.append("")
 
-        # ── 注目馬 Gemini解説 ─────────────────────────────────
-        lines += ["#### 注目馬 Gemini解説", ""]
+        # ── 注目馬 AI解説 ─────────────────────────────────
+        lines += ["#### 注目馬 AI解説", ""]
         for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
             p = r.get(role, {})
             if not p or not p.get("horse_name"):
@@ -444,10 +444,10 @@ def generate_note_report(output_path: Optional[Path] = None) -> str:
     lines += [
         "## KEIBA EDGEについて",
         "",
-        "KEIBA EDGEは機械学習（XGBoost）と Gemini AIを組み合わせた重賞予想システムです。",
+        "KEIBA EDGEは機械学習（XGBoost）と Claude AIを組み合わせた重賞予想システムです。",
         "- 過去の出走データ・騎手成績・コース適性を学習した独自モデルで3着以内確率を算出",
         "- 期待値（EV）スコアにより「オッズと確率のギャップ」がある穴馬を発見",
-        "- Gemini AIが展開予測・血統分析・個別解説を生成",
+        "- Claude AIが展開予測・血統分析・個別解説を生成",
         "",
         "※本予想はAIによる分析です。馬券購入は自己責任でお願いします。",
     ]
@@ -639,7 +639,7 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
-    p = argparse.ArgumentParser(description="note 記事用週次予想レポート生成（Gemini AI 解説付き）")
+    p = argparse.ArgumentParser(description="note 記事用週次予想レポート生成（Claude AI 解説付き）")
     p.add_argument("--output", type=Path, default=None,
                    help="出力先ファイルパス（省略時: data/note_report_YYYYMMDD.md）")
     args = p.parse_args()
