@@ -122,6 +122,21 @@ def cmd_report(args: argparse.Namespace) -> None:
     print(report_text[:200] + "\n…（レポート生成完了）")
 
 
+def cmd_snapshot(args: argparse.Namespace) -> None:
+    """predictions_cache.json のスナップショットを日付付きで保存する。"""
+    import shutil
+    from datetime import date as _date
+    from pathlib import Path as _Path
+
+    src = _Path("keiba_predictor/data/predictions_cache.json")
+    if not src.exists():
+        logger.error(f"キャッシュファイルが見つかりません: {src}")
+        sys.exit(1)
+    dst = _Path(f"keiba_predictor/data/predictions_snapshot_{_date.today().strftime('%Y%m%d')}.json")
+    shutil.copy(src, dst)
+    logger.info(f"スナップショット保存: {dst}")
+
+
 def cmd_update_featured(args: argparse.Namespace) -> None:
     """翌週末の重賞レースをスクレイピングして featured_races.csv に保存する。"""
     from keiba_predictor.discord_notify import update_featured_races_csv
@@ -250,6 +265,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="出力先ファイルパス（省略時: data/reports/report_YYYYMMDD.md）",
     )
     p_report.set_defaults(func=cmd_report)
+
+    # ── snapshot ───────────────────────────────────────────
+    p_snap = sub.add_parser("snapshot", help="predictions_cache.json のスナップショットを保存")
+    p_snap.set_defaults(func=cmd_snapshot)
 
     # ── update-featured ────────────────────────────────────
     p_uf = sub.add_parser(

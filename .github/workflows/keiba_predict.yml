@@ -1,17 +1,18 @@
-name: 予想通知（土日）
+name: 予想生成・通知（土日）
 
 on:
   schedule:
-    - cron: '0 5 * * 6'   # 土曜 14:00 JST
-    - cron: '0 5 * * 0'   # 日曜 14:00 JST
-  workflow_dispatch:       # 手動実行ボタンも有効化
+    - cron: '0 2 * * 6'   # 土曜 11:00 JST — 予想生成
+    - cron: '0 2 * * 0'   # 日曜 11:00 JST — 予想生成
+    - cron: '0 5 * * 6'   # 土曜 14:00 JST — 通知
+    - cron: '0 5 * * 0'   # 日曜 14:00 JST — 通知
+  workflow_dispatch:
     inputs:
-      race_id:
-        description: '予測対象のレースID（例: 202506050811）。空欄の場合は当週の全対象レースを自動取得。'
+      mode:
+        description: 'predict=予想生成のみ / notify=通知のみ / both=両方'
         required: false
-        default: ''
+        default: 'both'
 
-# ジョブ全体で環境変数を参照できるようにする
 env:
   DISCORD_WEBHOOK_URL:        ${{ secrets.DISCORD_WEBHOOK_URL }}
   DISCORD_REPORT_WEBHOOK_URL: ${{ secrets.DISCORD_REPORT_WEBHOOK_URL }}
@@ -23,22 +24,33 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  predict:
+  run:
     runs-on: ubuntu-latest
 
     steps:
       - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # ── 早期バリデーション ────────────────────────────────────
-      - name: Discord Webhook URL を確認
+      - name: 最新コミットをプル
+        run: git pull --ff-only origin ${{ github.ref_name }} || true
+
+      - name: 実行モードを判定
+        id: mode
         run: |
-          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            echo "::error::DISCORD_WEBHOOK_URL が設定されていません。"
-            echo "::error::GitHub リポジトリの Settings > Secrets > Actions で登録してください。"
-            exit 1
+          HOUR=$(date -u +%H)
+          INPUT_MODE="${{ inputs.mode }}"
+          if [ -n "$INPUT_MODE" ] && [ "$INPUT_MODE" != "" ]; then
+            echo "mode=$INPUT_MODE" >> $GITHUB_OUTPUT
+            echo "📋 手動実行モード: $INPUT_MODE"
+          elif [ "$HOUR" -lt 4 ]; then
+            echo "mode=predict" >> $GITHUB_OUTPUT
+            echo "📋 スケジュール: 予想生成モード (UTC $HOUR時)"
+          else
+            echo "mode=notify" >> $GITHUB_OUTPUT
+            echo "📋 スケジュール: 通知モード (UTC $HOUR時)"
           fi
-          echo "✅ DISCORD_WEBHOOK_URL: 設定済み (末尾6桁: ...${DISCORD_WEBHOOK_URL: -6})"
 
       - name: Python 3.11 をセットアップ
         uses: actions/setup-python@v5
@@ -52,102 +64,115 @@ jobs:
           echo "✅ pip install 完了"
 
       - name: Playwright Chromium をインストール
+        if: steps.mode.outputs.mode == 'predict' || steps.mode.outputs.mode == 'both'
         run: |
           python -m playwright install chromium
           python -m playwright install-deps chromium
-          echo "✅ Playwright Chromium インストール完了"
 
-      # ── featured_races.csv 確認・生成 ────────────────────────
-      - name: featured_races.csv を確認・生成
-        run: |
-          CSV_PATH="keiba_predictor/data/featured_races.csv"
-          if [ ! -f "$CSV_PATH" ]; then
-            echo "⚠️ featured_races.csv が見つかりません。clean・features を実行します..."
-            python -m keiba_predictor.main clean
-            python -m keiba_predictor.main features
-            echo "✅ featured_races.csv 生成完了"
-          else
-            echo "✅ featured_races.csv 確認OK: $CSV_PATH"
-          fi
-
-      # ── モデルファイル確認 ────────────────────────────────────
       - name: モデルファイルを確認
         run: |
           MODEL_PATH="keiba_predictor/model/xgb_model.pkl"
           if [ ! -f "$MODEL_PATH" ]; then
             echo "::error::モデルファイルが見つかりません: $MODEL_PATH"
-            echo "::error::先に keiba_update.yml を実行してください。"
             exit 1
           fi
-          echo "✅ モデルファイル確認OK: $MODEL_PATH"
+          echo "✅ モデルファイル確認OK"
 
-      # ── 今週末重賞 CSV を更新 ────────────────────────────────
+      # ── 予想生成（11時JST） ──────────────────────────────────
       - name: 今週末重賞CSVを更新
+        if: steps.mode.outputs.mode == 'predict' || steps.mode.outputs.mode == 'both'
         continue-on-error: true
         run: python -m keiba_predictor.main update-featured
 
-      # ── Discord 予想通知（デバッグモード有効）────────────────
-      - name: Discord に予想を送信
-        id: notify_predict
-        continue-on-error: true   # ネットワーク障害・スクレイピング失敗でも後続ステップを継続
+      - name: 予想を生成（predict_live）
+        if: steps.mode.outputs.mode == 'predict' || steps.mode.outputs.mode == 'both'
+        continue-on-error: true
         run: |
-          echo "📤 Discord 予想通知を送信中..."
-          # predictions_cache.json にデータがあればキャッシュから送信のみ行う
-          # (predict_live を再実行すると cleaned_races.csv 不在で確率が壊れるため)
-          echo "📋 キャッシュ優先で予想通知を送信"
-          python -m keiba_predictor.main notify --mode predict --debug
-          echo "✅ predict/notify コマンド終了"
+          echo "🔮 予想生成中（predict_live）..."
+          python -c "
+          import sys, json, logging
+          sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+          logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+          from keiba_predictor.discord_notify import _load_cache, scrape_grade_race_ids
+          from keiba_predictor.model.predict import predict_live
+          import requests
 
-      # ── note 記事用レポート生成 ───────────────────────────────
-      # predict ステップ完了後（成否に関わらず）実行する
-      # 予想キャッシュが空（{}）の場合はスキップ
-      - name: note レポートを生成
-        if: always()
-        run: |
-          if python - <<'EOF'
-          import json, sys
-          try:
-              cache = json.load(open("keiba_predictor/data/predictions_cache.json"))
-              if not cache:
-                  print("⏭️ 予想キャッシュが空のためnoteレポートをスキップします")
-                  sys.exit(1)
-          except Exception as e:
-              print(f"⏭️ キャッシュ確認エラー ({e})、スキップします")
-              sys.exit(1)
-          EOF
-          then
-            echo "📝 note レポートを生成中..."
-            python -m keiba_predictor.note_report
-            echo "✅ note レポート生成完了"
-          fi
+          session = requests.Session()
+          grade_races = scrape_grade_race_ids(session)
+          cache = _load_cache()
 
-      # ── 予想キャッシュ・レポートをリポジトリに保存 ────────────
-      - name: 予想キャッシュ・レポートをコミット
-        if: always()   # predict/note_report が失敗してもキャッシュが更新されていれば保存する
+          for race in grade_races:
+              rid = race['race_id']
+              name = race.get('race_name', rid)
+              if cache.get(rid, {}).get('predicted_top3_nums'):
+                  print(f'  キャッシュ済みスキップ: {name}')
+                  continue
+              try:
+                  print(f'  予想生成: {name} ({rid})')
+                  predict_live(rid, notify=False)
+              except Exception as e:
+                  print(f'  失敗: {name}: {e}')
+          print('予想生成完了')
+          "
+          echo "✅ 予想生成完了"
+
+      - name: 予想キャッシュをコミット・プッシュ
+        if: steps.mode.outputs.mode == 'predict' || steps.mode.outputs.mode == 'both'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
-          git add keiba_predictor/data/note_report_*.md       2>/dev/null || true
           if git diff --staged --quiet; then
-            echo "ℹ️ 変更なし（コミットスキップ）"
+            echo "ℹ️ 変更なし"
           else
-            git commit -m "chore: 金曜予想キャッシュ・noteレポートを更新 [skip ci]"
+            git commit -m "chore: 予想キャッシュ更新 [skip ci]"
             git push
             echo "✅ コミット・プッシュ完了"
           fi
 
-      # ── エラー時の Discord 通知 ──────────────────────────────
+      # ── 通知（14時JST） ──────────────────────────────────────
+      - name: Discord に予想を送信
+        if: steps.mode.outputs.mode == 'notify' || steps.mode.outputs.mode == 'both'
+        continue-on-error: true
+        run: |
+          echo "📤 スナップショットから予想通知を送信..."
+          python -m keiba_predictor.main notify --mode predict --debug
+          echo "✅ 通知完了"
+
+      - name: note レポートを生成
+        if: steps.mode.outputs.mode == 'notify' || steps.mode.outputs.mode == 'both'
+        continue-on-error: true
+        run: |
+          if python -c "
+          import json, sys
+          try:
+              cache = json.load(open('keiba_predictor/data/predictions_cache.json'))
+              if not cache: sys.exit(1)
+          except: sys.exit(1)
+          "; then
+            python -m keiba_predictor.note_report
+          fi
+
+      - name: レポートをコミット
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
+          git add keiba_predictor/data/predictions_snapshot_*.json 2>/dev/null || true
+          git add keiba_predictor/data/note_report_*.md 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "ℹ️ 変更なし"
+          else
+            git commit -m "chore: 予想キャッシュ・レポート更新 [skip ci]"
+            git push
+          fi
+
       - name: ❌ エラーを Discord に通知
         if: failure()
         run: |
-          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            echo "Webhook URL 未設定のため Discord 通知をスキップ"
-            exit 0
-          fi
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then exit 0; fi
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           curl -s -X POST "$DISCORD_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "{\"content\": \"⚠️ **金曜予想ワークフローが失敗しました**\nログ: ${RUN_URL}\"}" \
-            && echo "Discord エラー通知送信済み" \
-            || echo "Discord エラー通知の送信に失敗"
+            -d "{\"content\": \"⚠️ **予想ワークフローが失敗しました**\nログ: ${RUN_URL}\"}" || true

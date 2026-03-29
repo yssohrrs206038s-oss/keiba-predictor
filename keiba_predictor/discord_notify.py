@@ -529,6 +529,12 @@ def _load_featured_race_ids_for_weekend(
 # ══════════════════════════════════════════════════════════════
 
 def _load_cache() -> dict:
+    """予想キャッシュを読み込む。当日のスナップショットがあればそちらを優先する。"""
+    snapshot_path = DATA_DIR / f"predictions_snapshot_{date.today().strftime('%Y%m%d')}.json"
+    if snapshot_path.exists():
+        logger.info(f"スナップショットを使用: {snapshot_path.name}")
+        with open(snapshot_path, encoding="utf-8") as f:
+            return json.load(f)
     if PRED_CACHE.exists():
         with open(PRED_CACHE, encoding="utf-8") as f:
             return json.load(f)
