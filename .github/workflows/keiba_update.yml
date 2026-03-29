@@ -135,6 +135,13 @@ jobs:
             && echo "✅ Discord 通知送信完了" \
             || echo "::warning::Discord 通知の送信に失敗しました"
 
+      # ── クレジット残量チェック ─────────────────────────────────
+      - name: クレジット残量チェック
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m keiba_predictor.credit_monitor
+
       # ── エラー時の Discord 通知 ──────────────────────────────
       - name: ❌ エラーを Discord に通知
         if: failure()
