@@ -284,8 +284,8 @@ def predict_race(
 def _build_buy_lines(result_df: pd.DataFrame, race_name: str = "") -> list[str]:
     """
     買い目リストを返す。
-    3連複: 軸（◎）× 相手（2〜5位 + 穴馬EV≥3.0・6位以下）
-    穴馬あり→10点、穴馬なし→6点。
+    3連複: 軸（◎）× 相手（2〜5位 + 穴馬）
+    穴馬=AI確率35%以上&6番人気以下&TOP5外。穴馬あり→10点、穴馬なし→6点。
     """
     from itertools import combinations as _comb
 
@@ -311,16 +311,18 @@ def _build_buy_lines(result_df: pd.DataFrame, race_name: str = "") -> list[str]:
     umaren_pairs = list(_comb(nums[:3], 2))
     umaren_str   = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
 
-    # 穴馬: 6位以降で EV≥3.0 の最上位1頭
+    # 穴馬: AI確率35%以上 & 6番人気以下 & TOP5外 → AI確率最高の1頭
     ana_num = None
-    if len(result_df) > 5 and "ev_score" in result_df.columns:
-        rest    = result_df.iloc[5:]
-        rest_ev = pd.to_numeric(rest["ev_score"], errors="coerce")
-        high_ev = rest[rest_ev >= 3.0]
-        if not high_ev.empty:
-            best = high_ev.nlargest(1, "ev_score").iloc[0]
+    top5_set = set(nums)
+    if len(result_df) > 5:
+        rest = result_df.iloc[5:]
+        rest_prob = pd.to_numeric(rest.get("prob_top3", pd.Series(dtype=float)), errors="coerce")
+        rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
+        cands = rest[(rest_prob >= 0.35) & (rest_pop >= 6)]
+        if not cands.empty:
+            best = cands.nlargest(1, "prob_top3").iloc[0]
             v = best.get("horse_number")
-            if pd.notna(v):
+            if pd.notna(v) and int(v) not in top5_set:
                 ana_num = int(v)
 
     # 3連複: 軸1頭 × 相手（2〜5位 + 穴馬）
@@ -394,21 +396,21 @@ def format_prediction(
 
     lines1.append(sep)
 
-    # ★穴馬（TOP5外・EV≥3.0・確率≥15%）
+    # ★穴馬（TOP5外・AI確率35%以上・6番人気以下）
     top5_idx = top5.index
     ana_df = result_df.loc[
         ~result_df.index.isin(top5_idx) &
-        (result_df["ev_score"].fillna(0) >= 3.0) &
-        (result_df["prob_top3"] >= 0.15)
+        (result_df["prob_top3"] >= 0.35) &
+        (pd.to_numeric(result_df.get("popularity", pd.Series(dtype=float)), errors="coerce") >= 6)
     ]
     if not ana_df.empty:
-        row      = ana_df.nlargest(1, "ev_score").iloc[0]
+        row      = ana_df.nlargest(1, "prob_top3").iloc[0]
         num      = int(row["horse_number"]) if pd.notna(row.get("horse_number")) else 0
         name     = str(row.get("horse_name", ""))
-        ev       = row["ev_score"]
+        prob     = row["prob_top3"] * 100
         pop      = str(int(row["popularity"])) if pd.notna(row.get("popularity")) else "-"
-        odds_val = row.get("odds", "-")
-        lines1.append(f"★穴 {num}番{name} EV{ev:.2f}（{pop}人気 {odds_val}倍）")
+        lines1.append(f"★穴 {num}番{name}（AI確率{prob:.1f}% {pop}番人気）")
+        lines1.append(f"　→ AIが高評価も市場は低評価！")
 
     # ⚠危険な人気馬
     danger_df = result_df[result_df["is_dangerous"]]

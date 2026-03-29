@@ -608,6 +608,22 @@ def _save_cache(cache: dict) -> None:
     print(f"[_save_cache] 書き込み完了: {PRED_CACHE.resolve()} ({size}bytes, {len(keys)}件: {keys})", flush=True)
 
 
+def _ana_horse_info(result_df: pd.DataFrame, ana_horse_num: "Optional[int]") -> dict:
+    """穴馬の詳細情報を返す（キャッシュ保存用）。"""
+    if ana_horse_num is None or result_df.empty:
+        return {}
+    match = result_df[pd.to_numeric(result_df["horse_number"], errors="coerce") == ana_horse_num]
+    if match.empty:
+        return {}
+    r = match.iloc[0]
+    return {
+        "horse_number": ana_horse_num,
+        "horse_name": str(r.get("horse_name", "")),
+        "prob": round(float(r.get("prob_top3", 0)), 4),
+        "popularity": int(pd.to_numeric(r.get("popularity"), errors="coerce") or 0),
+    }
+
+
 def _store_prediction(race_id: str, race_name: str, race_date: str,
                       result_df: pd.DataFrame,
                       ai_comments: Optional[dict] = None,
@@ -639,13 +655,22 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
             entry["shap_top"] = shap_top
         return entry
 
-    # 穴馬: 3位以降でオッズ10倍以上の最高確率
+    # 穴馬: AI確率35%以上 & 6番人気以下 & TOP3外 → AI確率最高の1頭
     ana: dict = {}
     try:
-        odds_ser = pd.to_numeric(result_df["odds"], errors="coerce")
-        cands = result_df.iloc[2:][odds_ser.iloc[2:].fillna(0) >= 10.0]
-        if not cands.empty:
-            ana = _row(result_df, result_df.index.get_loc(cands.index[0]))
+        top3_set = set()
+        for _, r in result_df.head(3).iterrows():
+            v = r.get("horse_number")
+            if pd.notna(v):
+                top3_set.add(int(v))
+        rest = result_df.iloc[3:] if len(result_df) > 3 else pd.DataFrame()
+        if not rest.empty:
+            rest_prob = pd.to_numeric(rest["prob_top3"], errors="coerce")
+            rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
+            cands = rest[(rest_prob >= 0.35) & (rest_pop >= 6)]
+            if not cands.empty:
+                best_idx = cands["prob_top3"].idxmax()
+                ana = _row(result_df, result_df.index.get_loc(best_idx))
     except Exception:
         pass
     if not ana:
@@ -663,14 +688,15 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         if pd.notna(v):
             top5_nums.append(int(v))
 
-    # 穴馬（3連複用）: 6位以降で EV≥3.0 の最上位1頭
+    # 穴馬（3連複用）: AI確率35%以上 & 6番人気以下 & TOP5外 → AI確率最高
     ana_horse_num: Optional[int] = None
-    if "ev_score" in result_df.columns and len(result_df) > 5:
-        rest     = result_df.iloc[5:]
-        rest_ev  = pd.to_numeric(rest["ev_score"], errors="coerce")
-        high_ev  = rest[rest_ev >= 3.0]
-        if not high_ev.empty:
-            best = high_ev.nlargest(1, "ev_score").iloc[0]
+    if len(result_df) > 5:
+        rest = result_df.iloc[5:]
+        rest_prob = pd.to_numeric(rest["prob_top3"], errors="coerce")
+        rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
+        cands = rest[(rest_prob >= 0.35) & (rest_pop >= 6)]
+        if not cands.empty:
+            best = cands.nlargest(1, "prob_top3").iloc[0]
             v = best.get("horse_number")
             if pd.notna(v):
                 ana_horse_num = int(v)
@@ -732,6 +758,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "predicted_top3_nums": top3_nums,
         "predicted_top5_nums": top5_nums,
         "ana_horse_num":       ana_horse_num,
+        "ana_horse_info":      _ana_horse_info(result_df, ana_horse_num),
         "predicted_top5":      predicted_top5,
         "ev_top3":             ev_top3,
         "dangerous_horses":    dangerous,
@@ -1082,12 +1109,21 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
 
     # ★穴馬
     ana_num = entry.get("ana_horse_num")
+    ana_info = entry.get("ana_horse_info", {})
     if ana_num and ana_num not in top5_nums[:5]:
-        ana_ev = ev_map.get(ana_num, {})
-        if ana_ev:
-            ev = ana_ev.get("ev_score", 0)
-            name = ana_ev.get("horse_name", "")
-            lines1.append(f"★穴 {ana_num}番{name} EV{ev:.2f}")
+        name = ana_info.get("horse_name", "")
+        prob = ana_info.get("prob", 0) * 100
+        pop = ana_info.get("popularity", "?")
+        if not name:
+            # フォールバック: ev_top3 から取得
+            for e in entry.get("ev_top3", []):
+                if e.get("horse_number") == ana_num:
+                    name = e.get("horse_name", "")
+                    prob = e.get("prob", 0) * 100
+                    break
+        if name:
+            lines1.append(f"★穴 {ana_num}番{name}（AI確率{prob:.1f}% {pop}番人気）")
+            lines1.append(f"　→ AIが高評価も市場は低評価！")
 
     # ⚠危険馬
     for d in entry.get("dangerous_horses", []):

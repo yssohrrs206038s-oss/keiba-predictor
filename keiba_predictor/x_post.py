@@ -111,11 +111,11 @@ def build_predict_tweet(race_name: str, cache_entry: dict) -> str:
 
     # 穴馬（ana_horse_num）
     ana_num = cache_entry.get("ana_horse_num")
-    if ana_num:
-        for e in cache_entry.get("ev_top3", []):
-            if e["horse_number"] == ana_num:
-                lines.append(f"★穴{ana_num}番{e.get('horse_name','')}{_ev_stars(e['ev_score'])}")
-                break
+    ana_info = cache_entry.get("ana_horse_info", {})
+    if ana_num and ana_info.get("horse_name"):
+        prob = ana_info.get("prob", 0) * 100
+        pop = ana_info.get("popularity", "?")
+        lines.append(f"★穴{ana_num}番{ana_info['horse_name']}（AI{prob:.0f}% {pop}人気）")
 
     # 危険馬（1頭のみ）
     for d in cache_entry.get("dangerous_horses", [])[:1]:
