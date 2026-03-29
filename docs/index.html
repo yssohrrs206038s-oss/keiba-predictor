@@ -527,7 +527,8 @@ function renderChart(rows) {
 ════════════════════════════════════════════════════════════ */
 function renderPredictions(cache) {
   const grid = document.getElementById('race-grid');
-  const entries = Object.entries(cache);
+  const entries = Object.entries(cache)
+    .sort((a, b) => (a[1].start_time || '99:99').localeCompare(b[1].start_time || '99:99'));
   if (!entries.length) {
     grid.innerHTML = '<div class="no-data">今週の予想データがありません</div>';
     return;
