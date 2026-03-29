@@ -857,7 +857,7 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
 
     # predicted_top5（上位5頭の詳細情報）を馬番→infoのマップに変換
     top5_detail: dict[int, dict] = {}
-    for h in entry.get("predicted_top5", []):
+    for h in (entry.get("predicted_top5") or []):
         num = h.get("horse_number")
         if num is not None:
             top5_detail[int(num)] = h
@@ -870,7 +870,7 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
             top5_detail[int(num)] = p
 
     ev_map: dict[int, dict] = {}
-    for e in entry.get("ev_top3", []):
+    for e in (entry.get("ev_top3") or []):
         num = e.get("horse_number")
         if num is not None:
             ev_map[int(num)] = e
@@ -878,14 +878,19 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
     for rank, num in enumerate(top5_nums):
         mark = MARKS[rank] if rank < len(MARKS) else "　"
         info = top5_detail.get(num, ev_map.get(num, {}))
-        name = info.get("horse_name", f"{num}番")
+        name = info.get("horse_name", "")
+        if not name:
+            name = f"{num}番"
         prob = info.get("prob", 0) * 100
         ev_entry = ev_map.get(num, {})
         ev_val = ev_entry.get("ev_score")
-        # オッズが未確定(None)ならEVも仮値なので非表示
         has_real_odds = ev_entry.get("odds") is not None
         ev_str = f" EV{ev_val:.2f}" if ev_val and has_real_odds else ""
-        lines1.append(f"{mark} {num}番 {name}　{prob:.1f}%{ev_str}")
+        # predicted_top5にデータがない馬は確率非表示（馬番のみ）
+        if prob > 0.01:
+            lines1.append(f"{mark} {num}番 {name}　{prob:.1f}%{ev_str}")
+        else:
+            lines1.append(f"{mark} {num}番 {name}")
 
     lines1.append(sep)
 
