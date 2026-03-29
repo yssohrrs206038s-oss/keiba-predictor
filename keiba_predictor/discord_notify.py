@@ -671,8 +671,8 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
             if not cands.empty:
                 best_idx = cands["prob_top3"].idxmax()
                 ana = _row(result_df, result_df.index.get_loc(best_idx))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"穴馬検出失敗: {e}")
     if not ana:
         ana = _row(result_df, 2)
 

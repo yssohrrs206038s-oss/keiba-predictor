@@ -38,9 +38,11 @@ jobs:
 
       - name: オッズを更新
         run: python -m keiba_predictor.odds_updater
+        continue-on-error: true
 
       - name: スナップショットを保存
         run: python -m keiba_predictor.main snapshot
+        continue-on-error: true
 
       - name: キャッシュ・スナップショットをコミット・プッシュ
         run: |
