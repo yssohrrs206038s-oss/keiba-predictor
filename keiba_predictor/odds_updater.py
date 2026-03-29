@@ -62,10 +62,11 @@ def update_odds_for_race(race_id: str, entry: dict) -> dict:
 
     horses_df = shutuba["horses"]
 
-    # デバッグ: 先頭行のフィールドと値を出力して構造を確認
+    # デバッグ: 全馬のオッズ状況を出力
     if not horses_df.empty:
         print(f"[DEBUG][{race_id}] horses columns: {list(horses_df.columns)}", flush=True)
-        print(f"[DEBUG][{race_id}] horses[0]: {horses_df.iloc[0].to_dict()}", flush=True)
+        for idx, row in horses_df.iterrows():
+            print(f"[DEBUG][{race_id}] #{row.get('horse_number','?')} {row.get('horse_name','?')}: odds={row.get('odds')} pop={row.get('popularity')}", flush=True)
 
     # horse_number → odds / popularity のマップを構築
     odds_map: dict[int, float] = {}

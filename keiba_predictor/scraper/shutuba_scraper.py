@@ -189,17 +189,44 @@ def _parse_shutuba_row(tr) -> Optional[dict]:
         m = re.search(r"/trainer/(?:result/recent/)?(\w+)/?", trainer_link["href"])
         trainer_id = m.group(1) if m else ""
 
-    # オッズ・人気（発走前は "---" の場合あり）
-    try:
-        odds = float(_txt(".Odds", "td.Odds").replace(",", ""))
-    except ValueError:
-        odds = None
+    # オッズ（発走前は "---" の場合あり）
+    # netkeibaの出馬表では複数のHTML構造が存在する
+    odds = None
+    for odds_sel in (".Odds span", ".Odds", "td.Odds span", "td.Odds",
+                     "td.Txt_R", "span.Odds", ".OddsList span"):
+        el = tr.select_one(odds_sel)
+        if el:
+            odds_text = el.get_text(strip=True).replace(",", "").replace("---", "")
+            if odds_text:
+                try:
+                    odds = float(odds_text)
+                    break
+                except ValueError:
+                    continue
+    # フォールバック: tdを走査してオッズらしい数値を探す
+    if odds is None:
+        for td in tr.find_all("td"):
+            td_text = td.get_text(strip=True).replace(",", "")
+            td_cls = " ".join(td.get("class") or [])
+            # Oddsを含むクラス、またはPopular系クラスの数値
+            if re.match(r"^\d+\.\d$", td_text) and ("Odds" in td_cls or "Txt_R" in td_cls or "Popular" in td_cls):
+                try:
+                    odds = float(td_text)
+                    break
+                except ValueError:
+                    continue
+    print(f"[DEBUG odds] horse={_txt('.HorseName a', '.HorseInfo a') or '?'} odds={odds}", flush=True)
 
     # 人気
-    try:
-        popularity = int(_txt(".Popular_Ninki", "td.Popular_Ninki", ".Popular", "td.Popular", "td.popular_rank"))
-    except ValueError:
-        popularity = None
+    popularity = None
+    for pop_sel in (".Popular_Ninki", "td.Popular_Ninki", ".Popular span",
+                    "td.Popular", "td.popular_rank", "span.Popular_Ninki"):
+        el = tr.select_one(pop_sel)
+        if el:
+            pop_text = el.get_text(strip=True)
+            if pop_text.isdigit():
+                popularity = int(pop_text)
+                break
 
     return {
         "horse_number":       horse_number,
