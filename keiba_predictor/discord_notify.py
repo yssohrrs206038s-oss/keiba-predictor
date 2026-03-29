@@ -1147,6 +1147,7 @@ def run_predict_notify(
 def run_result_notify(
     webhook_url: Optional[str] = None,
     model_path: Optional[Path] = None,
+    race_id: Optional[str] = None,
 ) -> None:
     """週末重賞の結果をスクレイピングし、予想との比較をDiscordに送信する。"""
     webhook_url = _resolve_webhook(webhook_url)
@@ -1154,9 +1155,17 @@ def run_result_notify(
     session = requests.Session()
     cache   = _load_cache()
 
-    # 今週末の重賞IDを取得
-    logger.info("今週末の重賞を検索中...")
-    grade_races = scrape_grade_race_ids(session)
+    # --race-id 指定時はそのレースのみ対象
+    if race_id:
+        cached = cache.get(race_id, {})
+        race_name = cached.get("race_name", race_id)
+        race_date = cached.get("race_date", "")
+        grade_races = [{"race_id": race_id, "race_name": race_name, "race_date": race_date}]
+        logger.info(f"指定レースID: {race_id} ({race_name})")
+    else:
+        # 今週末の重賞IDを取得
+        logger.info("今週末の重賞を検索中...")
+        grade_races = scrape_grade_race_ids(session)
     if not grade_races:
         dates = _weekend_dates()
         sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"

@@ -173,7 +173,10 @@ def cmd_notify(args: argparse.Namespace) -> None:
             use_live=getattr(args, "live", False),
         )
     else:
-        run_result_notify(webhook_url=webhook)
+        run_result_notify(
+            webhook_url=webhook,
+            race_id=getattr(args, "race_id", None),
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -294,6 +297,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_notify.add_argument(
         "--test-race-id", dest="test_race_id", metavar="RACE_ID",
         help="テスト用race_id（指定時は週末重賞検索をスキップして該当レースのみ送信）"
+    )
+    p_notify.add_argument(
+        "--race-id", dest="race_id", metavar="RACE_ID",
+        help="指定レースIDのみ結果照合する（--mode result 時に使用）"
     )
     p_notify.add_argument(
         "--live", action="store_true",
