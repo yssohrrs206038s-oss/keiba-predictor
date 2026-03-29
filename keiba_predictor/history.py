@@ -32,9 +32,9 @@ DATA_DIR      = Path(__file__).parent / "data"
 HISTORY_PATH  = DATA_DIR / "results_history.csv"
 REPORTS_DIR   = DATA_DIR / "reports"
 
-# 1 口 100 円・1 レースあたりの買い目: 馬連1+ワイド3+3連複1 = 5 口
+# 1 口 100 円・1 レースあたりの買い目: 複勝1+馬連3+3連複10 = 14 口
 UNIT_BET  = 100
-BETS_PER_RACE = 5
+BETS_PER_RACE = 14
 
 HISTORY_COLS = [
     "date", "race_id", "race_name", "race_grade",

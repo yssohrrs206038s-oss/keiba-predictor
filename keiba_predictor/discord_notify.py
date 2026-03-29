@@ -739,9 +739,11 @@ def scrape_payouts(race_id: str, session: requests.Session) -> dict:
 def _record_manual_result(race_id: str, race_name: str, race_date: str,
                           pred: dict, manual: dict) -> None:
     """manual_results.json の的中フラグで results_history.csv に記録する。"""
-    from keiba_predictor.history import HISTORY_PATH, DATA_DIR, _grade_label, _pred_row, UNIT_BET, BETS_PER_RACE
+    from keiba_predictor.history import HISTORY_PATH, DATA_DIR, _grade_label, _pred_row
 
-    grade = _grade_label(race_name)
+    # レース名: manual 優先 → 引数 → race_id
+    name = manual.get("race_name") or race_name or race_id
+    grade = _grade_label(name)
     p1 = _pred_row(pred, "honmei")
     p2 = _pred_row(pred, "taikou")
     p3 = _pred_row(pred, "ana")
@@ -753,10 +755,12 @@ def _record_manual_result(race_id: str, race_name: str, race_date: str,
     umaren_hit  = manual.get("umaren_hit", False)
     sanren_hit  = manual.get("sanrenpuku_hit", False)
 
+    fukusho_payout  = manual_pay.get("fukusho", 0)
     umaren_payout   = manual_pay.get("umaren", 0)
     sanren_payout   = manual_pay.get("sanrenpuku", 0)
-    bet_total       = UNIT_BET * BETS_PER_RACE
-    return_total    = umaren_payout + sanren_payout
+    # 投資: 複勝1点 + 馬連3点 + 3連複10点 = 14点 × 100円
+    bet_total       = 1400
+    return_total    = fukusho_payout + umaren_payout + sanren_payout
 
     def _a(i):
         return {"name": "", "num": result_nums[i] if i < len(result_nums) else 0}
@@ -764,7 +768,7 @@ def _record_manual_result(race_id: str, race_name: str, race_date: str,
     row = {
         "date":       race_date,
         "race_id":    race_id,
-        "race_name":  race_name,
+        "race_name":  name,
         "race_grade": grade,
         "pred1_name": p1["name"], "pred1_num": p1["num"], "pred1_prob": p1["prob"],
         "pred2_name": p2["name"], "pred2_num": p2["num"], "pred2_prob": p2["prob"],
@@ -788,7 +792,7 @@ def _record_manual_result(race_id: str, race_name: str, race_date: str,
     else:
         new_row_df.to_csv(HISTORY_PATH, mode="w", header=True,
                           index=False, encoding="utf-8-sig")
-    logger.info(f"  [history] 手動記録: {race_name} fukusho={fukusho_hit} umaren={umaren_hit} sanren={sanren_hit}")
+    logger.info(f"  [history] 手動記録: {name} fukusho={fukusho_hit} umaren={umaren_hit} sanren={sanren_hit} return=¥{return_total:,}")
 
 
 def _fmt_result(race_name: str, race_date: str,
