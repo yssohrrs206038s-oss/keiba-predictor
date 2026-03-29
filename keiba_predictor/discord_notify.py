@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 DATA_DIR   = Path(__file__).parent / "data"
 MODEL_PATH = Path(__file__).parent / "model" / "xgb_model.pkl"
 PRED_CACHE = DATA_DIR / "predictions_cache.json"   # 予想キャッシュ
+MANUAL_RESULTS = DATA_DIR / "manual_results.json"  # 手動結果入力
 
 # 重賞判定 (G1/G2/G3 を含む括弧表記)
 GRADE_RE = re.compile(r"\(G[Ⅰ-Ⅲ1-3]\)|\(GI{1,3}\)")
@@ -1213,20 +1214,51 @@ def run_result_notify(
     )
     from datetime import date as _date
 
+    # 手動結果を読み込む
+    manual_results: dict = {}
+    if MANUAL_RESULTS.exists():
+        try:
+            manual_results = json.loads(MANUAL_RESULTS.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"manual_results.json 読み込み失敗: {e}")
+
     notified = 0
     for race in grade_races:
         race_id   = race["race_id"]
         race_name = race.get("race_name", race_id)
         race_date = race.get("race_date", "")
 
-        # 結果スクレイピング
-        actual_df = scrape_race_result(race_id, session)
+        # 手動結果があればスクレイピングをスキップ
+        manual = manual_results.get(race_id)
+        if manual:
+            logger.info(f"  手動結果を使用: {race_id} ({manual.get('race_name', race_name)})")
+            result_nums = manual.get("result", [])
+            # 手動結果から簡易DataFrameを構築
+            actual_rows = []
+            for i, num in enumerate(result_nums):
+                actual_rows.append({
+                    "finish_position": i + 1,
+                    "horse_number": num,
+                    "horse_name": "",
+                })
+            actual_df = pd.DataFrame(actual_rows) if actual_rows else None
+            # 払戻金
+            manual_pay = manual.get("payouts", {})
+            payouts = {}
+            if manual_pay.get("umaren"):
+                payouts["馬連"] = [{"combo": "-".join(str(n) for n in result_nums[:2]),
+                                    "amount": manual_pay["umaren"]}]
+            if manual_pay.get("sanrenpuku"):
+                payouts["三連複"] = [{"combo": "-".join(str(n) for n in sorted(result_nums[:3])),
+                                      "amount": manual_pay["sanrenpuku"]}]
+        else:
+            # 結果スクレイピング
+            actual_df = scrape_race_result(race_id, session)
+            payouts = scrape_payouts(race_id, session) if actual_df is not None else {}
+
         if actual_df is None or actual_df.empty:
             send_discord(webhook_url, f"⚠️ **{race_name}** の結果が取得できませんでした。")
             continue
-
-        # 払戻金取得
-        payouts = scrape_payouts(race_id, session)
 
         # 予想キャッシュ取得
         pred = cache.get(race_id, {})
