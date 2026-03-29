@@ -75,6 +75,11 @@ jobs:
           fi
           echo "✅ notify コマンド終了"
 
+      # ── 週次外れ分析 ──────────────────────────────────────
+      - name: 週次外れ分析
+        continue-on-error: true
+        run: python -m keiba_predictor.analysis.loss_analysis
+
       # ── 結果履歴をリポジトリに保存 ──────────────────────────
       - name: 結果履歴をコミット
         if: always()
