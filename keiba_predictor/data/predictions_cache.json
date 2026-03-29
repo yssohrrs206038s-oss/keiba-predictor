@@ -263,6 +263,38 @@
       15
     ],
     "ana_horse_num": 1,
+    "predicted_top5": [
+      {
+        "horse_number": 13,
+        "horse_name": "ナムラクレア",
+        "prob": 0.5562,
+        "odds": null
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "レイピア",
+        "prob": 0.553,
+        "odds": null
+      },
+      {
+        "horse_number": 18,
+        "horse_name": "ジューンブレア",
+        "prob": 0.5245,
+        "odds": null
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "ママコチャ",
+        "prob": 0.494,
+        "odds": null
+      },
+      {
+        "horse_number": 15,
+        "horse_name": "インビンシブルパパ",
+        "prob": 0.4261,
+        "odds": null
+      }
+    ],
     "ev_top3": [
       {
         "horse_number": 13,
