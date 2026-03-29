@@ -1041,6 +1041,12 @@ def run_predict_notify(
     today_str = date.today().isoformat()  # "YYYY-MM-DD"
     logger.info(f"本日: {today_str}")
 
+    # 発走時刻順にソート（キャッシュの start_time を使用）
+    grade_races = sorted(
+        grade_races,
+        key=lambda r: cache.get(r["race_id"], {}).get("start_time", "99:99"),
+    )
+
     for race in grade_races:
         race_id   = race["race_id"]
         race_name = race.get("race_name", race_id)
