@@ -1471,6 +1471,36 @@ def run_result_notify(
     except Exception as e:
         logger.warning(f"  [history] サマリー送信失敗: {e}")
 
+    # 日曜日に週次サマリーを X に投稿
+    if os.environ.get("ENABLE_X_POST", "false").lower() == "true":
+        try:
+            today = _date.today()
+            if today.weekday() == 6:  # 日曜日
+                from datetime import timedelta
+                hist_df = load_history()
+                week_start = today - timedelta(days=today.weekday())  # 月曜
+                week_end = today
+                ws = pd.Timestamp(week_start)
+                we = pd.Timestamp(week_end)
+                mask = (hist_df["date"] >= ws) & (
+                    hist_df["date"] <= we + pd.Timedelta(days=1) - pd.Timedelta(seconds=1))
+                wdf = hist_df[mask]
+                if not wdf.empty:
+                    results = []
+                    for _, row in wdf.iterrows():
+                        results.append({
+                            "race_name": str(row.get("race_name", "")),
+                            "fukusho": bool(row.get("fukusho_hit", False)),
+                            "umaren": bool(row.get("umaren_hit", False)),
+                            "sanren": bool(row.get("sanrenpuku_hit", False)),
+                            "bet": int(row.get("bet_total", 0)),
+                            "return_total": int(row.get("return_total", 0)),
+                        })
+                    from keiba_predictor.x_post import post_weekly_summary_tweet
+                    post_weekly_summary_tweet(results)
+        except Exception as e:
+            logger.warning(f"  [X] 週次サマリー投稿エラー: {e}")
+
 
 # ══════════════════════════════════════════════════════════════
 # ユーティリティ

@@ -145,42 +145,78 @@ def build_result_tweet(
     payouts: dict,
     roi_pct: float,
 ) -> str:
-    from keiba_predictor.discord_notify import _check_sanrenpuku_raw
+    from keiba_predictor.discord_notify import (
+        _check_sanrenpuku_raw, _check_umaren_raw,
+    )
 
     grade = _grade_label(race_name)
     short = _short_name(race_name)
-    lines = [f"🏆【{short}{' ' + grade if grade else ''}】KEIBA EDGE結果"]
-
-    pred_num_to_mark: dict[int, str] = {}
-    for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
-        p = pred.get(role, {})
-        num = p.get("horse_number")
-        if num is not None:
-            pred_num_to_mark[int(num)] = mark
 
     predicted_nums = pred.get("predicted_top3_nums", [])
+    ana_horse_num = pred.get("ana_horse_num")
 
+    # 本命情報
+    honmei = pred.get("honmei", {})
+    honmei_num = honmei.get("horse_number")
+    honmei_name = honmei.get("horse_name", "")
+
+    # 実際の3着以内
     df = actual_df.copy()
     df["_fp"] = pd.to_numeric(df["finish_position"], errors="coerce")
     top3 = df[df["_fp"].isin([1, 2, 3])].sort_values("_fp").head(3)
     actual_nums: list[int] = []
     for _, r in top3.iterrows():
-        fp   = int(r["_fp"])
-        num  = int(r["horse_number"]) if pd.notna(r.get("horse_number")) else 0
-        name = str(r.get("horse_name", ""))
+        num = int(r["horse_number"]) if pd.notna(r.get("horse_number")) else 0
         actual_nums.append(num)
-        mark = pred_num_to_mark.get(num, "　")
-        icon = "✅" if num in predicted_nums else ""
-        lines.append(f"{fp}着{mark}{num}番{name}{icon}")
 
-    sanren_hit, _ = _check_sanrenpuku_raw(predicted_nums, actual_nums, payouts)
-    lines.append(f"3連複{'✅的中！' if sanren_hit else '❌ハズレ'}")
+    # 的中判定
+    fukusho_hit = honmei_num is not None and int(honmei_num) in actual_nums
+    umaren_hit, umaren_pay = _check_umaren_raw(predicted_nums, actual_nums, payouts)
+    sanren_hit, sanren_pay = _check_sanrenpuku_raw(
+        predicted_nums, actual_nums, payouts, ana_horse_num)
 
-    if roi_pct > 0:
-        lines.append(f"累計回収率{roi_pct:.0f}%")
+    f_icon = "✅" if fukusho_hit else "❌"
+    u_icon = "✅" if umaren_hit else "❌"
+    s_icon = "✅" if sanren_hit else "❌"
 
-    lines.append(f"#競馬 #{'的中' if sanren_hit else 'AI予想'} #{short} #KEIBA_EDGE")
-    return "\n".join(lines)
+    SEP = "━━━━━━━━━━━━━━━━"
+
+    any_hit = fukusho_hit or umaren_hit or sanren_hit
+
+    if sanren_hit:
+        # 3連複的中: 特別フォーマット
+        pay_str = re.sub(r"[¥,]", "", str(sanren_pay)) if sanren_pay else ""
+        lines = [
+            "🎯💥 KEIBA EDGE 的中！",
+            SEP,
+            f"【{short}{' ' + grade if grade else ''}】",
+            f"複勝{f_icon} 馬連{u_icon} 3連複{s_icon}",
+            "",
+            f"3連複 {pay_str}円的中！" if pay_str else "3連複 的中！",
+            f"回収率 {roi_pct:.0f}%" if roi_pct > 0 else "",
+            "",
+            f"◎{honmei_num}番{honmei_name}" if honmei_num else "",
+            f"#競馬的中 #{short} #KEIBA_EDGE",
+        ]
+    elif any_hit:
+        # 複勝または馬連のみ的中
+        lines = [
+            "🎯 KEIBA EDGE 的中！",
+            f"【{short}{' ' + grade if grade else ''}】",
+            f"複勝{f_icon} 馬連{u_icon} 3連複{s_icon}",
+            f"回収率{roi_pct:.0f}%" if roi_pct > 0 else "",
+            f"#競馬的中 #{short} #KEIBA_EDGE",
+        ]
+    else:
+        # 全外れ: ハッシュタグなし
+        lines = [
+            f"🏆【{short}{' ' + grade if grade else ''}】KEIBA EDGE結果",
+            f"複勝{f_icon} 馬連{u_icon} 3連複{s_icon}",
+            f"累計回収率{roi_pct:.0f}%" if roi_pct > 0 else "",
+        ]
+
+    # 空行を除去
+    return "\n".join(line for line in lines if line)
 
 
 def post_result_tweet(
@@ -203,4 +239,63 @@ def post_result_tweet(
 
     text = build_result_tweet(race_name, actual_df, pred, payouts, roi_pct)
     print(f"[X結果ツイート]\n{text}", flush=True)
+    return _safe_post(client, text)
+
+
+# ── 週次サマリーツイート ─────────────────────────────────────────────────
+
+def build_weekly_summary_tweet(results: list[dict]) -> str:
+    """
+    週次サマリーツイートを構築する。
+
+    Args:
+        results: [{"race_name": "日経賞", "fukusho": True, "umaren": True,
+                    "sanren": False, "bet": 1400, "return_total": 1200}, ...]
+    """
+    SEP = "━━━━━━━━━━━━━━━━"
+
+    lines = [
+        "📊 今週のKEIBA EDGE成績",
+        SEP,
+    ]
+
+    hit_count = 0
+    for r in results:
+        name = _short_name(r.get("race_name", ""))
+        f_icon = "✅" if r.get("fukusho") else "❌"
+        u_icon = "✅" if r.get("umaren") else "❌"
+        s_icon = "✅" if r.get("sanren") else "❌"
+        if r.get("fukusho") or r.get("umaren") or r.get("sanren"):
+            hit_count += 1
+        lines.append(f"{name} {f_icon}{u_icon}{s_icon}")
+
+    total = len(results)
+    fukusho_hits = sum(1 for r in results if r.get("fukusho"))
+    fukusho_rate = (fukusho_hits / total * 100) if total else 0
+
+    total_bet = sum(r.get("bet", 0) for r in results)
+    total_ret = sum(r.get("return_total", 0) for r in results)
+    roi = (total_ret / total_bet * 100) if total_bet > 0 else 0
+
+    lines += [
+        "",
+        f"{hit_count}/{total}レース的中",
+        f"複勝的中率: {fukusho_rate:.0f}%",
+        f"回収率: {roi:.0f}%",
+        SEP,
+        "来週も予想します👇",
+        "#KEIBA_EDGE #AI競馬予想",
+    ]
+
+    return "\n".join(lines)
+
+
+def post_weekly_summary_tweet(results: list[dict]) -> bool:
+    """週次サマリーをXに投稿する。"""
+    client = _build_client()
+    if client is None:
+        return False
+
+    text = build_weekly_summary_tweet(results)
+    print(f"[X週次サマリーツイート]\n{text}", flush=True)
     return _safe_post(client, text)
