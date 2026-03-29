@@ -482,8 +482,9 @@ def predict_live(
     result = predict_race(race_df, model_bundle)
     result = calc_ev_and_flags(result)
 
-    race_name   = shutuba_info["race_name"]
-    course_info = shutuba_info["course_info"]
+    race_name   = shutuba_info.get("race_name", "")
+    course_info = shutuba_info.get("course_info", "")
+    print(f"[DEBUG] shutuba_info keys={list(shutuba_info.keys())} race_date={shutuba_info.get('race_date', '(なし)')}", flush=True)
 
     from keiba_predictor.ai_comment import generate_comments, generate_report_text, save_report
     ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)

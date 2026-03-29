@@ -894,7 +894,9 @@ def run_predict_notify(
 
     notified = 0
     for race in grade_races:
-        race_id, race_name, race_date = race["race_id"], race["race_name"], race["race_date"]
+        race_id   = race["race_id"]
+        race_name = race.get("race_name", race_id)
+        race_date = race.get("race_date", "")
 
         # ── 常に predict_live() で出馬表をリアルタイム取得 ────────
         # featured_races.csv は race_id/name/grade のみで特徴量なし。
@@ -989,7 +991,9 @@ def run_result_notify(
 
     notified = 0
     for race in grade_races:
-        race_id, race_name, race_date = race["race_id"], race["race_name"], race["race_date"]
+        race_id   = race["race_id"]
+        race_name = race.get("race_name", race_id)
+        race_date = race.get("race_date", "")
 
         # 結果スクレイピング
         actual_df = scrape_race_result(race_id, session)
