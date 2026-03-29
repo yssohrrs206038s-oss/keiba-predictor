@@ -72,6 +72,8 @@ FEATURE_COLS = [
     "horse_track_fukusho_rate",  # 馬場状態別複勝率（良/稍重/重/不良）
     "running_style_enc",         # 脚質（逃=0/先=1/差=2/追=3）
     "pace_pressure",             # 展開圧力（同レース内の逃げ+先行馬の数）
+    "jockey_course_fukusho_rate",# 騎手×コース（venue+course_type）複勝率
+    "jockey_dist_fukusho_rate",  # 騎手×距離帯複勝率
 ]
 
 
@@ -351,6 +353,49 @@ def add_jockey_horse_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _dist_band_label(distance) -> str:
+    """距離帯ラベルを返す: 短距離/マイル/中距離/長距離。"""
+    d = pd.to_numeric(distance, errors="coerce")
+    if pd.isna(d):
+        return "unknown"
+    if d < 1400:
+        return "sprint"
+    if d <= 1800:
+        return "mile"
+    if d <= 2200:
+        return "middle"
+    return "long"
+
+
+def add_jockey_course_dist_features(df: pd.DataFrame) -> pd.DataFrame:
+    """騎手×コース（venue+course_type）複勝率と騎手×距離帯複勝率を追加する。
+
+    当該レース自身は含めない（leakage防止）。
+    """
+    df = df.sort_values(["jockey_id", "race_date"]).reset_index(drop=True)
+
+    # 騎手×venue×course_type 複勝率
+    logger.info("騎手×コース複勝率を計算中...")
+    if "venue" in df.columns and "course_type_enc" in df.columns:
+        df["jockey_course_fukusho_rate"] = (
+            df.groupby(["jockey_id", "venue", "course_type_enc"], group_keys=False)["top3"]
+            .transform(lambda x: x.shift(1).expanding().mean())
+        )
+    else:
+        df["jockey_course_fukusho_rate"] = np.nan
+
+    # 騎手×距離帯 複勝率
+    logger.info("騎手×距離帯複勝率を計算中...")
+    df["_jockey_dist_band"] = df["distance"].apply(_dist_band_label)
+    df["jockey_dist_fukusho_rate"] = (
+        df.groupby(["jockey_id", "_jockey_dist_band"], group_keys=False)["top3"]
+        .transform(lambda x: x.shift(1).expanding().mean())
+    )
+    df = df.drop(columns=["_jockey_dist_band"])
+
+    return df
+
+
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     クリーニング済みDataFrameにすべての特徴量を追加して返す。
@@ -364,6 +409,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df = add_race_grade_feature(df)
     df = add_horse_course_dist_features(df)
     df = add_jockey_horse_features(df)      # jockey_fukusho_rate に依存するため最後
+    df = add_jockey_course_dist_features(df)
 
     # 存在しない特徴量列を NaN で補完
     for col in FEATURE_COLS:

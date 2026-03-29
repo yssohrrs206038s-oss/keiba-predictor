@@ -172,6 +172,62 @@ def _jockey_horse_rate(
     return float(top3.mean()) if len(top3) >= 3 else fallback
 
 
+def _jockey_course_rate(
+    jockey_id: str,
+    history: pd.DataFrame,
+    race_date: pd.Timestamp,
+    venue: str,
+    course_type_enc: int,
+) -> float:
+    """騎手×コース（venue+course_type）の過去複勝率を返す。"""
+    if not jockey_id or history.empty or "race_date" not in history.columns:
+        return np.nan
+    if "venue" not in history.columns:
+        return np.nan
+    past = history[
+        (history["jockey_id"].astype(str) == jockey_id) &
+        (history["race_date"] < race_date) &
+        (history["venue"].astype(str) == str(venue)) &
+        (pd.to_numeric(history["course_type_enc"], errors="coerce") == course_type_enc)
+    ]
+    top3 = pd.to_numeric(past["top3"], errors="coerce").dropna()
+    return float(top3.mean()) if len(top3) >= 1 else np.nan
+
+
+def _jockey_dist_rate(
+    jockey_id: str,
+    history: pd.DataFrame,
+    race_date: pd.Timestamp,
+    distance: int,
+) -> float:
+    """騎手×距離帯の過去複勝率を返す。
+
+    距離帯: 短距離(<1400m), マイル(1400-1800m), 中距離(1800-2200m), 長距離(>2200m)
+    """
+    if not jockey_id or history.empty or "race_date" not in history.columns:
+        return np.nan
+    if "distance" not in history.columns:
+        return np.nan
+
+    hist_dist = pd.to_numeric(history["distance"], errors="coerce")
+    if distance < 1400:
+        band_mask = hist_dist < 1400
+    elif distance <= 1800:
+        band_mask = (hist_dist >= 1400) & (hist_dist <= 1800)
+    elif distance <= 2200:
+        band_mask = (hist_dist > 1800) & (hist_dist <= 2200)
+    else:
+        band_mask = hist_dist > 2200
+
+    past = history[
+        (history["jockey_id"].astype(str) == jockey_id) &
+        (history["race_date"] < race_date) &
+        band_mask
+    ]
+    top3 = pd.to_numeric(past["top3"], errors="coerce").dropna()
+    return float(top3.mean()) if len(top3) >= 1 else np.nan
+
+
 def _horse_track_rate(
     horse_hist: pd.DataFrame,
     race_date: pd.Timestamp,
@@ -215,6 +271,7 @@ def build_live_features(
     race_date_str   = shutuba_info.get("race_date", "")
     distance            = int(shutuba_info.get("distance", 0))
     course_type_enc     = int(shutuba_info.get("course_type_enc", 1))
+    venue               = str(shutuba_info.get("venue", ""))
     race_grade_enc      = int(shutuba_info.get("race_grade_enc", 0))
     track_condition_enc = shutuba_info.get("track_condition_enc")  # None if unknown
 
@@ -251,6 +308,8 @@ def build_live_features(
         jockey_rate  = _jockey_rate(jockey_id,  history, race_date)
         trainer_rate = _trainer_rate(trainer_id, history, race_date)
         combo_rate   = _jockey_horse_rate(horse_hist, jockey_id, race_date, jockey_rate)
+        jockey_course_rate = _jockey_course_rate(jockey_id, history, race_date, venue, course_type_enc)
+        jockey_dist_rate   = _jockey_dist_rate(jockey_id, history, race_date, distance)
 
         row: dict = {
             # メタ情報（モデル特徴量ではないが後処理で使用）
@@ -288,6 +347,8 @@ def build_live_features(
                 if track_condition_enc is not None else np.nan
             ),
             "running_style_enc": h.get("running_style_enc"),
+            "jockey_course_fukusho_rate": jockey_course_rate,
+            "jockey_dist_fukusho_rate":   jockey_dist_rate,
         }
 
         # FEATURE_COLS に含まれる列が NaN なら中央値で補完
