@@ -151,7 +151,28 @@ def generate_comments(
         _err(f"anthropic パッケージが未インストールです: {e}")
         return {}
 
-    # ── Step 3: 馬データを組み立て ──────────────────────────
+    # ── Step 3〜6: データ組立 → APIコール → JSON解析 ────────
+    # 全体をtry/exceptで囲み、予期しないエラーでもクラッシュしない
+    try:
+        return _generate_comments_inner(result_df, race_name, course_info, key, _dbg, _err, _log)
+    except Exception as e:
+        _err(f"AI解説生成で予期しないエラー: {type(e).__name__}: {e}")
+        logger.debug(traceback.format_exc())
+        return {}
+
+
+def _generate_comments_inner(
+    result_df: pd.DataFrame,
+    race_name: str,
+    course_info: str,
+    key: str,
+    _dbg,
+    _err,
+    _log,
+) -> dict[str, str]:
+    """generate_comments の内部実装。エラーは呼び出し元で捕捉する。"""
+    import anthropic
+
     _dbg(f"Step3: データ組み立て開始  race_name={race_name!r}  course_info={course_info!r}")
 
     # prob_top3 降順でランク付け（1位=◎🔥 2位=○✨ 3位=▲⚡）
@@ -167,7 +188,8 @@ def generate_comments(
         num = str(int(row["horse_number"])) if pd.notna(row.get("horse_number")) else "?"
 
         prob = float(row["prob_top3"]) if pd.notna(row.get("prob_top3")) else 0.0
-        ev_val = float(row["ev_score"]) if pd.notna(row.get("ev_score")) else 0.0
+        _ev_raw = row.get("ev_score") if "ev_score" in row.index else None
+        ev_val = float(_ev_raw) if pd.notna(_ev_raw) else 0.0
 
         entry: dict = {
             "馬番": num,
