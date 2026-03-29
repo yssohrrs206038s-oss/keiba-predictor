@@ -6,62 +6,65 @@
     "venue": "中山",
     "course_info": "芝2500m",
     "honmei": {
-      "horse_number": 15,
-      "horse_name": "マイユニバース",
-      "prob": 0.5812138319015503
-    },
-    "taikou": {
       "horse_number": 10,
       "horse_name": "シャイニングソード",
-      "prob": 0.5046787858009338
+      "prob": 0.5357319712638855,
+      "odds": 19.3
+    },
+    "taikou": {
+      "horse_number": 15,
+      "horse_name": "マイユニバース",
+      "prob": 0.5344517230987549,
+      "odds": 19.3
     },
     "ana": {
       "horse_number": 1,
       "horse_name": "ミクニインスパイア",
-      "prob": 0.44380983710289
+      "prob": 0.46989569067955017,
+      "odds": 19.3
     },
     "predicted_top3_nums": [
-      15,
       10,
+      15,
       1
     ],
     "predicted_top5_nums": [
-      15,
       10,
+      15,
       1,
       3,
       7
     ],
-    "ana_horse_num": 9,
+    "ana_horse_num": 5,
     "ev_top3": [
-      {
-        "horse_number": 15,
-        "horse_name": "マイユニバース",
-        "ev_score": 14.065,
-        "prob": 0.5812,
-        "odds": 24.2
-      },
       {
         "horse_number": 10,
         "horse_name": "シャイニングソード",
-        "ev_score": 12.213,
-        "prob": 0.5047,
-        "odds": 24.2
+        "ev_score": 10.34,
+        "prob": 0.5357,
+        "odds": 19.3
+      },
+      {
+        "horse_number": 15,
+        "horse_name": "マイユニバース",
+        "ev_score": 10.315,
+        "prob": 0.5345,
+        "odds": 19.3
       },
       {
         "horse_number": 1,
         "horse_name": "ミクニインスパイア",
-        "ev_score": 10.74,
-        "prob": 0.4438,
-        "odds": 24.2
+        "ev_score": 9.069,
+        "prob": 0.4699,
+        "odds": 19.3
       }
     ],
     "dangerous_horses": [
       {
         "horse_number": 7,
         "horse_name": "コスモキュランダ",
-        "popularity": 2,
-        "prob": 0.4019,
+        "popularity": 1,
+        "prob": 0.4495,
         "reasons": [
           "1〜2番人気だが前走8着"
         ]
@@ -70,17 +73,13 @@
         "horse_number": 14,
         "horse_name": "ローシャムパーク",
         "popularity": 3,
-        "prob": 0.3035,
+        "prob": 0.3639,
         "reasons": [
-          "AI確率30%（3番人気以内なのに低い）"
+          "AI確率36%（3番人気以内なのに低い）"
         ]
       }
     ],
-    "ai_comments": {
-      "15": "◎🔥 AI3着以内確率58.1%で断トツの信頼度！EVスコア14.07は群を抜いています。前走2着から距離短縮で好走の可能性大。4番人気24.2倍は割安感満載で、ここは確実に狙うべき一頭。唯一の懸念はダート→芝転換という点のみ。",
-      "10": "○✨ AI3着以内確率50.5%で堅実性が光ります。騎手複勝率100%という最強の信頼馬で、安定感は◎印に匹敵。前走3着から距離300m短縮で脚が活きる展開必至。6番人気24.2倍は穴狙いの価値あり。距離短縮への適応が課題か。",
-      "1": "▲⚡ 前走勝利の実力馬で、騎手複勝率0.429と経験値も豊富。1番人気という評価は妥当。ただAI3着以内確率44.4%、EVスコア10.74とこの面子では見劣りは否めません。本来ならチャンスも、この勝負では控えめな評価に。"
-    }
+    "ai_comments": {}
   },
   "202609020111": {
     "race_name": "毎日杯",
@@ -89,65 +88,61 @@
     "venue": "阪神",
     "course_info": "芝1800m",
     "honmei": {
-      "horse_number": 2,
-      "horse_name": "カフジエメンタール",
-      "prob": 0.7058325409889221,
-      "odds": 24.2
-    },
-    "taikou": {
       "horse_number": 7,
       "horse_name": "シーズザスローン",
-      "prob": 0.7025817632675171,
-      "odds": 24.2
+      "prob": 0.7236478924751282,
+      "odds": 19.3
     },
-    "ana": {
+    "taikou": {
       "horse_number": 6,
       "horse_name": "ウップヘリーア",
-      "prob": 0.6781970262527466,
-      "odds": 24.2
+      "prob": 0.6759458184242249,
+      "odds": 19.3
+    },
+    "ana": {
+      "horse_number": 2,
+      "horse_name": "カフジエメンタール",
+      "prob": 0.6604613065719604,
+      "odds": 19.3
     },
     "predicted_top3_nums": [
-      2,
-      7,
-      6
-    ],
-    "predicted_top5_nums": [
-      2,
       7,
       6,
+      2
+    ],
+    "predicted_top5_nums": [
+      7,
+      6,
+      2,
       4,
       3
     ],
     "ana_horse_num": 1,
     "ev_top3": [
       {
-        "horse_number": 2,
-        "horse_name": "カフジエメンタール",
-        "ev_score": 17.081,
-        "prob": 0.7058,
-        "odds": 24.2
-      },
-      {
         "horse_number": 7,
         "horse_name": "シーズザスローン",
-        "ev_score": 17.002,
-        "prob": 0.7026,
-        "odds": 24.2
+        "ev_score": 13.966,
+        "prob": 0.7236,
+        "odds": 19.3
       },
       {
         "horse_number": 6,
         "horse_name": "ウップヘリーア",
-        "ev_score": 16.412,
-        "prob": 0.6782,
-        "odds": 24.2
+        "ev_score": 13.046,
+        "prob": 0.6759,
+        "odds": 19.3
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "カフジエメンタール",
+        "ev_score": 12.747,
+        "prob": 0.6605,
+        "odds": 19.3
       }
     ],
     "dangerous_horses": [],
-    "ai_comments": {
-      "2": "◎🔥 AI3着以内確率70.6%で断トツの信頼度！EVスコア17.08は本命級の実力を示唆。2番人気の支持も厚く、前走3着から確実にステップアップする流れが見える。このレベルの数値が揃うのは稀。ただし人気薄との比較では若干の割高感は否めない。",
-      "7": "○✨ AI3着以内確率70.3%で本命と僅差の好確度！5番人気の穴馬ながらEVスコア17.00の高水準をマーク。前走3着で調子上向き、そこからの躍進パターンが十分成立する局面。人気の薄さが価値を引き出すポイント。逆転狙いなら最高の一頭。",
-      "6": "▲⚡ AI3着以内確率67.8%、EVスコア16.41で堅実な勝負馬。3番人気ながら前走1着からの連勝を狙える好位置。他2頭との確率差は僅かで、前走勝利という直近成績が光る。ただ数値面では若干後塵を拝する形。"
-    }
+    "ai_comments": {}
   },
   "202606030211": {
     "race_name": "マーチS",
@@ -320,5 +315,150 @@
       "18": "○✨ AI3着以内確率43.7%で堅実な二番手評価。EVスコア10.58と十分な数値を確保し、6番人気という立場が狙い目。前走11着からの巻き返し劇を狙える位置付け。安定感重視の方は流し先に最適の一頭。",
       "13": "▲⚡ 1番人気の期待値を検証すると、AI3着以内確率39.4%はやや控えめ。EVスコア9.54と三頭中最低数値。前走は2着と悪くないが、人気ほどの評価にはAIモデルは慎重。穴狙いなら視野外推奨。"
     }
+  },
+  "202607010411": {
+    "race_name": "愛知杯",
+    "race_date": "2026-03-22",
+    "start_time": "15:15",
+    "venue": "中京",
+    "course_info": "芝1400m",
+    "honmei": {
+      "horse_number": 11,
+      "horse_name": "スリールミニョン",
+      "prob": 0.5885117053985596,
+      "odds": 19.3
+    },
+    "taikou": {
+      "horse_number": 5,
+      "horse_name": "ウイントワイライト",
+      "prob": 0.5695191621780396,
+      "odds": 19.3
+    },
+    "ana": {
+      "horse_number": 14,
+      "horse_name": "シンバーシア",
+      "prob": 0.4915289580821991,
+      "odds": 19.3
+    },
+    "predicted_top3_nums": [
+      11,
+      5,
+      14
+    ],
+    "predicted_top5_nums": [
+      11,
+      5,
+      14,
+      15,
+      12
+    ],
+    "ana_horse_num": 13,
+    "ev_top3": [
+      {
+        "horse_number": 11,
+        "horse_name": "スリールミニョン",
+        "ev_score": 11.358,
+        "prob": 0.5885,
+        "odds": 19.3
+      },
+      {
+        "horse_number": 5,
+        "horse_name": "ウイントワイライト",
+        "ev_score": 10.992,
+        "prob": 0.5695,
+        "odds": 19.3
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "シンバーシア",
+        "ev_score": 9.487,
+        "prob": 0.4915,
+        "odds": 19.3
+      }
+    ],
+    "dangerous_horses": [],
+    "ai_comments": {}
+  },
+  "202609020211": {
+    "race_name": "六甲S",
+    "race_date": "2026-03-29",
+    "start_time": "15:15",
+    "venue": "阪神",
+    "course_info": "芝1600m",
+    "honmei": {
+      "horse_number": 13,
+      "horse_name": "バレエマスター",
+      "prob": 0.5905486941337585,
+      "odds": 19.3
+    },
+    "taikou": {
+      "horse_number": 9,
+      "horse_name": "ブルーミンデザイン",
+      "prob": 0.4920288622379303,
+      "odds": 19.3
+    },
+    "ana": {
+      "horse_number": 4,
+      "horse_name": "アクートゥス",
+      "prob": 0.48412638902664185,
+      "odds": 19.3
+    },
+    "predicted_top3_nums": [
+      13,
+      9,
+      4
+    ],
+    "predicted_top5_nums": [
+      13,
+      9,
+      4,
+      6,
+      5
+    ],
+    "ana_horse_num": 7,
+    "ev_top3": [
+      {
+        "horse_number": 13,
+        "horse_name": "バレエマスター",
+        "ev_score": 11.398,
+        "prob": 0.5905,
+        "odds": 19.3
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "ブルーミンデザイン",
+        "ev_score": 9.496,
+        "prob": 0.492,
+        "odds": 19.3
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "アクートゥス",
+        "ev_score": 9.344,
+        "prob": 0.4841,
+        "odds": 19.3
+      }
+    ],
+    "dangerous_horses": [
+      {
+        "horse_number": 9,
+        "horse_name": "ブルーミンデザイン",
+        "popularity": 2,
+        "prob": 0.492,
+        "reasons": [
+          "1〜2番人気だが前走8着"
+        ]
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "ベラジオボンド",
+        "popularity": 1,
+        "prob": 0.4802,
+        "reasons": [
+          "1〜2番人気だが前走9着"
+        ]
+      }
+    ],
+    "ai_comments": {}
   }
 }
