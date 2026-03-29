@@ -739,7 +739,8 @@ def scrape_payouts(race_id: str, session: requests.Session) -> dict:
 def _fmt_result(race_name: str, race_date: str,
                 actual_df: pd.DataFrame,
                 pred: dict,
-                payouts: dict) -> str:
+                payouts: dict,
+                manual: Optional[dict] = None) -> str:
     """日曜結果メッセージを生成する。"""
     RULE = "━" * 24
     lines = [f"🏆 【KEIBA EDGE】{race_name} 結果  {race_date}", RULE]
@@ -789,26 +790,35 @@ def _fmt_result(race_name: str, race_date: str,
 
     lines.append(RULE)
 
-    # 複勝的中: predicted_top5_nums[0]（◎本命）が 3 着以内
-    # 買い目「複勝：本命1頭」と一致させるため honmei ではなく top5[0] を使用
-    honmei_num = predicted_nums[0] if predicted_nums else None
-    honmei_name = pred.get("honmei", {}).get("horse_name", "")
-    fukusho_hit = (honmei_num is not None) and (int(honmei_num) in actual_top3_nums)
+    # manual_results.json のフラグがあればそちらを優先
+    if manual and "fukusho_hit" in manual:
+        fukusho_hit = manual["fukusho_hit"]
+        umaren_hit  = manual.get("umaren_hit", False)
+        sanren_hit  = manual.get("sanrenpuku_hit", False)
+        manual_pay  = manual.get("payouts", {})
+        umaren_pay  = f"¥{manual_pay['umaren']:,}" if manual_pay.get("umaren") else ""
+        sanren_pay  = f"¥{manual_pay['sanrenpuku']:,}" if manual_pay.get("sanrenpuku") else ""
+        honmei_num  = predicted_nums[0] if predicted_nums else None
+        honmei_name = pred.get("honmei", {}).get("horse_name", "")
+    else:
+        # 自動判定
+        honmei_num = predicted_nums[0] if predicted_nums else None
+        honmei_name = pred.get("honmei", {}).get("horse_name", "")
+        fukusho_hit = (honmei_num is not None) and (int(honmei_num) in actual_top3_nums)
+        umaren_hit, umaren_pay = _check_umaren_raw(predicted_nums, actual_top3_nums, payouts)
+        ana_horse_num = pred.get("ana_horse_num")
+        sanren_hit, sanren_pay = _check_sanrenpuku_raw(predicted_nums, actual_top3_nums, payouts, ana_horse_num)
+
     lines.append(f"複勝  {'✅ 的中' if fukusho_hit else '❌ ハズレ'}（◎{honmei_num}番{honmei_name}）")
 
-    # 馬連
-    umaren_hit, umaren_pay = _check_umaren_raw(predicted_nums, actual_top3_nums, payouts)
     umaren_line = f"馬連  {'✅ 的中' if umaren_hit else '❌ ハズレ'}"
     if umaren_hit and umaren_pay:
-        umaren_line += f"（配当{re.sub(r'[¥,]', '', umaren_pay)}円）"
+        umaren_line += f"（配当{re.sub(r'[¥,]', '', str(umaren_pay))}円）"
     lines.append(umaren_line)
 
-    # 3連複
-    ana_horse_num = pred.get("ana_horse_num")
-    sanren_hit, sanren_pay = _check_sanrenpuku_raw(predicted_nums, actual_top3_nums, payouts, ana_horse_num)
     sanren_line = f"3連複 {'✅ 的中' if sanren_hit else '❌ ハズレ'}"
     if sanren_hit and sanren_pay:
-        sanren_line += f"（配当{re.sub(r'[¥,]', '', sanren_pay)}円）"
+        sanren_line += f"（配当{re.sub(r'[¥,]', '', str(sanren_pay))}円）"
     lines.append(sanren_line)
 
     return "\n".join(lines)
@@ -1285,7 +1295,7 @@ def run_result_notify(
             pred = {"race_name": race_name, "race_date": race_date,
                     "honmei": {}, "taikou": {}, "ana": {}, "predicted_top3_nums": []}
 
-        msg = _fmt_result(race_name, race_date, actual_df, pred, payouts)
+        msg = _fmt_result(race_name, race_date, actual_df, pred, payouts, manual=manual)
         if send_discord(webhook_url, msg):
             notified += 1
             logger.info(f"  送信: {race_name}")
