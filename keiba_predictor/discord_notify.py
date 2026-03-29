@@ -770,10 +770,12 @@ def _fmt_result(race_name: str, race_date: str,
 
     lines.append(RULE)
 
-    # 複勝的中: ◎ が 3 着以内
-    honmei_num = pred.get("honmei", {}).get("horse_number")
+    # 複勝的中: predicted_top5_nums[0]（◎本命）が 3 着以内
+    # 買い目「複勝：本命1頭」と一致させるため honmei ではなく top5[0] を使用
+    honmei_num = predicted_nums[0] if predicted_nums else None
+    honmei_name = pred.get("honmei", {}).get("horse_name", "")
     fukusho_hit = (honmei_num is not None) and (int(honmei_num) in actual_top3_nums)
-    lines.append(f"複勝  {'✅ 的中' if fukusho_hit else '❌ ハズレ'}")
+    lines.append(f"複勝  {'✅ 的中' if fukusho_hit else '❌ ハズレ'}（◎{honmei_num}番{honmei_name}）")
 
     # 馬連
     umaren_hit, umaren_pay = _check_umaren_raw(predicted_nums, actual_top3_nums, payouts)
@@ -783,7 +785,8 @@ def _fmt_result(race_name: str, race_date: str,
     lines.append(umaren_line)
 
     # 3連複
-    sanren_hit, sanren_pay = _check_sanrenpuku_raw(predicted_nums, actual_top3_nums, payouts)
+    ana_horse_num = pred.get("ana_horse_num")
+    sanren_hit, sanren_pay = _check_sanrenpuku_raw(predicted_nums, actual_top3_nums, payouts, ana_horse_num)
     sanren_line = f"3連複 {'✅ 的中' if sanren_hit else '❌ ハズレ'}"
     if sanren_hit and sanren_pay:
         sanren_line += f"（配当{re.sub(r'[¥,]', '', sanren_pay)}円）"
@@ -810,15 +813,18 @@ def _check_umaren_raw(
     actual_top3_nums: list[int],
     payouts: dict,
 ) -> tuple[bool, str]:
-    """馬連的中判定。(hit, pay_str) を返す。"""
+    """馬連的中判定。買い目はtop3の全組み合わせ(3点)。(hit, pay_str) を返す。"""
     if len(predicted_nums) < 2 or len(actual_top3_nums) < 2:
         return False, ""
-    p1, p2 = predicted_nums[0], predicted_nums[1]
     a1, a2 = actual_top3_nums[0], actual_top3_nums[1]
-    hit   = {p1, p2} == {a1, a2}
-    combo = f"{p1}-{p2}"
-    pay   = _get_payout(payouts, "馬連", combo)
-    return hit, pay
+    actual_set = {a1, a2}
+    # 買い目: predicted_top3_nums[:3] の全組み合わせ
+    for pair in combinations(predicted_nums[:3], 2):
+        if set(pair) == actual_set:
+            combo = f"{pair[0]}-{pair[1]}"
+            pay = _get_payout(payouts, "馬連", combo)
+            return True, pay
+    return False, ""
 
 
 def _check_wide_pairs_raw(
@@ -842,14 +848,27 @@ def _check_sanrenpuku_raw(
     predicted_nums: list[int],
     actual_top3_nums: list[int],
     payouts: dict,
+    ana_horse_num: Optional[int] = None,
 ) -> tuple[bool, str]:
-    """3連複的中判定。(hit, pay_str) を返す。"""
-    if len(predicted_nums) < 3 or len(actual_top3_nums) < 3:
+    """3連複的中判定。買い目は軸(top5[0])×相手(top5[1:5]+穴馬)。(hit, pay_str) を返す。"""
+    if len(predicted_nums) < 2 or len(actual_top3_nums) < 3:
         return False, ""
-    hit   = set(predicted_nums[:3]) == set(actual_top3_nums[:3])
-    combo = "-".join(str(n) for n in sorted(predicted_nums[:3]))
-    pay   = _get_payout(payouts, "三連複", combo)
-    return hit, pay
+    # 買い目: 軸 = predicted_nums[0], 相手 = predicted_nums[1:5] + 穴馬
+    axis = predicted_nums[0]
+    partners = list(predicted_nums[1:5])
+    if ana_horse_num and ana_horse_num not in partners:
+        partners.append(ana_horse_num)
+    # 軸が3着以内に含まれることが前提
+    if axis not in actual_top3_nums:
+        return False, ""
+    # 相手2頭が3着以内に含まれるか
+    actual_set = set(actual_top3_nums[:3])
+    for pair in combinations(partners, 2):
+        if {axis, pair[0], pair[1]} == actual_set:
+            combo = "-".join(str(n) for n in sorted([axis, pair[0], pair[1]]))
+            pay = _get_payout(payouts, "三連複", combo)
+            return True, pay
+    return False, ""
 
 
 def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str]:

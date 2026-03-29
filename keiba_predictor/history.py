@@ -203,7 +203,8 @@ def record_result(
     # 馬連・ワイド・3連複
     umaren_hit, umaren_pay_str  = _check_umaren_raw(predicted_nums, actual_nums, payouts)
     wide_pairs                  = _check_wide_pairs_raw(predicted_nums, actual_nums, payouts)
-    sanren_hit, sanren_pay_str  = _check_sanrenpuku_raw(predicted_nums, actual_nums, payouts)
+    ana_horse_num = pred.get("ana_horse_num")
+    sanren_hit, sanren_pay_str  = _check_sanrenpuku_raw(predicted_nums, actual_nums, payouts, ana_horse_num)
 
     wide_hit    = any(h for _, h, _ in wide_pairs)
     wide_payout = sum(_payout_str_to_int(p) for _, h, p in wide_pairs if h)
