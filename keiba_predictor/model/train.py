@@ -34,6 +34,29 @@ MODEL_PATH = MODEL_DIR / "xgb_model.pkl"
 IMPORTANCE_PATH = DATA_DIR / "feature_importance.csv"
 IMPORTANCE_PLOT_PATH = DATA_DIR / "feature_importance.png"
 
+# 距離帯の定義
+DISTANCE_BANDS = {
+    "sprint": (0, 1400),       # 1400m以下
+    "mile":   (1401, 1800),    # 1401-1800m
+    "middle": (1801, 2200),    # 1801-2200m
+    "long":   (2201, 99999),   # 2201m以上
+}
+
+DISTANCE_BAND_LABELS = {
+    "sprint": "短距離",
+    "mile":   "マイル",
+    "middle": "中距離",
+    "long":   "長距離",
+}
+
+
+def classify_distance_band(distance: float) -> str:
+    """距離(m)から距離帯名を返す。"""
+    for band, (lo, hi) in DISTANCE_BANDS.items():
+        if lo <= distance <= hi:
+            return band
+    return "middle"  # fallback
+
 # XGBoost デフォルトハイパーパラメータ
 DEFAULT_PARAMS = {
     "objective": "binary:logistic",
@@ -239,7 +262,7 @@ def train(
     logger.info("\n=== Feature Importance (Top 15) ===")
     logger.info(importance.head(15).to_string(index=False))
 
-    # ── モデル保存 ───────────────────────────────────────────
+    # ── モデル保存（統合モデル） ────────────────────────────────
     model_path.parent.mkdir(parents=True, exist_ok=True)
     bundle = {
         "model": final_model,
@@ -253,6 +276,56 @@ def train(
     with open(model_path, "wb") as f:
         pickle.dump(bundle, f)
     logger.info(f"モデル保存: {model_path}")
+
+    # ── 距離帯別モデル学習 ──────────────────────────────────────
+    if "distance" in df.columns:
+        logger.info("\n=== 距離帯別モデル学習 ===")
+        df["_distance_band"] = pd.to_numeric(df["distance"], errors="coerce").apply(
+            lambda d: classify_distance_band(d) if pd.notna(d) else None
+        )
+        for band, (lo, hi) in DISTANCE_BANDS.items():
+            label = DISTANCE_BAND_LABELS[band]
+            df_band = df[df["_distance_band"] == band].reset_index(drop=True)
+            if len(df_band) < 100:
+                logger.warning(f"{label}モデル: データ不足 ({len(df_band)} rows) → スキップ")
+                continue
+
+            X_band = df_band[available_cols].astype(float)
+            y_band = df_band["top3"].astype(int)
+
+            # 交差検証でAUC算出
+            tscv_band = TimeSeriesSplit(n_splits=min(n_splits, max(2, len(df_band) // 500)))
+            band_auc_scores = []
+            for fold, (tr_idx, va_idx) in enumerate(tscv_band.split(X_band), 1):
+                X_tr_b, X_va_b = X_band.iloc[tr_idx], X_band.iloc[va_idx]
+                y_tr_b, y_va_b = y_band.iloc[tr_idx], y_band.iloc[va_idx]
+                m = xgb.XGBClassifier(**params)
+                m.fit(X_tr_b, y_tr_b, eval_set=[(X_va_b, y_va_b)], verbose=False)
+                prob_b = m.predict_proba(X_va_b)[:, 1]
+                band_auc_scores.append(roc_auc_score(y_va_b, prob_b))
+
+            band_auc_mean = float(np.mean(band_auc_scores))
+            logger.info(f"{label}モデル AUC: {band_auc_mean:.3f} ({len(df_band)} rows)")
+
+            # 全データで学習・保存
+            band_model = xgb.XGBClassifier(**params)
+            band_model.fit(X_band, y_band, verbose=False)
+
+            band_path = MODEL_DIR / f"xgb_model_{band}.pkl"
+            with open(band_path, "wb") as f:
+                pickle.dump(
+                    {
+                        "model": band_model,
+                        "feature_cols": available_cols,
+                        "cv_auc_mean": band_auc_mean,
+                        "distance_band": band,
+                    },
+                    f,
+                )
+            logger.info(f"  保存: {band_path}")
+        df.drop(columns=["_distance_band"], inplace=True)
+    else:
+        logger.warning("distance列がないため距離帯別モデルをスキップ")
 
     return final_model
 

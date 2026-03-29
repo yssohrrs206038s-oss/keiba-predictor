@@ -83,7 +83,8 @@ FEATURE_LABELS: dict[str, str] = {
 }
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-MODEL_PATH = Path(__file__).parent / "xgb_model.pkl"
+MODEL_DIR = Path(__file__).parent
+MODEL_PATH = MODEL_DIR / "xgb_model.pkl"
 
 # JRA 競馬場コード → 競馬場名
 VENUE_MAP: dict[str, str] = {
@@ -238,6 +239,21 @@ def compute_shap_top(
 
         results.append(top)
     return results
+
+
+def load_band_model(distance: float) -> Optional[dict]:
+    """距離から距離帯別モデルをロードする。存在しなければNoneを返す。"""
+    from keiba_predictor.model.train import classify_distance_band, DISTANCE_BAND_LABELS
+    band = classify_distance_band(distance)
+    band_path = MODEL_DIR / f"xgb_model_{band}.pkl"
+    if not band_path.exists():
+        logger.info(f"距離帯モデル ({DISTANCE_BAND_LABELS[band]}) が見つかりません → 統合モデルを使用")
+        return None
+    with open(band_path, "rb") as f:
+        bundle = pickle.load(f)
+    label = DISTANCE_BAND_LABELS[band]
+    logger.info(f"距離帯モデル使用: {label} ({int(distance)}m) AUC: {bundle.get('cv_auc_mean', 'N/A'):.4f}")
+    return bundle
 
 
 def predict_race(
@@ -583,7 +599,16 @@ def predict_from_csv(
     if race_df.empty:
         raise ValueError(f"race_id={race_id} がデータに存在しません")
 
-    model_bundle = load_model(model_path)
+    # 距離帯別モデルを優先使用
+    band_bundle = None
+    if "distance" in race_df.columns and model_path is None:
+        dist = pd.to_numeric(race_df["distance"].iloc[0], errors="coerce")
+        if pd.notna(dist):
+            try:
+                band_bundle = load_band_model(float(dist))
+            except Exception as e:
+                logger.warning(f"距離帯モデルロード失敗: {e}")
+    model_bundle = band_bundle if band_bundle else load_model(model_path)
     result = predict_race(race_df, model_bundle)
     result = calc_ev_and_flags(result)
 
@@ -703,8 +728,15 @@ def predict_live(
     if race_df.empty:
         raise ValueError("特徴量の生成に失敗しました")
 
-    # 予測
-    model_bundle = load_model(model_path)
+    # 予測（距離帯別モデルを優先使用）
+    band_bundle = None
+    distance = shutuba_info.get("distance")
+    if distance is not None and model_path is None:
+        try:
+            band_bundle = load_band_model(float(distance))
+        except Exception as e:
+            logger.warning(f"距離帯モデルロード失敗: {e}")
+    model_bundle = band_bundle if band_bundle else load_model(model_path)
     result = predict_race(race_df, model_bundle)
     result = calc_ev_and_flags(result)
 
