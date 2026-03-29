@@ -270,7 +270,9 @@ def weekly_summary(df: pd.DataFrame, week_end: date) -> dict:
         }
     """
     week_start = week_end - timedelta(days=week_end.weekday())  # 月曜
-    mask = (df["date"].dt.date >= week_start) & (df["date"].dt.date <= week_end)
+    ws = pd.Timestamp(week_start)
+    we = pd.Timestamp(week_end)
+    mask = (df["date"] >= ws) & (df["date"] <= we + pd.Timedelta(days=1) - pd.Timedelta(seconds=1))
     wdf = df[mask]
 
     if wdf.empty:
@@ -390,7 +392,9 @@ def build_weekly_report(week_date: str, output_path: Optional[Path] = None) -> s
     streak  = hit_streak(df)
 
     # 当週のレース
-    mask    = (df["date"].dt.date >= week_start) & (df["date"].dt.date <= week_end)
+    _ws = pd.Timestamp(week_start)
+    _we = pd.Timestamp(week_end)
+    mask    = (df["date"] >= _ws) & (df["date"] <= _we + pd.Timedelta(days=1) - pd.Timedelta(seconds=1))
     week_df = df[mask].copy()
 
     lines: list[str] = []
