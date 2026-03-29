@@ -517,8 +517,33 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         or soup.select_one("table[summary*='結果']")
         or soup.select_one("table.nk_tb_common")
     )
+
+    # db.netkeiba.com でテーブルが見つからなければ race.netkeiba.com を試す
     if result_table is None:
-        logger.warning(f"Result table not found: {race_id}")
+        alt_url = f"{RACE_RESULT_SITE_URL}?race_id={race_id}"
+        logger.info(f"db.netkeiba でテーブル未検出 → race.netkeiba を試行: {alt_url}")
+        alt_html = _get_result_html_with_playwright(alt_url)
+        if alt_html:
+            alt_soup = BeautifulSoup(alt_html, "html.parser")
+            result_table = (
+                alt_soup.select_one("table.race_table_01")
+                or alt_soup.select_one("div.ResultTableWrap table")
+                or alt_soup.select_one("table.Shutuba_Table")
+                or alt_soup.select_one("table[summary*='結果']")
+                or alt_soup.select_one("table.nk_tb_common")
+            )
+            if result_table:
+                soup = alt_soup  # 以降の解析もこちらのsoupを使う
+                logger.info("race.netkeiba から結果テーブル取得成功")
+                # デバッグ保存
+                try:
+                    _debug_path = DATA_DIR / "debug" / f"result_race_{race_id}.html"
+                    _debug_path.write_text(alt_soup.prettify(), encoding="utf-8")
+                except Exception:
+                    pass
+
+    if result_table is None:
+        logger.warning(f"Result table not found (both sites): {race_id}")
         return None
 
     # ── ヘッダからカラムインデックスをマッピング ───────────────
