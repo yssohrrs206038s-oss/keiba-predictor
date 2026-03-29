@@ -219,6 +219,33 @@
     .bet-row  { font-size: 12px; color: var(--text); }
     .bet-label{ color: var(--text-muted); margin-right: 6px; font-weight: 600; }
 
+    /* ── モンテカルロ分析 ────────────────────────────────────── */
+    .sim-box {
+      margin-top: 14px;
+      background: rgba(52,152,219,.06);
+      border: 1px solid rgba(52,152,219,.25);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .sim-title {
+      font-size: 12px; font-weight: 700; color: var(--blue);
+      margin-bottom: 8px; letter-spacing: .05em;
+    }
+    .sim-row {
+      font-size: 12px; color: var(--text);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      padding: 3px 0;
+    }
+    .sim-mark { font-weight: 700; min-width: 50px; }
+    .sim-rate { color: var(--text); }
+    .sim-tag {
+      font-size: 10px; font-weight: 700; padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .tag-stable   { background: rgba(46,204,113,.2); color: var(--green); }
+    .tag-volatile { background: rgba(231,76,60,.15); color: #ff9d9d; }
+    .sim-scenario { font-size: 11px; color: var(--text-muted); }
+
     /* ── アラートバッジ ──────────────────────────────────────── */
     .alert-section { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
     .alert-item {
@@ -685,6 +712,37 @@ function renderPredictions(cache) {
       }
     }
 
+    // モンテカルロシミュレーション
+    let simHTML = '';
+    const sim = r.simulation;
+    if (sim && Object.keys(sim).length > 0) {
+      const simMarks = ['◎','○','▲','△','　'];
+      const simNums = (r.predicted_top5_nums || []).filter(n => n != null);
+      const simRows = simNums.slice(0, 5).map((num, i) => {
+        const mc = sim[String(num)];
+        if (!mc) return '';
+        const mark = simMarks[i] || '　';
+        const rate = (mc.top3_rate * 100).toFixed(1);
+        const tag = mc.is_stable ? '🔒安定軸' : '⚡展開依存';
+        const hi = (mc.scenario?.high_pace * 100 || 0).toFixed(0);
+        const sl = (mc.scenario?.slow_pace * 100 || 0).toFixed(0);
+        return `<div class="sim-row">
+          <span class="sim-mark">${mark}${num}番</span>
+          <span class="sim-rate">3着以内 ${rate}%</span>
+          <span class="sim-tag ${mc.is_stable ? 'tag-stable' : 'tag-volatile'}">${tag}</span>
+          <span class="sim-scenario">ハイ${hi}% / スロー${sl}%</span>
+        </div>`;
+      }).filter(s => s).join('');
+
+      if (simRows) {
+        simHTML = `
+          <div class="sim-box">
+            <div class="sim-title">📊 モンテカルロ分析（1万回）</div>
+            ${simRows}
+          </div>`;
+      }
+    }
+
     return `
       <div class="race-card">
         <div class="race-card-header">
@@ -698,6 +756,7 @@ function renderPredictions(cache) {
           <div class="horse-list">${horseHTML}</div>
           ${(dangerous || anaBakkeHTML) ? `<div class="alert-section">${dangerous}${anaBakkeHTML}</div>` : ''}
           ${betHTML}
+          ${simHTML}
         </div>
       </div>`;
   }).join('');

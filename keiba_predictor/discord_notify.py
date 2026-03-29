@@ -772,6 +772,29 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
     except Exception as e:
         logger.warning(f"買い目自動決定失敗: {e}")
 
+    # モンテカルロシミュレーション
+    try:
+        from keiba_predictor.simulation import run_monte_carlo
+        mc_horses = []
+        for i in range(min(len(result_df), 18)):
+            r = result_df.iloc[i]
+            mc_horses.append({
+                "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else i + 1,
+                "horse_name": str(r.get("horse_name", "")),
+                "prob": float(r["prob_top3"]),
+                "running_style_enc": int(r.get("running_style_enc", 2)) if pd.notna(r.get("running_style_enc")) else 2,
+            })
+        mc_result = run_monte_carlo(mc_horses)
+        # 上位5頭のみ保存
+        top5_mc = {}
+        for num in top5_nums[:5]:
+            k = str(num)
+            if k in mc_result:
+                top5_mc[k] = mc_result[k]
+        cache[race_id]["simulation"] = top5_mc
+    except Exception as e:
+        logger.warning(f"モンテカルロシミュレーション失敗: {e}")
+
     _save_cache(cache)
 
 
@@ -1140,6 +1163,27 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
         reasons = d.get("reasons", [])
         reason = reasons[0] if reasons else "要注意"
         lines1.append(f"⚠危険 {num}番{name}（{reason}）")
+
+    # 📊 モンテカルロ分析
+    sim = entry.get("simulation", {})
+    if sim:
+        MARKS_MC = ["◎", "○", "▲", "△", "　"]
+        lines1.append(sep)
+        lines1.append("📊 モンテカルロ分析（1万回）")
+        lines1.append(sep)
+        for rank, num in enumerate(top5_nums[:5]):
+            mc = sim.get(str(num))
+            if not mc:
+                continue
+            mark = MARKS_MC[rank] if rank < len(MARKS_MC) else "　"
+            rate = mc.get("top3_rate", 0) * 100
+            is_stable = mc.get("is_stable", False)
+            tag = "🔒安定軸" if is_stable else "⚡展開依存"
+            sc = mc.get("scenario", {})
+            hi = sc.get("high_pace", 0) * 100
+            sl = sc.get("slow_pace", 0) * 100
+            lines1.append(f"{mark}{num}番 3着以内{rate:.1f}% {tag}")
+            lines1.append(f"　ハイペース{hi:.0f}% / スロー{sl:.0f}%")
 
     lines1.append(sep)
     msg1 = "\n".join(lines1)
