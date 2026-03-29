@@ -19,6 +19,11 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import roc_auc_score
 import xgboost as xgb
 
+try:
+    import shap
+except ImportError:
+    shap = None
+
 from keiba_predictor.features.feature_engineering import FEATURE_COLS
 
 logger = logging.getLogger(__name__)
@@ -188,11 +193,32 @@ def train(
     final_model = xgb.XGBClassifier(**params)
     final_model.fit(X, y, verbose=False)
 
-    # ── Feature Importance ───────────────────────────────────
-    importance = pd.DataFrame({
-        "feature": available_cols,
-        "importance": final_model.feature_importances_,
-    }).sort_values("importance", ascending=False)
+    # ── SHAP値による Feature Importance ────────────────────────
+    shap_values_array = None
+    if shap is not None:
+        try:
+            logger.info("SHAP値を計算中...")
+            explainer = shap.TreeExplainer(final_model)
+            shap_values_array = explainer.shap_values(X)
+            shap_importance = pd.DataFrame({
+                "feature": available_cols,
+                "importance": np.abs(shap_values_array).mean(axis=0),
+            }).sort_values("importance", ascending=False)
+            logger.info("SHAP値ベースの特徴量重要度を使用します")
+        except Exception as e:
+            logger.warning(f"SHAP値計算に失敗、XGBoost標準のimportanceを使用: {e}")
+            shap_importance = None
+    else:
+        logger.warning("shapパッケージ未インストール: pip install shap")
+        shap_importance = None
+
+    if shap_importance is not None:
+        importance = shap_importance
+    else:
+        importance = pd.DataFrame({
+            "feature": available_cols,
+            "importance": final_model.feature_importances_,
+        }).sort_values("importance", ascending=False)
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     importance.to_csv(IMPORTANCE_PATH, index=False, encoding="utf-8-sig")
@@ -201,8 +227,8 @@ def train(
     try:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.barh(importance["feature"][::-1], importance["importance"][::-1])
-        ax.set_xlabel("Importance")
-        ax.set_title("XGBoost Feature Importance")
+        ax.set_xlabel("Mean |SHAP value|" if shap_importance is not None else "Importance")
+        ax.set_title("Feature Importance (SHAP)" if shap_importance is not None else "XGBoost Feature Importance")
         plt.tight_layout()
         fig.savefig(IMPORTANCE_PLOT_PATH, dpi=150)
         plt.close(fig)
@@ -215,16 +241,17 @@ def train(
 
     # ── モデル保存 ───────────────────────────────────────────
     model_path.parent.mkdir(parents=True, exist_ok=True)
+    bundle = {
+        "model": final_model,
+        "feature_cols": available_cols,
+        "cv_auc_mean": float(np.mean(auc_scores)),
+        "cv_fukusho_mean": float(np.mean(fukusho_scores)),
+    }
+    if shap_values_array is not None:
+        bundle["shap_values"] = shap_values_array
+        logger.info("SHAP値をモデルバンドルに保存しました")
     with open(model_path, "wb") as f:
-        pickle.dump(
-            {
-                "model": final_model,
-                "feature_cols": available_cols,
-                "cv_auc_mean": float(np.mean(auc_scores)),
-                "cv_fukusho_mean": float(np.mean(fukusho_scores)),
-            },
-            f,
-        )
+        pickle.dump(bundle, f)
     logger.info(f"モデル保存: {model_path}")
 
     return final_model

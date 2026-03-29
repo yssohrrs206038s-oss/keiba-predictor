@@ -184,6 +184,16 @@ def generate_comments(
         if pd.notna(jfr):
             entry["騎手複勝率"] = f"{jfr:.3f}"
 
+        # SHAP値による予測根拠を追加
+        shap_top = row.get("shap_top")
+        if isinstance(shap_top, list) and shap_top:
+            strengths = [s["label"] for s in shap_top if s.get("value", 0) > 0]
+            concerns = [s["label"] for s in shap_top if s.get("value", 0) < 0]
+            if strengths:
+                entry["AI判定の強み"] = "、".join(strengths)
+            if concerns:
+                entry["AI判定の懸念"] = "、".join(concerns)
+
         horses_data.append(entry)
 
     _dbg(f"Step3 OK: {len(horses_data)} 頭分データ組み立て完了（◎○▲のみ）")
@@ -210,6 +220,7 @@ def generate_comments(
         f"各馬について以下の形式で解説してください：\n"
         f"- AI印を文頭に必ず付ける\n"
         f"- {MAX_COMMENT_LEN}文字以内で簡潔・断定的に\n"
+        f"- 「AI判定の強み」「AI判定の懸念」があれば解説に自然に織り込む\n"
         f"- 強みを前面に、懸念は最後に一言\n"
         f"- 競馬ファンが「買いたい！」と思う表現で\n"
         f"- 解説テキスト内に馬名を含めないこと。馬名は別途見出しに表示されます\n"

@@ -627,12 +627,17 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         r = df.iloc[idx]
         raw_o = pd.to_numeric(r.get("odds"), errors="coerce")
         o_val = None if (not pd.notna(raw_o) or _all_same) else round(float(raw_o), 1)
-        return {
+        entry = {
             "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
             "horse_name":   str(r.get("horse_name", "")),
             "prob":         float(r["prob_top3"]),
             "odds":         o_val,
         }
+        # SHAP値の上位要因を追加
+        shap_top = r.get("shap_top")
+        if isinstance(shap_top, list) and shap_top:
+            entry["shap_top"] = shap_top
+        return entry
 
     # 穴馬: 3位以降でオッズ10倍以上の最高確率
     ana: dict = {}

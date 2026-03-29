@@ -35,7 +35,47 @@ import pandas as pd
 
 from keiba_predictor.features.feature_engineering import FEATURE_COLS
 
+try:
+    import shap
+except ImportError:
+    shap = None
+
 logger = logging.getLogger(__name__)
+
+# SHAP値表示用の特徴量ラベルマッピング（日本語）
+FEATURE_LABELS: dict[str, str] = {
+    "distance": "距離適性",
+    "course_type_enc": "コース適性",
+    "track_condition_enc": "馬場状態",
+    "weather_enc": "天候",
+    "frame_number": "枠番",
+    "horse_number": "馬番",
+    "weight_carried": "斤量",
+    "odds": "オッズ有利",
+    "popularity": "人気",
+    "sex_enc": "性別",
+    "age": "年齢",
+    "horse_weight": "馬体重",
+    "horse_weight_diff": "馬体重増減",
+    "last_3f": "上がり3F",
+    "avg_time_3": "近3走タイム",
+    "avg_time_5": "近5走タイム",
+    "avg_time_3_any": "近3走タイム(全)",
+    "avg_time_5_any": "近5走タイム(全)",
+    "jockey_fukusho_rate": "騎手好成績",
+    "trainer_fukusho_rate": "調教師好成績",
+    "dist_diff_prev": "距離変更",
+    "days_since_last_race": "レース間隔",
+    "prev_finish_pos": "前走着順",
+    "prev_odds": "前走オッズ",
+    "horse_course_fukusho_rate": "コース実績",
+    "horse_dist_fukusho_rate": "距離実績",
+    "race_grade_enc": "レース格",
+    "jockey_horse_fukusho_rate": "騎手馬相性",
+    "horse_track_fukusho_rate": "馬場実績",
+    "running_style_enc": "脚質",
+    "pace_pressure": "展開圧力",
+}
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 MODEL_PATH = Path(__file__).parent / "xgb_model.pkl"
@@ -146,6 +186,55 @@ def load_model(model_path: Path | None = None) -> dict:
     return bundle
 
 
+def compute_shap_top(
+    model_bundle: dict,
+    X: pd.DataFrame,
+    feature_cols: list[str],
+) -> list[list[dict]]:
+    """
+    各馬のSHAP値を計算し、上位3特徴量（プラス最大2 + マイナス最大1）を返す。
+
+    Returns:
+        馬ごとの shap_top リスト。各要素は
+        [{"feature": str, "value": float, "label": str}, ...] の形式。
+    """
+    if shap is None:
+        logger.warning("shapパッケージ未インストール: SHAP値計算をスキップ")
+        return [[] for _ in range(len(X))]
+
+    try:
+        model = model_bundle["model"]
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X)
+    except Exception as e:
+        logger.warning(f"SHAP値計算に失敗: {e}")
+        return [[] for _ in range(len(X))]
+
+    results = []
+    for i in range(len(X)):
+        sv = shap_values[i]
+        pairs = list(zip(feature_cols, sv))
+
+        # プラス方向の上位2つ
+        positive = sorted([p for p in pairs if p[1] > 0], key=lambda x: -x[1])[:2]
+        # マイナス方向の上位1つ
+        negative = sorted([p for p in pairs if p[1] < 0], key=lambda x: x[1])[:1]
+
+        top = []
+        for feat, val in positive:
+            label = FEATURE_LABELS.get(feat, feat)
+            top.append({"feature": feat, "value": round(float(val), 4), "label": label})
+        for feat, val in negative:
+            label = FEATURE_LABELS.get(feat, feat)
+            # マイナス要因のラベルに「やや悪」等のニュアンスを付加
+            if not any(neg in label for neg in ["悪", "不", "低"]):
+                label = label + "やや悪"
+            top.append({"feature": feat, "value": round(float(val), 4), "label": label})
+
+        results.append(top)
+    return results
+
+
 def predict_race(
     race_df: pd.DataFrame,
     model_bundle: Optional[dict] = None,
@@ -178,6 +267,11 @@ def predict_race(
 
     result = race_df.copy()
     result["prob_top3"] = probs
+
+    # SHAP値を計算して各馬に付与
+    shap_tops = compute_shap_top(model_bundle, X, feature_cols)
+    result["shap_top"] = shap_tops
+
     result = result.sort_values("prob_top3", ascending=False).reset_index(drop=True)
     return result
 
