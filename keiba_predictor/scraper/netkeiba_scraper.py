@@ -86,6 +86,48 @@ def _sleep():
     time.sleep(random.uniform(1.0, 2.0))
 
 
+def _get_result_html_with_playwright(url: str) -> Optional[str]:
+    """
+    Playwright (Chromium) で結果ページの JS レンダリング後 HTML を返す。
+    playwright 未インストール時は None を返す。
+    """
+    try:
+        from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+    except ImportError:
+        logger.warning("playwright 未インストール → requests にフォールバック")
+        return None
+
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            ctx = browser.new_context(
+                user_agent=HEADERS["User-Agent"],
+                locale="ja-JP",
+                extra_http_headers={
+                    "Accept-Language": HEADERS["Accept-Language"],
+                    "Accept": HEADERS["Accept"],
+                },
+            )
+            page = ctx.new_page()
+            page.goto("https://db.netkeiba.com/", wait_until="domcontentloaded", timeout=20000)
+            time.sleep(1)
+            page.goto(url, wait_until="networkidle", timeout=30000)
+            try:
+                page.wait_for_selector(
+                    "table.race_table_01, div.ResultTableWrap table, table[summary]",
+                    timeout=10000,
+                )
+            except PWTimeout:
+                logger.warning("Playwright: 結果テーブルセレクタのタイムアウト（HTMLをそのまま使用）")
+            html = page.content()
+            browser.close()
+            logger.info(f"Playwright 結果取得成功: {len(html)} bytes")
+            return html
+    except Exception as e:
+        logger.warning(f"Playwright 結果取得失敗: {e}")
+        return None
+
+
 def _get(url: str, session: requests.Session, encoding: str = "EUC-JP") -> Optional[BeautifulSoup]:
     """
     GETリクエストを送り BeautifulSoup を返す。失敗時はNone。
@@ -344,9 +386,30 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
     先頭8桁から日付を確実に取得できる。
     """
     url = RACE_RESULT_URL.format(race_id=race_id)
-    soup = _get(url, session)
+    logger.info(f"結果ページ取得: {url}")
+
+    # Playwright 優先 → requests フォールバック
+    soup = None
+    html = _get_result_html_with_playwright(url)
+    if html:
+        soup = BeautifulSoup(html, "html.parser")
+        logger.info("Playwright で結果HTML取得成功")
     if soup is None:
+        logger.info("requests にフォールバック")
+        soup = _get(url, session)
+    if soup is None:
+        logger.warning(f"結果ページ取得失敗: {race_id}")
         return None
+
+    # デバッグ: HTMLをファイルに保存
+    try:
+        _debug_dir = DATA_DIR / "debug"
+        _debug_dir.mkdir(parents=True, exist_ok=True)
+        _debug_path = _debug_dir / f"result_{race_id}.html"
+        _debug_path.write_text(soup.prettify(), encoding="utf-8")
+        print(f"[DEBUG] 結果HTML保存: {_debug_path}", flush=True)
+    except Exception as _de:
+        print(f"[DEBUG] 結果HTML保存失敗: {_de}", flush=True)
 
     # ── レース基本情報（全フィールドをデフォルト値で初期化） ──────
     race_info: dict = {
@@ -450,6 +513,8 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
     # ── 着順テーブル ──────────────────────────────────────────
     result_table = (
         soup.select_one("table.race_table_01")
+        or soup.select_one("div.ResultTableWrap table")
+        or soup.select_one("table[summary*='結果']")
         or soup.select_one("table.nk_tb_common")
     )
     if result_table is None:
