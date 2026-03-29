@@ -342,6 +342,8 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
     distance = 0
     course_type_enc = 1  # デフォルト芝
     course_info = ""
+    track_condition_enc = None  # 良=0, 稍重=1, 重=2, 不良=3
+    _TRACK_COND_MAP = {"良": 0, "稍重": 1, "重": 2, "不良": 3}
     data01 = soup.select_one(".RaceData01") or soup.select_one(".RaceInfo")
     if data01:
         txt = data01.get_text()
@@ -354,6 +356,22 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         else:
             course_type_enc = 1
             course_info = f"芝{distance}m"
+        # 馬場状態
+        for cond, enc in _TRACK_COND_MAP.items():
+            if cond in txt:
+                track_condition_enc = enc
+                break
+    # RaceData02 からも馬場状態を探す
+    if track_condition_enc is None:
+        data02 = soup.select_one(".RaceData02") or soup.select_one(".Race_Data")
+        if data02:
+            txt2 = data02.get_text()
+            for cond, enc in _TRACK_COND_MAP.items():
+                if cond in txt2:
+                    track_condition_enc = enc
+                    break
+    if track_condition_enc is not None:
+        logger.info(f"馬場状態: {list(_TRACK_COND_MAP.keys())[track_condition_enc]} (enc={track_condition_enc})")
 
     # レース格
     from keiba_predictor.features.feature_engineering import _encode_race_grade
@@ -429,7 +447,8 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         "venue":           venue,
         "course_info":     course_info,
         "distance":        distance,
-        "course_type_enc": course_type_enc,
-        "race_grade_enc":  race_grade_enc,
-        "horses":          horses_df,
+        "course_type_enc":     course_type_enc,
+        "track_condition_enc": track_condition_enc,
+        "race_grade_enc":      race_grade_enc,
+        "horses":              horses_df,
     }

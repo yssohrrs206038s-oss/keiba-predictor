@@ -154,6 +154,24 @@ def _jockey_horse_rate(
     return float(top3.mean()) if len(top3) >= 3 else fallback
 
 
+def _horse_track_rate(
+    horse_hist: pd.DataFrame,
+    race_date: pd.Timestamp,
+    track_condition_enc: int,
+) -> float:
+    """この馬の指定馬場状態での複勝率を返す。"""
+    if horse_hist.empty or "race_date" not in horse_hist.columns:
+        return np.nan
+    if "track_condition_enc" not in horse_hist.columns:
+        return np.nan
+    past = horse_hist[
+        (horse_hist["race_date"] < race_date) &
+        (pd.to_numeric(horse_hist["track_condition_enc"], errors="coerce") == track_condition_enc)
+    ]
+    top3 = pd.to_numeric(past["top3"], errors="coerce").dropna()
+    return float(top3.mean()) if len(top3) >= 1 else np.nan
+
+
 # ══════════════════════════════════════════════════════════════
 # 公開 API
 # ══════════════════════════════════════════════════════════════
@@ -177,9 +195,10 @@ def build_live_features(
     race_id         = shutuba_info.get("race_id", "")
     race_name       = shutuba_info.get("race_name", "")
     race_date_str   = shutuba_info.get("race_date", "")
-    distance        = int(shutuba_info.get("distance", 0))
-    course_type_enc = int(shutuba_info.get("course_type_enc", 1))
-    race_grade_enc  = int(shutuba_info.get("race_grade_enc", 0))
+    distance            = int(shutuba_info.get("distance", 0))
+    course_type_enc     = int(shutuba_info.get("course_type_enc", 1))
+    race_grade_enc      = int(shutuba_info.get("race_grade_enc", 0))
+    track_condition_enc = shutuba_info.get("track_condition_enc")  # None if unknown
 
     try:
         race_date = pd.Timestamp(race_date_str)
@@ -237,8 +256,8 @@ def build_live_features(
             "age":              h.get("age"),
             "odds":             h.get("odds"),
             "popularity":       h.get("popularity"),
-            # レース当日未確定（NaN として扱う）
-            "track_condition_enc": np.nan,
+            # レース当日情報
+            "track_condition_enc": track_condition_enc if track_condition_enc is not None else np.nan,
             "weather_enc":         np.nan,
             "last_3f":             np.nan,
             # 過去成績由来
@@ -246,6 +265,10 @@ def build_live_features(
             "jockey_fukusho_rate":      jockey_rate,
             "trainer_fukusho_rate":     trainer_rate,
             "jockey_horse_fukusho_rate": combo_rate,
+            "horse_track_fukusho_rate": (
+                _horse_track_rate(horse_hist, race_date, track_condition_enc)
+                if track_condition_enc is not None else np.nan
+            ),
         }
 
         # FEATURE_COLS に含まれる列が NaN なら中央値で補完

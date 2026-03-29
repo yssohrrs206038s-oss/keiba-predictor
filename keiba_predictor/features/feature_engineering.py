@@ -63,6 +63,7 @@ FEATURE_COLS = [
     "horse_dist_fukusho_rate",    # 同距離帯（±200m）過去複勝率
     "race_grade_enc",             # レース格 G1=6 … 未勝利=0
     "jockey_horse_fukusho_rate",  # 騎手×馬コンビ複勝率
+    "horse_track_fukusho_rate",  # 馬場状態別複勝率（良/稍重/重/不良）
 ]
 
 
@@ -238,6 +239,16 @@ def add_horse_course_dist_features(df: pd.DataFrame) -> pd.DataFrame:
         .transform(lambda x: x.shift(1).expanding().mean())
     )
     df = df.drop(columns=["_dist_band"])
+
+    # 馬場状態別複勝率
+    logger.info("馬の馬場状態別複勝率を計算中...")
+    if "track_condition_enc" in df.columns:
+        df["horse_track_fukusho_rate"] = (
+            df.groupby(["horse_id", "track_condition_enc"], group_keys=False)["top3"]
+            .transform(lambda x: x.shift(1).expanding().mean())
+        )
+    else:
+        df["horse_track_fukusho_rate"] = np.nan
 
     return df
 
