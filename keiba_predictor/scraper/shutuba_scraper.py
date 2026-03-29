@@ -327,7 +327,8 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         _debug_path = _debug_dir / f"shutuba_{race_id}.html"
         _debug_path.write_text(soup.prettify(), encoding="utf-8")
         logger.info(f"HTML保存: {_debug_path.name}")
-    except Exception as _de:
+    except Exception:
+        pass
 
     # ── レース基本情報 ─────────────────────────────────────
     race_name = ""

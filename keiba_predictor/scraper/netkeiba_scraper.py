@@ -408,7 +408,8 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         _debug_path = _debug_dir / f"result_{race_id}.html"
         _debug_path.write_text(soup.prettify(), encoding="utf-8")
         logger.info(f"結果HTML保存: {_debug_path.name}")
-    except Exception as _de:
+    except Exception:
+        pass
 
     # ── レース基本情報（全フィールドをデフォルト値で初期化） ──────
     race_info: dict = {
