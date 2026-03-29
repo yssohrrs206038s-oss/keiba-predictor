@@ -468,9 +468,14 @@ def predict_live(
     if shutuba_info is None:
         raise ValueError(f"出馬表の取得に失敗しました: race_id={race_id}")
 
+    print(f"[DEBUG predict_live] shutuba_info keys={list(shutuba_info.keys())}", flush=True)
+    print(f"[DEBUG predict_live] race_date={shutuba_info.get('race_date', '(なし)')}", flush=True)
+
     horses_df = shutuba_info["horses"]
     if horses_df.empty:
         raise ValueError(f"出馬表に馬が見つかりませんでした: race_id={race_id}")
+
+    print(f"[DEBUG predict_live] horses columns={list(horses_df.columns)} len={len(horses_df)}", flush=True)
 
     # 特徴量を生成
     race_df = build_live_features(shutuba_info, cleaned_path=cleaned_path)

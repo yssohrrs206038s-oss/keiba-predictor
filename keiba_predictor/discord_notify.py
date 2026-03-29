@@ -912,7 +912,8 @@ def run_predict_notify(
             race_date   = _cached.get("race_date", race_date)
             logger.info(f"  predict_live 成功: {race_name} ({race_id})")
         except Exception as e:
-            logger.warning(f"  predict_live 失敗 ({e}): {race_name} ({race_id})")
+            import traceback
+            logger.warning(f"  predict_live 失敗: {traceback.format_exc()}")
             send_discord(webhook_url,
                 f"⚠️ **{race_name}** の出馬表取得に失敗しました: {e}")
             continue
