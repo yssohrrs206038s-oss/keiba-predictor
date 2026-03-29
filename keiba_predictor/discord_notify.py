@@ -736,6 +736,61 @@ def scrape_payouts(race_id: str, session: requests.Session) -> dict:
 
 
 
+def _record_manual_result(race_id: str, race_name: str, race_date: str,
+                          pred: dict, manual: dict) -> None:
+    """manual_results.json の的中フラグで results_history.csv に記録する。"""
+    from keiba_predictor.history import HISTORY_PATH, DATA_DIR, _grade_label, _pred_row, UNIT_BET, BETS_PER_RACE
+
+    grade = _grade_label(race_name)
+    p1 = _pred_row(pred, "honmei")
+    p2 = _pred_row(pred, "taikou")
+    p3 = _pred_row(pred, "ana")
+
+    result_nums = manual.get("result", [])
+    manual_pay = manual.get("payouts", {})
+
+    fukusho_hit = manual.get("fukusho_hit", False)
+    umaren_hit  = manual.get("umaren_hit", False)
+    sanren_hit  = manual.get("sanrenpuku_hit", False)
+
+    umaren_payout   = manual_pay.get("umaren", 0)
+    sanren_payout   = manual_pay.get("sanrenpuku", 0)
+    bet_total       = UNIT_BET * BETS_PER_RACE
+    return_total    = umaren_payout + sanren_payout
+
+    def _a(i):
+        return {"name": "", "num": result_nums[i] if i < len(result_nums) else 0}
+
+    row = {
+        "date":       race_date,
+        "race_id":    race_id,
+        "race_name":  race_name,
+        "race_grade": grade,
+        "pred1_name": p1["name"], "pred1_num": p1["num"], "pred1_prob": p1["prob"],
+        "pred2_name": p2["name"], "pred2_num": p2["num"], "pred2_prob": p2["prob"],
+        "pred3_name": p3["name"], "pred3_num": p3["num"], "pred3_prob": p3["prob"],
+        "actual1_name": _a(0)["name"], "actual1_num": _a(0)["num"],
+        "actual2_name": _a(1)["name"], "actual2_num": _a(1)["num"],
+        "actual3_name": _a(2)["name"], "actual3_num": _a(2)["num"],
+        "fukusho_hit":     fukusho_hit,
+        "umaren_hit":      umaren_hit,     "umaren_payout":   umaren_payout,
+        "wide_hit":        False,          "wide_payout":     0,
+        "sanrenpuku_hit":  sanren_hit,     "sanrenpuku_payout": sanren_payout,
+        "bet_total":       bet_total,
+        "return_total":    return_total,
+    }
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    new_row_df = pd.DataFrame([row])
+    if HISTORY_PATH.exists():
+        new_row_df.to_csv(HISTORY_PATH, mode="a", header=False,
+                          index=False, encoding="utf-8-sig")
+    else:
+        new_row_df.to_csv(HISTORY_PATH, mode="w", header=True,
+                          index=False, encoding="utf-8-sig")
+    logger.info(f"  [history] 手動記録: {race_name} fukusho={fukusho_hit} umaren={umaren_hit} sanren={sanren_hit}")
+
+
 def _fmt_result(race_name: str, race_date: str,
                 actual_df: pd.DataFrame,
                 pred: dict,
@@ -1309,16 +1364,32 @@ def run_result_notify(
             pred = {"race_name": race_name, "race_date": race_date,
                     "honmei": {}, "taikou": {}, "ana": {}, "predicted_top3_nums": []}
 
+        # manual の honmei / predicted_top3_nums で pred を上書き
+        if manual:
+            if manual.get("honmei") is not None:
+                pred["honmei"] = {"horse_number": manual["honmei"],
+                                  "horse_name": pred.get("honmei", {}).get("horse_name", ""),
+                                  "prob": pred.get("honmei", {}).get("prob", 0)}
+            if manual.get("predicted_top3_nums"):
+                pred["predicted_top3_nums"] = manual["predicted_top3_nums"]
+
         msg = _fmt_result(race_name, race_date, actual_df, pred, payouts, manual=manual)
         if send_discord(webhook_url, msg):
             notified += 1
             logger.info(f"  送信: {race_name}")
 
         # 的中実績を CSV に記録
-        try:
-            record_result(race_id, race_name, race_date, pred, actual_df, payouts)
-        except Exception as e:
-            logger.warning(f"  [history] 記録失敗 ({race_name}): {e}")
+        if manual and "fukusho_hit" in manual:
+            # manual_results.json の的中フラグで直接記録
+            try:
+                _record_manual_result(race_id, race_name, race_date, pred, manual)
+            except Exception as e:
+                logger.warning(f"  [history] 手動記録失敗 ({race_name}): {e}")
+        else:
+            try:
+                record_result(race_id, race_name, race_date, pred, actual_df, payouts)
+            except Exception as e:
+                logger.warning(f"  [history] 記録失敗 ({race_name}): {e}")
 
         # X（Twitter）に結果を投稿
         if os.environ.get("ENABLE_X_POST", "false").lower() == "true":
