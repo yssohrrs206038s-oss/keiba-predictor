@@ -77,6 +77,9 @@ FEATURE_LABELS: dict[str, str] = {
     "pace_pressure": "展開圧力",
     "jockey_course_fukusho_rate": "騎手コース相性",
     "jockey_dist_fukusho_rate": "騎手距離適性",
+    "weeks_since_last_race": "レース間隔",
+    "is_fresh": "休み明け",
+    "is_continuous": "連闘・中2週",
 }
 
 DATA_DIR = Path(__file__).parent.parent / "data"

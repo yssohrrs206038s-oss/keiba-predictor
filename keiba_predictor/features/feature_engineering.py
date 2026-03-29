@@ -74,6 +74,9 @@ FEATURE_COLS = [
     "pace_pressure",             # 展開圧力（同レース内の逃げ+先行馬の数）
     "jockey_course_fukusho_rate",# 騎手×コース（venue+course_type）複勝率
     "jockey_dist_fukusho_rate",  # 騎手×距離帯複勝率
+    "weeks_since_last_race",     # 前走からの週数
+    "is_fresh",                  # 休み明けフラグ（中8週以上=1）
+    "is_continuous",             # 連闘・中2週フラグ（中2週以下=1）
 ]
 
 
@@ -211,6 +214,12 @@ def add_prev_race_features(df: pd.DataFrame) -> pd.DataFrame:
     df["days_since_last_race"] = df.groupby("horse_id", group_keys=False).apply(
         _days_diff
     ).values
+
+    # 前走間隔の派生特徴量
+    days = pd.to_numeric(df["days_since_last_race"], errors="coerce")
+    df["weeks_since_last_race"] = days / 7.0
+    df["is_fresh"] = (days >= 56).astype(float)        # 中8週以上 = 休み明け
+    df["is_continuous"] = (days <= 21).astype(float)    # 中2週以下 = 連闘・中2週
 
     return df
 

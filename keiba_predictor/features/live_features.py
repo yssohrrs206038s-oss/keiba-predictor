@@ -77,7 +77,11 @@ def _horse_hist_features(
     # 前走情報
     feats["prev_finish_pos"]    = pd.to_numeric(last.get("finish_position"), errors="coerce")
     feats["prev_odds"]          = pd.to_numeric(last.get("odds"),            errors="coerce")
-    feats["days_since_last_race"] = (race_date - last["race_date"]).days
+    days_since = (race_date - last["race_date"]).days
+    feats["days_since_last_race"] = days_since
+    feats["weeks_since_last_race"] = days_since / 7.0
+    feats["is_fresh"] = 1.0 if days_since >= 56 else 0.0        # 中8週以上
+    feats["is_continuous"] = 1.0 if days_since <= 21 else 0.0    # 中2週以下
 
     last_dist = pd.to_numeric(last.get("distance"), errors="coerce")
     feats["dist_diff_prev"] = float(last_dist - distance) if pd.notna(last_dist) else np.nan
