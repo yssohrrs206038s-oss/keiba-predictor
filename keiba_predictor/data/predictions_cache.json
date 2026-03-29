@@ -9,19 +9,19 @@
       "horse_number": 10,
       "horse_name": "シャイニングソード",
       "prob": 0.5357319712638855,
-      "odds": 19.3
+      "odds": null
     },
     "taikou": {
       "horse_number": 15,
       "horse_name": "マイユニバース",
       "prob": 0.5344517230987549,
-      "odds": 19.3
+      "odds": null
     },
     "ana": {
       "horse_number": 1,
       "horse_name": "ミクニインスパイア",
       "prob": 0.46989569067955017,
-      "odds": 19.3
+      "odds": null
     },
     "predicted_top3_nums": [
       10,
@@ -42,21 +42,21 @@
         "horse_name": "シャイニングソード",
         "ev_score": 10.34,
         "prob": 0.5357,
-        "odds": 19.3
+        "odds": null
       },
       {
         "horse_number": 15,
         "horse_name": "マイユニバース",
         "ev_score": 10.315,
         "prob": 0.5345,
-        "odds": 19.3
+        "odds": null
       },
       {
         "horse_number": 1,
         "horse_name": "ミクニインスパイア",
         "ev_score": 9.069,
         "prob": 0.4699,
-        "odds": 19.3
+        "odds": null
       }
     ],
     "dangerous_horses": [
@@ -91,19 +91,19 @@
       "horse_number": 7,
       "horse_name": "シーズザスローン",
       "prob": 0.7236478924751282,
-      "odds": 19.3
+      "odds": null
     },
     "taikou": {
       "horse_number": 6,
       "horse_name": "ウップヘリーア",
       "prob": 0.6759458184242249,
-      "odds": 19.3
+      "odds": null
     },
     "ana": {
       "horse_number": 2,
       "horse_name": "カフジエメンタール",
       "prob": 0.6604613065719604,
-      "odds": 19.3
+      "odds": null
     },
     "predicted_top3_nums": [
       7,
@@ -124,21 +124,21 @@
         "horse_name": "シーズザスローン",
         "ev_score": 13.966,
         "prob": 0.7236,
-        "odds": 19.3
+        "odds": null
       },
       {
         "horse_number": 6,
         "horse_name": "ウップヘリーア",
         "ev_score": 13.046,
         "prob": 0.6759,
-        "odds": 19.3
+        "odds": null
       },
       {
         "horse_number": 2,
         "horse_name": "カフジエメンタール",
         "ev_score": 12.747,
         "prob": 0.6605,
-        "odds": 19.3
+        "odds": null
       }
     ],
     "dangerous_horses": [],
@@ -151,75 +151,80 @@
     "venue": "中山",
     "course_info": "芝1800m",
     "honmei": {
-      "horse_number": 14,
-      "horse_name": "チュウワクリスエス",
-      "prob": 0.6134623289108276,
-      "odds": 24.2
+      "horse_number": 5,
+      "horse_name": "レヴォントゥレット",
+      "prob": 0.6065043210983276,
+      "odds": null
     },
     "taikou": {
-      "horse_number": 15,
-      "horse_name": "サンデーファンデー",
-      "prob": 0.5784760117530823,
-      "odds": 24.2
+      "horse_number": 14,
+      "horse_name": "チュウワクリスエス",
+      "prob": 0.5869494676589966,
+      "odds": null
     },
     "ana": {
       "horse_number": 6,
       "horse_name": "ヴァルツァーシャル",
-      "prob": 0.5580788254737854,
-      "odds": 24.2
+      "prob": 0.5639752745628357,
+      "odds": null
     },
     "predicted_top3_nums": [
+      5,
       14,
-      15,
       6
     ],
     "predicted_top5_nums": [
+      5,
       14,
-      15,
       6,
       12,
-      9
+      15
     ],
-    "ana_horse_num": 7,
+    "ana_horse_num": 9,
     "ev_top3": [
+      {
+        "horse_number": 5,
+        "horse_name": "レヴォントゥレット",
+        "ev_score": 11.706,
+        "prob": 0.6065,
+        "odds": null
+      },
       {
         "horse_number": 14,
         "horse_name": "チュウワクリスエス",
-        "ev_score": 14.846,
-        "prob": 0.6135,
-        "odds": 24.2
-      },
-      {
-        "horse_number": 15,
-        "horse_name": "サンデーファンデー",
-        "ev_score": 13.999,
-        "prob": 0.5785,
-        "odds": 24.2
+        "ev_score": 11.328,
+        "prob": 0.5869,
+        "odds": null
       },
       {
         "horse_number": 6,
         "horse_name": "ヴァルツァーシャル",
-        "ev_score": 13.506,
-        "prob": 0.5581,
-        "odds": 24.2
+        "ev_score": 10.885,
+        "prob": 0.564,
+        "odds": null
       }
     ],
     "dangerous_horses": [
       {
         "horse_number": 6,
         "horse_name": "ヴァルツァーシャル",
-        "popularity": 1,
-        "prob": 0.5581,
+        "popularity": 2,
+        "prob": 0.564,
         "reasons": [
           "1〜2番人気だが前走13着"
         ]
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "オメガギネス",
+        "popularity": 1,
+        "prob": 0.5202,
+        "reasons": [
+          "1〜2番人気だが前走6着"
+        ]
       }
     ],
-    "ai_comments": {
-      "14": "◎🔥 AI3着以内確率61.3%で本命候補の最高評価！EVスコア14.85は圧倒的な数値で、2番人気の支持もうなずける。前走2着から切れ味を磨いてきた血統馬が、ここでの差し切りは確実性が高い。唯一の懸念は1800m芝での初挑戦",
-      "15": "○✨ AI3着以内確率57.8%で堅実な相手候補。EVスコア14.00は安定感を示す数値で、前走6着からの巻き返しが期待できる穴狙い人気4番で狙い目。切れ込み馬として重賞舞台での器の大きさが武器だ。ただし上位2頭との差は明確",
-      "6": "▲⚡ AI3着以内確率55.8%で人気薄の穴馬評価。騎手複勝率42.9%の堅実性とEVスコア13.51が底堅さを物語る、1番人気での台頭劇を演出する可能性が存在。東京芝の鬼が本領発揮なら侮れない。ただし前走13着は信頼材料に欠ける"
-    }
+    "ai_comments": {}
   },
   "202607010611": {
     "race_name": "高松宮記念",
@@ -228,93 +233,71 @@
     "venue": "中京",
     "course_info": "芝1200m",
     "honmei": {
-      "horse_number": 14,
-      "horse_name": "レイピア",
-      "prob": 0.48894065618515015,
-      "odds": 24.2
-    },
-    "taikou": {
-      "horse_number": 18,
-      "horse_name": "ジューンブレア",
-      "prob": 0.43719393014907837,
-      "odds": 24.2
-    },
-    "ana": {
       "horse_number": 13,
       "horse_name": "ナムラクレア",
-      "prob": 0.3944154679775238,
-      "odds": 24.2
+      "prob": 0.5561978220939636,
+      "odds": null
+    },
+    "taikou": {
+      "horse_number": 14,
+      "horse_name": "レイピア",
+      "prob": 0.5530202984809875,
+      "odds": null
+    },
+    "ana": {
+      "horse_number": 18,
+      "horse_name": "ジューンブレア",
+      "prob": 0.5244607329368591,
+      "odds": null
     },
     "predicted_top3_nums": [
+      13,
       14,
-      18,
-      13
+      18
     ],
     "predicted_top5_nums": [
+      13,
       14,
       18,
-      13,
-      5,
-      10
+      10,
+      15
     ],
-    "ana_horse_num": 17,
+    "ana_horse_num": 1,
     "ev_top3": [
+      {
+        "horse_number": 13,
+        "horse_name": "ナムラクレア",
+        "ev_score": 10.735,
+        "prob": 0.5562,
+        "odds": null
+      },
       {
         "horse_number": 14,
         "horse_name": "レイピア",
-        "ev_score": 11.832,
-        "prob": 0.4889,
-        "odds": 24.2
+        "ev_score": 10.673,
+        "prob": 0.553,
+        "odds": null
       },
       {
         "horse_number": 18,
         "horse_name": "ジューンブレア",
-        "ev_score": 10.58,
-        "prob": 0.4372,
-        "odds": 24.2
-      },
-      {
-        "horse_number": 13,
-        "horse_name": "ナムラクレア",
-        "ev_score": 9.545,
-        "prob": 0.3944,
-        "odds": 24.2
+        "ev_score": 10.122,
+        "prob": 0.5245,
+        "odds": null
       }
     ],
     "dangerous_horses": [
       {
-        "horse_number": 13,
-        "horse_name": "ナムラクレア",
-        "popularity": 1,
-        "prob": 0.3944,
-        "reasons": [
-          "AI確率39%（3番人気以内なのに低い）"
-        ]
-      },
-      {
         "horse_number": 9,
         "horse_name": "サトノレーヴ",
-        "popularity": 2,
-        "prob": 0.2968,
+        "popularity": 1,
+        "prob": 0.3704,
         "reasons": [
-          "AI確率30%（3番人気以内なのに低い）"
-        ]
-      },
-      {
-        "horse_number": 1,
-        "horse_name": "パンジャタワー",
-        "popularity": 3,
-        "prob": 0.282,
-        "reasons": [
-          "AI確率28%（3番人気以内なのに低い）"
+          "AI確率37%（3番人気以内なのに低い）"
         ]
       }
     ],
-    "ai_comments": {
-      "14": "◎🔥 AI3着以内確率48.9%で本命筆頭！EVスコア11.83は群を抜く数値。前走2着から着昇気配バッチリ。5番人気の割安評価も魅力で、ここが買い場と判断。唯一の懸念は騎手複勝率が未実績な点だが、これまでのAI分析値が圧倒的に優秀。",
-      "18": "○✨ AI3着以内確率43.7%で堅実な二番手評価。EVスコア10.58と十分な数値を確保し、6番人気という立場が狙い目。前走11着からの巻き返し劇を狙える位置付け。安定感重視の方は流し先に最適の一頭。",
-      "13": "▲⚡ 1番人気の期待値を検証すると、AI3着以内確率39.4%はやや控えめ。EVスコア9.54と三頭中最低数値。前走は2着と悪くないが、人気ほどの評価にはAIモデルは慎重。穴狙いなら視野外推奨。"
-    }
+    "ai_comments": {}
   },
   "202607010411": {
     "race_name": "愛知杯",
@@ -323,60 +306,70 @@
     "venue": "中京",
     "course_info": "芝1400m",
     "honmei": {
-      "horse_number": 11,
-      "horse_name": "スリールミニョン",
-      "prob": 0.5885117053985596,
-      "odds": 19.3
-    },
-    "taikou": {
       "horse_number": 5,
       "horse_name": "ウイントワイライト",
-      "prob": 0.5695191621780396,
-      "odds": 19.3
+      "prob": 0.5897270441055298,
+      "odds": null
+    },
+    "taikou": {
+      "horse_number": 11,
+      "horse_name": "スリールミニョン",
+      "prob": 0.5199373364448547,
+      "odds": null
     },
     "ana": {
-      "horse_number": 14,
-      "horse_name": "シンバーシア",
-      "prob": 0.4915289580821991,
-      "odds": 19.3
+      "horse_number": 16,
+      "horse_name": "ドロップオブライト",
+      "prob": 0.4958156645298004,
+      "odds": null
     },
     "predicted_top3_nums": [
-      11,
       5,
-      14
+      11,
+      16
     ],
     "predicted_top5_nums": [
-      11,
       5,
-      14,
-      15,
-      12
+      11,
+      16,
+      1,
+      7
     ],
-    "ana_horse_num": 13,
+    "ana_horse_num": 6,
     "ev_top3": [
-      {
-        "horse_number": 11,
-        "horse_name": "スリールミニョン",
-        "ev_score": 11.358,
-        "prob": 0.5885,
-        "odds": 19.3
-      },
       {
         "horse_number": 5,
         "horse_name": "ウイントワイライト",
-        "ev_score": 10.992,
-        "prob": 0.5695,
-        "odds": 19.3
+        "ev_score": 11.382,
+        "prob": 0.5897,
+        "odds": null
       },
       {
-        "horse_number": 14,
-        "horse_name": "シンバーシア",
-        "ev_score": 9.487,
-        "prob": 0.4915,
-        "odds": 19.3
+        "horse_number": 11,
+        "horse_name": "スリールミニョン",
+        "ev_score": 10.035,
+        "prob": 0.5199,
+        "odds": null
+      },
+      {
+        "horse_number": 16,
+        "horse_name": "ドロップオブライト",
+        "ev_score": 9.569,
+        "prob": 0.4958,
+        "odds": null
       }
     ],
-    "dangerous_horses": [],
+    "dangerous_horses": [
+      {
+        "horse_number": 16,
+        "horse_name": "ドロップオブライト",
+        "popularity": 1,
+        "prob": 0.4958,
+        "reasons": [
+          "1〜2番人気だが前走6着"
+        ]
+      }
+    ],
     "ai_comments": {}
   },
   "202609020211": {
@@ -389,19 +382,19 @@
       "horse_number": 13,
       "horse_name": "バレエマスター",
       "prob": 0.5905486941337585,
-      "odds": 19.3
+      "odds": null
     },
     "taikou": {
       "horse_number": 9,
       "horse_name": "ブルーミンデザイン",
       "prob": 0.4920288622379303,
-      "odds": 19.3
+      "odds": null
     },
     "ana": {
       "horse_number": 4,
       "horse_name": "アクートゥス",
       "prob": 0.48412638902664185,
-      "odds": 19.3
+      "odds": null
     },
     "predicted_top3_nums": [
       13,
@@ -422,21 +415,21 @@
         "horse_name": "バレエマスター",
         "ev_score": 11.398,
         "prob": 0.5905,
-        "odds": 19.3
+        "odds": null
       },
       {
         "horse_number": 9,
         "horse_name": "ブルーミンデザイン",
         "ev_score": 9.496,
         "prob": 0.492,
-        "odds": 19.3
+        "odds": null
       },
       {
         "horse_number": 4,
         "horse_name": "アクートゥス",
         "ev_score": 9.344,
         "prob": 0.4841,
-        "odds": 19.3
+        "odds": null
       }
     ],
     "dangerous_horses": [
