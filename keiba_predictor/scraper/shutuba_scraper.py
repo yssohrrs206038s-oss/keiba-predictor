@@ -215,7 +215,6 @@ def _parse_shutuba_row(tr) -> Optional[dict]:
                     break
                 except ValueError:
                     continue
-    print(f"[DEBUG odds] horse={_txt('.HorseName a', '.HorseInfo a') or '?'} odds={odds}", flush=True)
 
     # 人気
     popularity = None
@@ -327,9 +326,8 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         _debug_dir.mkdir(parents=True, exist_ok=True)
         _debug_path = _debug_dir / f"shutuba_{race_id}.html"
         _debug_path.write_text(soup.prettify(), encoding="utf-8")
-        print(f"[DEBUG] HTML 保存: {_debug_path} ({_debug_path.stat().st_size} bytes)", flush=True)
+        logger.info(f"HTML保存: {_debug_path.name}")
     except Exception as _de:
-        print(f"[DEBUG] HTML 保存失敗: {_de}", flush=True)
 
     # ── レース基本情報 ─────────────────────────────────────
     race_name = ""
@@ -419,20 +417,20 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         if not trs:
             trs = [tr for tr in table.find_all("tr")
                    if tr.select_one("td[class*='Umaban']") or tr.select_one("td.Umaban")]
-        print(f"[DEBUG] HorseList 行数: {len(trs)}", flush=True)
+        logger.info(f"HorseList 行数: {len(trs)}")
         for tr in trs:
             tr_classes = tr.get("class", [])
             _hel = tr.select_one(".HorseName a") or tr.select_one(".HorseInfo a")
             _hn = _hel.get_text(strip=True) if _hel else "?"
             # 取消馬スキップ
             if "Cancel" in tr_classes:
-                print(f"[SKIP] {_hn}: tr.classにCancel検出 → スキップ", flush=True)
+                logger.info(f"取消馬スキップ: {_hn}")
                 continue
             if any("Cancel" in str(td.get("class", "")) for td in tr.find_all("td")):
-                print(f"[SKIP] {_hn}: tdにCancel系クラス検出 → スキップ", flush=True)
+                logger.info(f"取消馬スキップ: {_hn}")
                 continue
             if any(td.get_text(strip=True) == "取消" for td in tr.find_all("td")):
-                print(f"[SKIP] {_hn}: tdに「取消」テキスト検出 → スキップ", flush=True)
+                logger.info(f"取消馬スキップ: {_hn}")
                 continue
             row = _parse_shutuba_row(tr)
             if row:
@@ -440,20 +438,20 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
     else:
         logger.warning("出馬表テーブルが見つかりませんでした（selector: table.Shutuba_Table）")
         horse_trs = soup.select("tr.HorseList, tr[class*='HorseList']")
-        print(f"[DEBUG] ページ全体の HorseList 行数: {len(horse_trs)}", flush=True)
+        logger.info(f"ページ全体の HorseList 行数: {len(horse_trs)}")
         for tr in horse_trs:
             tr_classes = tr.get("class", [])
             _hel = tr.select_one(".HorseName a") or tr.select_one(".HorseInfo a")
             _hn = _hel.get_text(strip=True) if _hel else "?"
             # 取消馬スキップ
             if "Cancel" in tr_classes:
-                print(f"[SKIP] {_hn}: tr.classにCancel検出 → スキップ", flush=True)
+                logger.info(f"取消馬スキップ: {_hn}")
                 continue
             if any("Cancel" in str(td.get("class", "")) for td in tr.find_all("td")):
-                print(f"[SKIP] {_hn}: tdにCancel系クラス検出 → スキップ", flush=True)
+                logger.info(f"取消馬スキップ: {_hn}")
                 continue
             if any(td.get_text(strip=True) == "取消" for td in tr.find_all("td")):
-                print(f"[SKIP] {_hn}: tdに「取消」テキスト検出 → スキップ", flush=True)
+                logger.info(f"取消馬スキップ: {_hn}")
                 continue
             row = _parse_shutuba_row(tr)
             if row:

@@ -136,7 +136,7 @@ jobs:
         continue-on-error: true
         run: |
           echo "📤 スナップショットから予想通知を送信..."
-          python -m keiba_predictor.main notify --mode predict --debug
+          python -m keiba_predictor.main notify --mode predict
           echo "✅ 通知完了"
 
       - name: note レポートを生成

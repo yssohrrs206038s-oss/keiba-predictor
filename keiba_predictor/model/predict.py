@@ -367,11 +367,9 @@ def predict_from_csv(
 
     race_name   = race_df["race_name"].iloc[0] if "race_name" in race_df.columns else race_id
     course_info = _build_course_info(race_id, race_df)
-    print(f"[DEBUG] race_id={race_id}  venue_code={str(race_id)[4:6]!r}  course_info={course_info!r}", flush=True)
 
     from keiba_predictor.ai_comment import generate_comments, generate_report_text, save_report
     ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
-    print(f"[DEBUG] ai_comments: {len(ai_comments)} 頭分  keys={sorted(ai_comments.keys())}", flush=True)
 
     msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments=ai_comments,
                                    course_info=course_info)
@@ -468,14 +466,11 @@ def predict_live(
     if shutuba_info is None:
         raise ValueError(f"出馬表の取得に失敗しました: race_id={race_id}")
 
-    print(f"[DEBUG predict_live] shutuba_info keys={list(shutuba_info.keys())}", flush=True)
-    print(f"[DEBUG predict_live] race_date={shutuba_info.get('race_date', '(なし)')}", flush=True)
 
     horses_df = shutuba_info["horses"]
     if horses_df.empty:
         raise ValueError(f"出馬表に馬が見つかりませんでした: race_id={race_id}")
 
-    print(f"[DEBUG predict_live] horses columns={list(horses_df.columns)} len={len(horses_df)}", flush=True)
 
     # 特徴量を生成
     race_df = build_live_features(shutuba_info, cleaned_path=cleaned_path)
@@ -489,7 +484,6 @@ def predict_live(
 
     race_name   = shutuba_info.get("race_name", "")
     course_info = shutuba_info.get("course_info", "")
-    print(f"[DEBUG] shutuba_info keys={list(shutuba_info.keys())} race_date={shutuba_info.get('race_date', '(なし)')}", flush=True)
 
     from keiba_predictor.ai_comment import generate_comments, generate_report_text, save_report
     ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)

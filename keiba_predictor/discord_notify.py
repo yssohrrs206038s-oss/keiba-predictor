@@ -251,17 +251,6 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
                 # 重賞判定: <li> 全体を渡す（a タグ外のグレードアイコンも検査）
                 is_grade = _is_grade_race(li)
 
-                # デバッグ: li 内の全クラス一覧を出力
-                all_cls = [
-                    " ".join(c.get("class", []))
-                    for c in li.find_all(True)
-                    if c.get("class")
-                ]
-                logger.debug(
-                    f"    {race_id} [{race_name!r}] grade={is_grade} "
-                    f"child_classes={all_cls}"
-                )
-
                 if is_grade:
                     seen.add(race_id)
                     found_this_day.append({
@@ -306,8 +295,6 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
                     )
 
                     is_grade = _is_grade_race(container)
-                    logger.debug(f"    [fallback] {race_id} [{race_name!r}] grade={is_grade}")
-
                     if is_grade:
                         seen.add(race_id)
                         found_this_day.append({
@@ -682,9 +669,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "dangerous_horses":    dangerous,
         "ai_comments":         ai_comments or {},
     }
-    print(f"[_store_prediction] _save_cache() 呼び出し直前: keys={list(cache.keys())}", flush=True)
     _save_cache(cache)
-    print(f"[_store_prediction] _save_cache() 完了", flush=True)
 
 
 # ══════════════════════════════════════════════════════════════

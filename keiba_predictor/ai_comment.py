@@ -187,8 +187,6 @@ def generate_comments(
         horses_data.append(entry)
 
     _dbg(f"Step3 OK: {len(horses_data)} 頭分データ組み立て完了（◎○▲のみ）")
-    _dbg(f"Step3 horses_data keys: {[list(h.keys()) for h in horses_data]}")
-    _dbg(f"Step3 horses_data: {json.dumps(horses_data, ensure_ascii=False)}")
 
     # ── Step 4: プロンプト生成 ────────────────────────────────
     race_label = race_name or "今回のレース"

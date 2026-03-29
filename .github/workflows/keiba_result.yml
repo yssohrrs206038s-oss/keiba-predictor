@@ -68,10 +68,10 @@ jobs:
           RACE_ID="${{ inputs.race_id }}"
           if [ -n "$RACE_ID" ]; then
             echo "🎯 指定レースID: $RACE_ID"
-            python -m keiba_predictor.main notify --mode result --debug --race-id "$RACE_ID"
+            python -m keiba_predictor.main notify --mode result --race-id "$RACE_ID"
           else
             echo "📋 レースID未指定 → キャッシュ内の全レースを対象"
-            python -m keiba_predictor.main notify --mode result --debug
+            python -m keiba_predictor.main notify --mode result
           fi
           echo "✅ notify コマンド終了"
 

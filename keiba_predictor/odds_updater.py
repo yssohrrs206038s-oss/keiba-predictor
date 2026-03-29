@@ -62,11 +62,6 @@ def update_odds_for_race(race_id: str, entry: dict) -> dict:
 
     horses_df = shutuba["horses"]
 
-    # デバッグ: 全馬のオッズ状況を出力
-    if not horses_df.empty:
-        print(f"[DEBUG][{race_id}] horses columns: {list(horses_df.columns)}", flush=True)
-        for idx, row in horses_df.iterrows():
-            print(f"[DEBUG][{race_id}] #{row.get('horse_number','?')} {row.get('horse_name','?')}: odds={row.get('odds')} pop={row.get('popularity')}", flush=True)
 
     # horse_number → odds / popularity のマップを構築
     odds_map: dict[int, float] = {}
@@ -89,7 +84,7 @@ def update_odds_for_race(race_id: str, entry: dict) -> dict:
         except (KeyError, TypeError):
             pass
 
-    print(f"[DEBUG][{race_id}] odds_map: {odds_map}", flush=True)
+    logger.info(f"[{race_id}] odds_map: {len(odds_map)}頭")
 
     if not odds_map:
         logger.warning(f"[{race_id}] オッズデータが0件 → スキップ")
