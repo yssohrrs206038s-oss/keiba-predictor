@@ -554,15 +554,21 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
     """予想結果をキャッシュに保存する（日曜結果比較・note レポート生成に使用）。"""
     cache = _load_cache()
 
+    # オッズが全馬同一（仮オッズ）かチェック
+    _odds_ser = pd.to_numeric(result_df["odds"], errors="coerce").dropna()
+    _all_same = len(_odds_ser) > 1 and _odds_ser.nunique() == 1
+
     def _row(df: pd.DataFrame, idx: int) -> dict:
         if len(df) <= idx:
             return {}
         r = df.iloc[idx]
+        raw_o = pd.to_numeric(r.get("odds"), errors="coerce")
+        o_val = None if (not pd.notna(raw_o) or _all_same) else round(float(raw_o), 1)
         return {
             "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
             "horse_name":   str(r.get("horse_name", "")),
             "prob":         float(r["prob_top3"]),
-            "odds":         float(pd.to_numeric(r.get("odds"), errors="coerce") or 0),
+            "odds":         o_val,
         }
 
     # 穴馬: 3位以降でオッズ10倍以上の最高確率
@@ -605,14 +611,22 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
     if "ev_score" not in result_df.columns:
         result_df = calc_ev_and_flags(result_df)
 
+    # オッズが全馬同一（仮オッズ）かチェック
+    odds_vals = pd.to_numeric(result_df["odds"], errors="coerce").dropna()
+    all_same_odds = len(odds_vals) > 1 and odds_vals.nunique() == 1
+    if all_same_odds:
+        logger.warning(f"全馬同一オッズ({odds_vals.iloc[0]}) → 仮オッズのため odds=None として保存")
+
     ev_top3: list[dict] = []
     for _, r in result_df[result_df["ev_score"].notna()].nlargest(3, "ev_score").iterrows():
+        raw_odds = pd.to_numeric(r.get("odds"), errors="coerce")
+        odds_val = None if (not pd.notna(raw_odds) or all_same_odds) else round(float(raw_odds), 1)
         ev_top3.append({
             "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
             "horse_name":   str(r.get("horse_name", "")),
             "ev_score":     round(float(r["ev_score"]), 3),
             "prob":         round(float(r["prob_top3"]), 4),
-            "odds":         float(pd.to_numeric(r.get("odds"), errors="coerce") or 0),
+            "odds":         odds_val,
         })
 
     dangerous: list[dict] = []
@@ -846,8 +860,11 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
         info = role_map.get(num, ev_map.get(num, {}))
         name = info.get("horse_name", f"{num}番")
         prob = info.get("prob", 0) * 100
-        ev_val = ev_map.get(num, {}).get("ev_score")
-        ev_str = f" EV{ev_val:.2f}" if ev_val else ""
+        ev_entry = ev_map.get(num, {})
+        ev_val = ev_entry.get("ev_score")
+        # オッズが未確定(None)ならEVも仮値なので非表示
+        has_real_odds = ev_entry.get("odds") is not None
+        ev_str = f" EV{ev_val:.2f}" if ev_val and has_real_odds else ""
         lines1.append(f"{mark} {num}番 {name}　{prob:.1f}%{ev_str}")
 
     lines1.append(sep)
