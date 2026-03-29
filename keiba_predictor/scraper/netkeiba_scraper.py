@@ -664,6 +664,13 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         # 上がり3ハロン
         row["last_3f"] = _td(tds, "last_3f")
 
+        # 通過順位（コーナー通過順: "1-1-1-1" 形式）
+        passing_idx = 9  # デフォルトインデックス
+        if passing_idx < len(tds):
+            row["passing"] = tds[passing_idx].get_text(strip=True)
+        else:
+            row["passing"] = ""
+
         # 調教師 + trainer_id
         ti = col_idx.get("trainer", 13)
         trainer_el = tds[ti].select_one("a") if ti < len(tds) else None
