@@ -30,10 +30,19 @@ def _load_history(cleaned_path: Optional[Path] = None) -> pd.DataFrame:
     if cleaned_path is None:
         cleaned_path = DATA_DIR / "cleaned_races.csv"
     if not cleaned_path.exists():
-        logger.warning(f"過去成績CSVが見つかりません: {cleaned_path}")
+        logger.warning(f"過去成績CSVが見つかりません: {cleaned_path} → 過去成績なしで予想を実行します")
         return pd.DataFrame()
-    df = pd.read_csv(cleaned_path, encoding="utf-8-sig", parse_dates=["race_date"])
-    return df
+    try:
+        df = pd.read_csv(cleaned_path, encoding="utf-8-sig")
+        if "race_date" in df.columns:
+            df["race_date"] = pd.to_datetime(df["race_date"], errors="coerce")
+        else:
+            logger.warning(f"cleaned_races.csv に race_date 列がありません → 過去成績なしで予想を実行します")
+            return pd.DataFrame()
+        return df
+    except Exception as e:
+        logger.warning(f"cleaned_races.csv 読み込み失敗: {e} → 過去成績なしで予想を実行します")
+        return pd.DataFrame()
 
 
 def _column_medians(history: pd.DataFrame) -> dict:
