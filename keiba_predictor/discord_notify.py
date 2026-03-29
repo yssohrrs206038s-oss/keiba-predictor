@@ -554,15 +554,21 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
     """予想結果をキャッシュに保存する（日曜結果比較・note レポート生成に使用）。"""
     cache = _load_cache()
 
+    # オッズが全馬同一（仮オッズ）かチェック
+    _odds_ser = pd.to_numeric(result_df["odds"], errors="coerce").dropna()
+    _all_same = len(_odds_ser) > 1 and _odds_ser.nunique() == 1
+
     def _row(df: pd.DataFrame, idx: int) -> dict:
         if len(df) <= idx:
             return {}
         r = df.iloc[idx]
+        raw_o = pd.to_numeric(r.get("odds"), errors="coerce")
+        o_val = None if (not pd.notna(raw_o) or _all_same) else round(float(raw_o), 1)
         return {
             "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
             "horse_name":   str(r.get("horse_name", "")),
             "prob":         float(r["prob_top3"]),
-            "odds":         float(pd.to_numeric(r.get("odds"), errors="coerce") or 0),
+            "odds":         o_val,
         }
 
     # 穴馬: 3位以降でオッズ10倍以上の最高確率
@@ -605,14 +611,22 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
     if "ev_score" not in result_df.columns:
         result_df = calc_ev_and_flags(result_df)
 
+    # オッズが全馬同一（仮オッズ）かチェック
+    odds_vals = pd.to_numeric(result_df["odds"], errors="coerce").dropna()
+    all_same_odds = len(odds_vals) > 1 and odds_vals.nunique() == 1
+    if all_same_odds:
+        logger.warning(f"全馬同一オッズ({odds_vals.iloc[0]}) → 仮オッズのため odds=None として保存")
+
     ev_top3: list[dict] = []
     for _, r in result_df[result_df["ev_score"].notna()].nlargest(3, "ev_score").iterrows():
+        raw_odds = pd.to_numeric(r.get("odds"), errors="coerce")
+        odds_val = None if (not pd.notna(raw_odds) or all_same_odds) else round(float(raw_odds), 1)
         ev_top3.append({
             "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
             "horse_name":   str(r.get("horse_name", "")),
             "ev_score":     round(float(r["ev_score"]), 3),
             "prob":         round(float(r["prob_top3"]), 4),
-            "odds":         float(pd.to_numeric(r.get("odds"), errors="coerce") or 0),
+            "odds":         odds_val,
         })
 
     dangerous: list[dict] = []
@@ -812,6 +826,109 @@ def _check_sanrenpuku_raw(
     return hit, pay
 
 
+def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str]:
+    """predictions_cache.json のエントリからDiscord用メッセージ(予想・買い目)を生成する。"""
+    sep = "━" * 20
+    course_info = entry.get("course_info", "")
+    ai_comments = entry.get("ai_comments", {})
+
+    # ── Message 1: 予想 ───────────────────────────────────────
+    lines1 = [sep, f"🏇 {race_name}"]
+    if course_info:
+        lines1.append(course_info)
+    lines1.append(sep)
+
+    MARKS = ["◎", "○", "▲", "△", "　"]
+    top5_nums = entry.get("predicted_top5_nums", [])
+
+    # honmei/taikou/ana + ev_top3 から上位馬情報を構築
+    role_map: dict[int, dict] = {}  # horse_number → info
+    for role in ("honmei", "taikou", "ana"):
+        p = entry.get(role, {})
+        num = p.get("horse_number")
+        if num is not None:
+            role_map[int(num)] = p
+
+    ev_map: dict[int, dict] = {}
+    for e in entry.get("ev_top3", []):
+        num = e.get("horse_number")
+        if num is not None:
+            ev_map[int(num)] = e
+
+    for rank, num in enumerate(top5_nums):
+        mark = MARKS[rank] if rank < len(MARKS) else "　"
+        info = role_map.get(num, ev_map.get(num, {}))
+        name = info.get("horse_name", f"{num}番")
+        prob = info.get("prob", 0) * 100
+        ev_entry = ev_map.get(num, {})
+        ev_val = ev_entry.get("ev_score")
+        # オッズが未確定(None)ならEVも仮値なので非表示
+        has_real_odds = ev_entry.get("odds") is not None
+        ev_str = f" EV{ev_val:.2f}" if ev_val and has_real_odds else ""
+        lines1.append(f"{mark} {num}番 {name}　{prob:.1f}%{ev_str}")
+
+    lines1.append(sep)
+
+    # ★穴馬
+    ana_num = entry.get("ana_horse_num")
+    if ana_num and ana_num not in top5_nums[:5]:
+        ana_ev = ev_map.get(ana_num, {})
+        if ana_ev:
+            ev = ana_ev.get("ev_score", 0)
+            name = ana_ev.get("horse_name", "")
+            lines1.append(f"★穴 {ana_num}番{name} EV{ev:.2f}")
+
+    # ⚠危険馬
+    for d in entry.get("dangerous_horses", []):
+        num = d.get("horse_number", 0)
+        name = d.get("horse_name", "")
+        reasons = d.get("reasons", [])
+        reason = reasons[0] if reasons else "要注意"
+        lines1.append(f"⚠危険 {num}番{name}（{reason}）")
+
+    lines1.append(sep)
+    msg1 = "\n".join(lines1)
+
+    # ── Message 2: 買い目 ─────────────────────────────────────
+    _SEP = "━" * 20
+    nums = top5_nums
+    if len(nums) < 2:
+        return msg1, ""
+
+    hon = nums[0]
+    hon_name = entry.get("honmei", {}).get("horse_name", "")
+
+    umaren_pairs = list(combinations(nums[:3], 2))
+    umaren_str = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
+
+    partners = nums[1:5]
+    ana_buy = entry.get("ana_horse_num")
+    if ana_buy and ana_buy not in partners:
+        partners = partners + [ana_buy]
+    sanren_pt = len(list(combinations(partners, 2)))
+    partners_str = "/".join(
+        f"{n}（穴）" if n == ana_buy else str(n) for n in partners
+    )
+    total = 1 + len(umaren_pairs) + sanren_pt
+
+    header = f"💰 {race_name}  買い目" if race_name else "💰 買い目"
+    lines2 = [
+        _SEP, header, _SEP,
+        "■ 複勝（1点）",
+        f"　{hon}番 {hon_name}",
+        f"■ 馬連（{len(umaren_pairs)}点）",
+        f"　{umaren_str}",
+        f"■ 3連複（{sanren_pt}点）",
+        f"　軸 {hon}番",
+        f"　× {partners_str}",
+        _SEP,
+        f"合計 {total}点",
+        _SEP,
+    ]
+    msg2 = "\n".join(lines2)
+    return msg1, msg2
+
+
 # ══════════════════════════════════════════════════════════════
 # 機能1: 金曜予想
 # ══════════════════════════════════════════════════════════════
@@ -893,51 +1010,60 @@ def run_predict_notify(
             f"🏇 **今週末の重賞予想** ({dates_str})  全{len(grade_races)}レース")
 
     notified = 0
+    cache = _load_cache()
+
     for race in grade_races:
-        race_id, race_name, race_date = race["race_id"], race["race_name"], race["race_date"]
+        race_id   = race["race_id"]
+        race_name = race.get("race_name", race_id)
+        race_date = race.get("race_date", "")
 
-        # ── 常に predict_live() で出馬表をリアルタイム取得 ────────
-        # featured_races.csv は race_id/name/grade のみで特徴量なし。
-        # キャッシュの古いデータを使わず、毎回出馬表を取得して予想する。
-        try:
-            from keiba_predictor.model.predict import predict_live
-            result = predict_live(race_id, notify=False, model_path=model_path)
-            # predict_live() 内で _store_prediction() 済み → キャッシュから補完
-            _cached = _load_cache().get(race_id, {})
-            ai_comments = _cached.get("ai_comments", {})
-            course_info = _cached.get("course_info", "")
-            race_name   = _cached.get("race_name", race_name)
-            race_date   = _cached.get("race_date", race_date)
-            logger.info(f"  predict_live 成功: {race_name} ({race_id})")
-        except Exception as e:
-            logger.warning(f"  predict_live 失敗 ({e}): {race_name} ({race_id})")
-            send_discord(webhook_url,
-                f"⚠️ **{race_name}** の出馬表取得に失敗しました: {e}")
-            continue
+        # ── キャッシュ優先: predictions_cache.json にデータがあればそれを使う ──
+        # predict_live() を再実行するとcleaned_races.csvが無い環境で確率が壊れるため、
+        # キャッシュに予想データがあれば常にそちらを使う
+        cached_entry = cache.get(race_id, {})
+        has_cache = bool(cached_entry and cached_entry.get("predicted_top3_nums"))
 
-        print(f"[DEBUG] {race_name} course_info={course_info!r}", flush=True)
-        print(f"[AI解説] {race_name}: {len(ai_comments)}頭分 keys={sorted(ai_comments.keys())}", flush=True)
+        if has_cache:
+            race_name = cached_entry.get("race_name", race_name)
+            logger.info(f"  キャッシュから予想を読み込み: {race_name} ({race_id})")
+            msg1, msg2 = _format_prediction_from_cache(race_name, cached_entry)
+        else:
+            # キャッシュになければ predict_live() で生成
+            logger.info(f"  キャッシュなし → predict_live 実行: {race_name} ({race_id})")
+            try:
+                from keiba_predictor.model.predict import predict_live
+                result = predict_live(race_id, notify=False, model_path=model_path)
+                cached_entry = _load_cache().get(race_id, {})
+                ai_comments = cached_entry.get("ai_comments", {})
+                course_info = cached_entry.get("course_info", "")
+                race_name   = cached_entry.get("race_name", race_name)
+                logger.info(f"  predict_live 成功: {race_name} ({race_id})")
+                msg1, msg2 = format_prediction(result, race_name=race_name,
+                                               ai_comments=ai_comments, course_info=course_info)
+            except Exception as e:
+                import traceback
+                logger.warning(f"  predict_live 失敗: {traceback.format_exc()}")
+                send_discord(webhook_url,
+                    f"⚠️ **{race_name}** の予想生成に失敗しました: {e}")
+                continue
 
-        # ① format_prediction() でメッセージを生成
-        msg1, msg2 = format_prediction(result, race_name=race_name,
-                                       ai_comments=ai_comments, course_info=course_info)
         print(msg1, flush=True)
         print(msg2, flush=True)
 
-        # ② 予想メッセージ → 買い目メッセージの順に Discord に送信
+        # Discord に送信
         ok = send_discord(webhook_url, msg1)
         if ok:
             send_discord(webhook_url, msg2)
             notified += 1
             logger.info(f"  送信完了: {race_name}")
 
-        # ③ X（Twitter）に予想を投稿
-        try:
-            from keiba_predictor.x_post import post_predict_tweet
-            cache_entry = _load_cache().get(race_id, {})
-            post_predict_tweet(race_name, cache_entry)
-        except Exception as e:
-            logger.warning(f"  [X] 予想投稿エラー: {e}")
+        # X（Twitter）に予想を投稿
+        if os.environ.get("ENABLE_X_POST", "false").lower() == "true":
+            try:
+                from keiba_predictor.x_post import post_predict_tweet
+                post_predict_tweet(race_name, cached_entry)
+            except Exception as e:
+                logger.warning(f"  [X] 予想投稿エラー: {e}")
 
     send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース送信完了")
 
@@ -989,7 +1115,9 @@ def run_result_notify(
 
     notified = 0
     for race in grade_races:
-        race_id, race_name, race_date = race["race_id"], race["race_name"], race["race_date"]
+        race_id   = race["race_id"]
+        race_name = race.get("race_name", race_id)
+        race_date = race.get("race_date", "")
 
         # 結果スクレイピング
         actual_df = scrape_race_result(race_id, session)
@@ -1019,11 +1147,12 @@ def run_result_notify(
             logger.warning(f"  [history] 記録失敗 ({race_name}): {e}")
 
         # X（Twitter）に結果を投稿
-        try:
-            from keiba_predictor.x_post import post_result_tweet
-            post_result_tweet(race_name, actual_df, pred, payouts)
-        except Exception as e:
-            logger.warning(f"  [X] 結果投稿エラー: {e}")
+        if os.environ.get("ENABLE_X_POST", "false").lower() == "true":
+            try:
+                from keiba_predictor.x_post import post_result_tweet
+                post_result_tweet(race_name, actual_df, pred, payouts)
+            except Exception as e:
+                logger.warning(f"  [X] 結果投稿エラー: {e}")
 
     send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース結果送信完了")
 

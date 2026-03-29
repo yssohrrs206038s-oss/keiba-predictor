@@ -2,10 +2,10 @@
 X（Twitter）自動投稿モジュール
 
 【環境変数】
-    X_API_KEY         : Consumer Key（API Key）
-    X_API_SECRET      : Consumer Secret（API Secret）
-    X_ACCESS_TOKEN    : Access Token
-    X_ACCESS_SECRET   : Access Token Secret
+    TWITTER_API_KEY              : Consumer Key（API Key）
+    TWITTER_API_SECRET           : Consumer Secret（API Secret）
+    TWITTER_ACCESS_TOKEN         : Access Token
+    TWITTER_ACCESS_TOKEN_SECRET  : Access Token Secret
 
 環境変数が未設定の場合は投稿をスキップし、エラーにはなりません。
 """
@@ -18,8 +18,8 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# 文字数の安全上限（280 - バッファ10）
-_CHAR_LIMIT = 270
+# 文字数の安全上限
+_CHAR_LIMIT = 140
 
 # グレード判定パターン
 _GRADE_PATS = [
@@ -40,10 +40,10 @@ def _build_client():
         return None
 
     keys = {
-        "consumer_key":        os.environ.get("X_API_KEY", ""),
-        "consumer_secret":     os.environ.get("X_API_SECRET", ""),
-        "access_token":        os.environ.get("X_ACCESS_TOKEN", ""),
-        "access_token_secret": os.environ.get("X_ACCESS_SECRET", ""),
+        "consumer_key":        os.environ.get("TWITTER_API_KEY", ""),
+        "consumer_secret":     os.environ.get("TWITTER_API_SECRET", ""),
+        "access_token":        os.environ.get("TWITTER_ACCESS_TOKEN", ""),
+        "access_token_secret": os.environ.get("TWITTER_ACCESS_TOKEN_SECRET", ""),
     }
     if not all(keys.values()):
         missing = [k for k, v in keys.items() if not v]
@@ -64,6 +64,16 @@ def _short_name(race_name: str) -> str:
     return re.sub(r"[（(]G[^）)]*[）)]", "", race_name).strip()
 
 
+def _ev_stars(ev: float) -> str:
+    if ev >= 15:
+        return "★★★"
+    elif ev >= 12:
+        return "★★"
+    elif ev >= 9:
+        return "★"
+    return ""
+
+
 def _safe_post(client, text: str) -> bool:
     """ツイートを投稿し、成否を返す。上限超は末尾を切り詰める。"""
     if len(text) > _CHAR_LIMIT:
@@ -81,44 +91,38 @@ def _safe_post(client, text: str) -> bool:
 # ── 予想ツイート ──────────────────────────────────────────────────────
 
 def build_predict_tweet(race_name: str, cache_entry: dict) -> str:
-    """
-    予想ツイート文字列を生成する。
-
-    Args:
-        race_name:   レース名（グレード表記込み）
-        cache_entry: predictions_cache.json の 1 レース分エントリ
-    """
     grade = _grade_label(race_name)
     short = _short_name(race_name)
-    lines = [f"🏇 KEIBA EDGE AI予想", f"【{short} {grade}】"]
 
-    # 印（◎○☆）
-    for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "☆")]:
+    ev_map = {e["horse_number"]: e["ev_score"]
+              for e in cache_entry.get("ev_top3", [])}
+
+    lines = [f"🏇【{short}{' ' + grade if grade else ''}】KEIBA EDGE予想"]
+
+    for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
         p = cache_entry.get(role, {})
         if not p or not p.get("horse_name"):
             continue
-        num  = p.get("horse_number", "?")
-        name = p.get("horse_name", "")
-        prob = p.get("prob", 0) * 100
-        lines.append(f"{mark} {num}番 {name} {prob:.1f}%")
+        num   = p.get("horse_number", "?")
+        name  = p.get("horse_name", "")
+        ev    = ev_map.get(num, 0)
+        stars = _ev_stars(ev)
+        lines.append(f"{mark}{num}番{name}{stars}")
+
+    # 穴馬（ana_horse_num）
+    ana_num = cache_entry.get("ana_horse_num")
+    if ana_num:
+        for e in cache_entry.get("ev_top3", []):
+            if e["horse_number"] == ana_num:
+                lines.append(f"★穴{ana_num}番{e.get('horse_name','')}{_ev_stars(e['ev_score'])}")
+                break
 
     # 危険馬（1頭のみ）
     for d in cache_entry.get("dangerous_horses", [])[:1]:
-        num  = d.get("horse_number", "?")
-        name = d.get("horse_name", "")
-        pop  = d.get("popularity", "?")
-        lines.append(f"⚠️危険：{num}番{name}（{pop}番人気）")
+        lines.append(f"⚠️{d['horse_number']}番{d['horse_name']}({d['popularity']}人気)")
 
-    # 穴馬（predicted_top3_nums 外・EV ≥ 1.0 の最上位1頭）
-    pred_nums = set(cache_entry.get("predicted_top3_nums", []))
-    for e in cache_entry.get("ev_top3", []):
-        enum = e.get("horse_number")
-        if enum is not None and int(enum) not in pred_nums and e.get("ev_score", 0) >= 1.0:
-            lines.append(f"★穴馬：{enum}番{e.get('horse_name','')} EV{e['ev_score']:.2f}")
-            break
+    lines.append(f"#競馬予想 #{short} #KEIBAREDGE")
 
-    lines += ["詳細はnoteで👇", "note.com/keiba_edge",
-              f"#競馬予想 #{short} #KEIBAREDGE #AI競馬"]
     return "\n".join(lines)
 
 
@@ -141,21 +145,14 @@ def build_result_tweet(
     payouts: dict,
     roi_pct: float,
 ) -> str:
-    """
-    結果ツイート文字列を生成する。
-
-    Args:
-        roi_pct: 累計回収率（%）
-    """
     from keiba_predictor.discord_notify import _check_sanrenpuku_raw
 
     grade = _grade_label(race_name)
     short = _short_name(race_name)
-    lines = [f"🏆 KEIBA EDGE 結果", f"【{short} {grade}】"]
+    lines = [f"🏆【{short}{' ' + grade if grade else ''}】KEIBA EDGE結果"]
 
-    # 予想馬番 → 印マッピング
     pred_num_to_mark: dict[int, str] = {}
-    for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "☆")]:
+    for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
         p = pred.get(role, {})
         num = p.get("horse_number")
         if num is not None:
@@ -163,7 +160,6 @@ def build_result_tweet(
 
     predicted_nums = pred.get("predicted_top3_nums", [])
 
-    # 実際の 1〜3 着
     df = actual_df.copy()
     df["_fp"] = pd.to_numeric(df["finish_position"], errors="coerce")
     top3 = df[df["_fp"].isin([1, 2, 3])].sort_values("_fp").head(3)
@@ -174,15 +170,14 @@ def build_result_tweet(
         name = str(r.get("horse_name", ""))
         actual_nums.append(num)
         mark = pred_num_to_mark.get(num, "　")
-        icon = " ✅" if num in predicted_nums else ""
-        lines.append(f"{fp}着 {mark} {num}番 {name}{icon}")
+        icon = "✅" if num in predicted_nums else ""
+        lines.append(f"{fp}着{mark}{num}番{name}{icon}")
 
-    # 3連複
     sanren_hit, _ = _check_sanrenpuku_raw(predicted_nums, actual_nums, payouts)
-    lines.append(f"3連複 {'✅ 的中！' if sanren_hit else '❌ ハズレ'}")
+    lines.append(f"3連複{'✅的中！' if sanren_hit else '❌ハズレ'}")
 
     if roi_pct > 0:
-        lines.append(f"累計回収率：{roi_pct:.0f}%")
+        lines.append(f"累計回収率{roi_pct:.0f}%")
 
     lines.append(f"#競馬 #{'的中' if sanren_hit else 'AI予想'} #{short} #KEIBAREDGE")
     return "\n".join(lines)

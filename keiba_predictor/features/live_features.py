@@ -30,10 +30,19 @@ def _load_history(cleaned_path: Optional[Path] = None) -> pd.DataFrame:
     if cleaned_path is None:
         cleaned_path = DATA_DIR / "cleaned_races.csv"
     if not cleaned_path.exists():
-        logger.warning(f"過去成績CSVが見つかりません: {cleaned_path}")
+        logger.warning(f"過去成績CSVが見つかりません: {cleaned_path} → 過去成績なしで予想を実行します")
         return pd.DataFrame()
-    df = pd.read_csv(cleaned_path, encoding="utf-8-sig", parse_dates=["race_date"])
-    return df
+    try:
+        df = pd.read_csv(cleaned_path, encoding="utf-8-sig")
+        if "race_date" in df.columns:
+            df["race_date"] = pd.to_datetime(df["race_date"], errors="coerce")
+        else:
+            logger.warning(f"cleaned_races.csv に race_date 列がありません → 過去成績なしで予想を実行します")
+            return pd.DataFrame()
+        return df
+    except Exception as e:
+        logger.warning(f"cleaned_races.csv 読み込み失敗: {e} → 過去成績なしで予想を実行します")
+        return pd.DataFrame()
 
 
 def _column_medians(history: pd.DataFrame) -> dict:
@@ -55,6 +64,8 @@ def _horse_hist_features(
     course_type_enc: int,
 ) -> dict:
     """1頭の過去成績（レース前の全記録）から特徴量を計算する。"""
+    if horse_hist.empty or "race_date" not in horse_hist.columns:
+        return {}
     past = horse_hist[horse_hist["race_date"] < race_date].sort_values("race_date")
     if past.empty:
         return {}
@@ -100,7 +111,7 @@ def _horse_hist_features(
 
 def _jockey_rate(jockey_id: str, history: pd.DataFrame, race_date: pd.Timestamp) -> float:
     """騎手の直近90日複勝率を返す。"""
-    if not jockey_id or history.empty:
+    if not jockey_id or history.empty or "race_date" not in history.columns:
         return np.nan
     cutoff = race_date - pd.Timedelta(days=90)
     jh = history[
@@ -114,7 +125,7 @@ def _jockey_rate(jockey_id: str, history: pd.DataFrame, race_date: pd.Timestamp)
 
 def _trainer_rate(trainer_id: str, history: pd.DataFrame, race_date: pd.Timestamp) -> float:
     """調教師の直近90日複勝率を返す。"""
-    if not trainer_id or history.empty:
+    if not trainer_id or history.empty or "race_date" not in history.columns:
         return np.nan
     cutoff = race_date - pd.Timedelta(days=90)
     th = history[
@@ -133,7 +144,7 @@ def _jockey_horse_rate(
     fallback: float,
 ) -> float:
     """騎手×馬コンビの複勝率（3回未満なら騎手全体で補完）。"""
-    if horse_hist.empty or not jockey_id:
+    if horse_hist.empty or not jockey_id or "race_date" not in horse_hist.columns:
         return fallback
     combo = horse_hist[
         (horse_hist["jockey_id"].astype(str) == jockey_id) &

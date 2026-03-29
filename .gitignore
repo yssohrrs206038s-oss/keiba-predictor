@@ -13,6 +13,9 @@ build/
 
 # Data (large files)
 keiba_predictor/data/*.csv
+!keiba_predictor/data/cleaned_races.csv
+!keiba_predictor/data/featured_races.csv
+!keiba_predictor/data/results_history.csv
 keiba_predictor/data/*.png
 
 # Model (binary) - xgb_model.pkl はリポジトリで管理する

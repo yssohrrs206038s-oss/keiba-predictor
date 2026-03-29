@@ -15,10 +15,10 @@ env:
   DISCORD_WEBHOOK_URL:        ${{ secrets.DISCORD_WEBHOOK_URL }}
   DISCORD_REPORT_WEBHOOK_URL: ${{ secrets.DISCORD_REPORT_WEBHOOK_URL }}
   ANTHROPIC_API_KEY:          ${{ secrets.ANTHROPIC_API_KEY }}
-  X_API_KEY:           ${{ secrets.X_API_KEY }}
-  X_API_SECRET:        ${{ secrets.X_API_SECRET }}
-  X_ACCESS_TOKEN:      ${{ secrets.X_ACCESS_TOKEN }}
-  X_ACCESS_SECRET:     ${{ secrets.X_ACCESS_SECRET }}
+  TWITTER_API_KEY:             ${{ secrets.TWITTER_API_KEY }}
+  TWITTER_API_SECRET:          ${{ secrets.TWITTER_API_SECRET }}
+  TWITTER_ACCESS_TOKEN:        ${{ secrets.TWITTER_ACCESS_TOKEN }}
+  TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -91,14 +91,10 @@ jobs:
         continue-on-error: true   # ネットワーク障害・スクレイピング失敗でも後続ステップを継続
         run: |
           echo "📤 Discord 予想通知を送信中..."
-          RACE_ID="${{ inputs.race_id }}"
-          if [ -n "$RACE_ID" ]; then
-            echo "🎯 指定レースID: $RACE_ID"
-            python -m keiba_predictor.main predict --race-id "$RACE_ID" --live --notify --webhook-url "$DISCORD_WEBHOOK_URL"
-          else
-            echo "📋 レースID未指定 → 当週の全対象レースを自動取得"
-            python -m keiba_predictor.main notify --mode predict --live --debug
-          fi
+          # predictions_cache.json にデータがあればキャッシュから送信のみ行う
+          # (predict_live を再実行すると cleaned_races.csv 不在で確率が壊れるため)
+          echo "📋 キャッシュ優先で予想通知を送信"
+          python -m keiba_predictor.main notify --mode predict --debug
           echo "✅ predict/notify コマンド終了"
 
       # ── note 記事用レポート生成 ───────────────────────────────
