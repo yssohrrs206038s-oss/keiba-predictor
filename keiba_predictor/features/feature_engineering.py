@@ -64,6 +64,8 @@ FEATURE_COLS = [
     "race_grade_enc",             # レース格 G1=6 … 未勝利=0
     "jockey_horse_fukusho_rate",  # 騎手×馬コンビ複勝率
     "horse_track_fukusho_rate",  # 馬場状態別複勝率（良/稍重/重/不良）
+    "running_style_enc",         # 脚質（逃=0/先=1/差=2/追=3）
+    "pace_pressure",             # 展開圧力（同レース内の逃げ+先行馬の数）
 ]
 
 
@@ -249,6 +251,37 @@ def add_horse_course_dist_features(df: pd.DataFrame) -> pd.DataFrame:
         )
     else:
         df["horse_track_fukusho_rate"] = np.nan
+
+    # 脚質エンコード（通過順位から推定）
+    if "running_style_enc" not in df.columns:
+        # cleaned_races.csv に running_style_enc がない場合、通過順位から推定
+        if "passing" in df.columns:
+            logger.info("通過順位から脚質を推定中...")
+            def _estimate_style(passing):
+                if not isinstance(passing, str):
+                    return np.nan
+                m = re.match(r"(\d+)", str(passing))
+                if not m:
+                    return np.nan
+                pos = int(m.group(1))
+                if pos <= 2: return 0  # 逃
+                if pos <= 5: return 1  # 先
+                if pos <= 10: return 2  # 差
+                return 3  # 追
+            df["running_style_enc"] = df["passing"].apply(_estimate_style)
+        else:
+            df["running_style_enc"] = np.nan
+
+    # 展開圧力（同レース内の逃げ+先行馬の数）
+    logger.info("展開圧力を計算中...")
+    if "running_style_enc" in df.columns and "race_id" in df.columns:
+        rs_numeric = pd.to_numeric(df["running_style_enc"], errors="coerce")
+        df["pace_pressure"] = (
+            (rs_numeric <= 1).astype(float)
+            .groupby(df["race_id"]).transform("sum")
+        )
+    else:
+        df["pace_pressure"] = np.nan
 
     return df
 

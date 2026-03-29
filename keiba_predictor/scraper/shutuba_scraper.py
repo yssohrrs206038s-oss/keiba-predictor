@@ -228,6 +228,33 @@ def _parse_shutuba_row(tr) -> Optional[dict]:
                 popularity = int(pop_text)
                 break
 
+    # 脚質（逃/先/差/追）
+    _RUNNING_STYLE_MAP = {"逃": 0, "先": 1, "差": 2, "追": 3, "逃げ": 0, "先行": 1, "差し": 2, "追込": 3, "追い込み": 3}
+    running_style_enc = None
+    for rs_sel in (".RunningStyle", "td.RunningStyle", ".Style", "td.Style",
+                   "span.RunningStyle", ".HorseInfo span"):
+        el = tr.select_one(rs_sel)
+        if el:
+            rs_text = el.get_text(strip=True)
+            if rs_text in _RUNNING_STYLE_MAP:
+                running_style_enc = _RUNNING_STYLE_MAP[rs_text]
+                break
+    # フォールバック: 通過順位から推定（1角1〜2番手→逃/先）
+    if running_style_enc is None:
+        pass_text = _txt("td.PassageRate", ".PassageRate")
+        if pass_text:
+            first_pos = re.match(r"(\d+)", pass_text)
+            if first_pos:
+                pos = int(first_pos.group(1))
+                if pos <= 2:
+                    running_style_enc = 0  # 逃
+                elif pos <= 5:
+                    running_style_enc = 1  # 先
+                elif pos <= 10:
+                    running_style_enc = 2  # 差
+                else:
+                    running_style_enc = 3  # 追
+
     return {
         "horse_number":       horse_number,
         "frame_number":       frame_number,
@@ -245,6 +272,7 @@ def _parse_shutuba_row(tr) -> Optional[dict]:
         "trainer_id":         trainer_id,
         "odds":               odds,
         "popularity":         popularity,
+        "running_style_enc":  running_style_enc,
     }
 
 

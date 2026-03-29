@@ -269,6 +269,7 @@ def build_live_features(
                 _horse_track_rate(horse_hist, race_date, track_condition_enc)
                 if track_condition_enc is not None else np.nan
             ),
+            "running_style_enc": h.get("running_style_enc"),
         }
 
         # FEATURE_COLS に含まれる列が NaN なら中央値で補完
@@ -280,6 +281,13 @@ def build_live_features(
         rows.append(row)
 
     result_df = pd.DataFrame(rows)
+
+    # 展開圧力（同レース内の逃げ+先行馬の数）
+    if "running_style_enc" in result_df.columns:
+        rs = pd.to_numeric(result_df["running_style_enc"], errors="coerce")
+        result_df["pace_pressure"] = float((rs <= 1).sum())
+    else:
+        result_df["pace_pressure"] = np.nan
 
     # FEATURE_COLS の列を数値型に統一
     for col in FEATURE_COLS:
