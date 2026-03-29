@@ -58,6 +58,12 @@ FEATURE_COLS = [
     "days_since_last_race",# 前走からの日数
     "prev_finish_pos",     # 前走着順
     "prev_odds",           # 前走オッズ
+    "prev2_finish_pos",    # 前々走着順
+    "prev2_odds",          # 前々走オッズ
+    "prev3_finish_pos",    # 前3走着順
+    "prev2_last_3f",       # 前々走上がり3F
+    "prev3_last_3f",       # 前3走上がり3F
+    "finish_pos_trend",    # 着順トレンド（マイナス=改善傾向）
     # [追加特徴量]
     "horse_course_fukusho_rate",  # 同コース（芝/ダート）過去複勝率
     "horse_dist_fukusho_rate",    # 同距離帯（±200m）過去複勝率
@@ -170,6 +176,31 @@ def add_prev_race_features(df: pd.DataFrame) -> pd.DataFrame:
     df["prev_odds"] = df.groupby("horse_id", group_keys=False).apply(
         lambda g: _prev(g, "odds")
     ).values
+
+    # 前々走・前3走
+    def _prev_n(group: pd.DataFrame, col: str, n: int) -> pd.Series:
+        return group[col].shift(n)
+
+    df["prev2_finish_pos"] = df.groupby("horse_id", group_keys=False).apply(
+        lambda g: _prev_n(g, "finish_position", 2)
+    ).values
+    df["prev2_odds"] = df.groupby("horse_id", group_keys=False).apply(
+        lambda g: _prev_n(g, "odds", 2)
+    ).values
+    df["prev3_finish_pos"] = df.groupby("horse_id", group_keys=False).apply(
+        lambda g: _prev_n(g, "finish_position", 3)
+    ).values
+    df["prev2_last_3f"] = df.groupby("horse_id", group_keys=False).apply(
+        lambda g: _prev_n(g, "last_3f", 2)
+    ).values
+    df["prev3_last_3f"] = df.groupby("horse_id", group_keys=False).apply(
+        lambda g: _prev_n(g, "last_3f", 3)
+    ).values
+
+    # 着順トレンド: (前走 - 前3走) / 2  マイナスなら改善傾向
+    fp1 = pd.to_numeric(df["prev_finish_pos"], errors="coerce")
+    fp3 = pd.to_numeric(df["prev3_finish_pos"], errors="coerce")
+    df["finish_pos_trend"] = (fp1 - fp3) / 2.0
 
     # 前走からの経過日数
     def _days_diff(group: pd.DataFrame) -> pd.Series:

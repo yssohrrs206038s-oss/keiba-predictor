@@ -82,6 +82,24 @@ def _horse_hist_features(
     last_dist = pd.to_numeric(last.get("distance"), errors="coerce")
     feats["dist_diff_prev"] = float(last_dist - distance) if pd.notna(last_dist) else np.nan
 
+    # 前々走（2走前）
+    if len(past) >= 2:
+        prev2 = past.iloc[-2]
+        feats["prev2_finish_pos"] = pd.to_numeric(prev2.get("finish_position"), errors="coerce")
+        feats["prev2_odds"]       = pd.to_numeric(prev2.get("odds"), errors="coerce")
+        feats["prev2_last_3f"]    = pd.to_numeric(prev2.get("last_3f"), errors="coerce")
+    # 前3走（3走前）
+    if len(past) >= 3:
+        prev3 = past.iloc[-3]
+        feats["prev3_finish_pos"] = pd.to_numeric(prev3.get("finish_position"), errors="coerce")
+        feats["prev3_last_3f"]    = pd.to_numeric(prev3.get("last_3f"), errors="coerce")
+
+    # 着順トレンド: (前走 - 前3走) / 2
+    fp1 = feats.get("prev_finish_pos")
+    fp3 = feats.get("prev3_finish_pos")
+    if pd.notna(fp1) and pd.notna(fp3):
+        feats["finish_pos_trend"] = (float(fp1) - float(fp3)) / 2.0
+
     # 平均タイム（同コース / 全コース）
     times_all  = pd.to_numeric(past["time_sec"], errors="coerce").dropna()
     same_course = past[pd.to_numeric(past.get("course_type_enc", pd.Series(dtype=float)),
