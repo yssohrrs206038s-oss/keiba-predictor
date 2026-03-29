@@ -1,1 +1,62 @@
-{}
+{
+  "202606030111": {
+    "race_name": "日経賞",
+    "race_date": "2026-03-28",
+    "honmei": 15,
+    "predicted_top3_nums": [15, 1, 3],
+    "result": [15, 1, 14],
+    "fukusho_hit": true,
+    "umaren_hit": true,
+    "sanrenpuku_hit": false,
+    "payouts": {
+      "fukusho": 240,
+      "umaren": 1330,
+      "sanrenpuku": 0
+    }
+  },
+  "202609020111": {
+    "race_name": "毎日杯",
+    "race_date": "2026-03-28",
+    "honmei": 2,
+    "predicted_top3_nums": [2, 1, 3],
+    "result": [4, 3, 2],
+    "fukusho_hit": true,
+    "umaren_hit": true,
+    "sanrenpuku_hit": true,
+    "payouts": {
+      "fukusho": 220,
+      "umaren": 650,
+      "sanrenpuku": 420
+    }
+  },
+  "202606030211": {
+    "race_name": "マーチS",
+    "race_date": "2026-03-29",
+    "honmei": 6,
+    "predicted_top3_nums": [6, 9, 14],
+    "result": [15, 7, 4],
+    "fukusho_hit": false,
+    "umaren_hit": false,
+    "sanrenpuku_hit": false,
+    "payouts": {
+      "fukusho": 0,
+      "umaren": 0,
+      "sanrenpuku": 0
+    }
+  },
+  "202607010611": {
+    "race_name": "高松宮記念",
+    "race_date": "2026-03-29",
+    "honmei": 14,
+    "predicted_top3_nums": [14, 5, 18],
+    "result": [9, 6, 8],
+    "fukusho_hit": false,
+    "umaren_hit": false,
+    "sanrenpuku_hit": false,
+    "payouts": {
+      "fukusho": 0,
+      "umaren": 0,
+      "sanrenpuku": 0
+    }
+  }
+}
