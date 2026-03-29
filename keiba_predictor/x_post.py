@@ -2,10 +2,10 @@
 X（Twitter）自動投稿モジュール
 
 【環境変数】
-    X_API_KEY         : Consumer Key（API Key）
-    X_API_SECRET      : Consumer Secret（API Secret）
-    X_ACCESS_TOKEN    : Access Token
-    X_ACCESS_SECRET   : Access Token Secret
+    TWITTER_API_KEY              : Consumer Key（API Key）
+    TWITTER_API_SECRET           : Consumer Secret（API Secret）
+    TWITTER_ACCESS_TOKEN         : Access Token
+    TWITTER_ACCESS_TOKEN_SECRET  : Access Token Secret
 
 環境変数が未設定の場合は投稿をスキップし、エラーにはなりません。
 """
@@ -40,10 +40,10 @@ def _build_client():
         return None
 
     keys = {
-        "consumer_key":        os.environ.get("X_API_KEY", ""),
-        "consumer_secret":     os.environ.get("X_API_SECRET", ""),
-        "access_token":        os.environ.get("X_ACCESS_TOKEN", ""),
-        "access_token_secret": os.environ.get("X_ACCESS_SECRET", ""),
+        "consumer_key":        os.environ.get("TWITTER_API_KEY", ""),
+        "consumer_secret":     os.environ.get("TWITTER_API_SECRET", ""),
+        "access_token":        os.environ.get("TWITTER_ACCESS_TOKEN", ""),
+        "access_token_secret": os.environ.get("TWITTER_ACCESS_TOKEN_SECRET", ""),
     }
     if not all(keys.values()):
         missing = [k for k, v in keys.items() if not v]
