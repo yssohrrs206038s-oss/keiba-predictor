@@ -1,8 +1,9 @@
-name: 日曜結果通知
+name: 結果通知（土日）
 
 on:
   schedule:
-    - cron: '0 8 * * 0'  # 毎週日曜 8:00 UTC = JST 17:00
+    - cron: '0 9 * * 6'   # 土曜 18:00 JST
+    - cron: '0 9 * * 0'   # 日曜 18:00 JST
   workflow_dispatch:       # 手動実行ボタンも有効化
     inputs:
       race_id:

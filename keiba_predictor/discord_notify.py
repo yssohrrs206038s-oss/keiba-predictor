@@ -1037,10 +1037,22 @@ def run_predict_notify(
     notified = 0
     cache = _load_cache()
 
+    # 当日のレースのみ通知（土曜実行→土曜レース、日曜実行→日曜レース）
+    today_str = date.today().isoformat()  # "YYYY-MM-DD"
+    logger.info(f"本日: {today_str}")
+
     for race in grade_races:
         race_id   = race["race_id"]
         race_name = race.get("race_name", race_id)
         race_date = race.get("race_date", "")
+
+        # キャッシュの race_date も確認
+        cached_date = cache.get(race_id, {}).get("race_date", race_date)
+        effective_date = cached_date or race_date
+
+        if effective_date and effective_date != today_str:
+            logger.info(f"  スキップ（{effective_date} ≠ {today_str}）: {race_name}")
+            continue
 
         # ── キャッシュ優先: predictions_cache.json にデータがあればそれを使う ──
         # predict_live() を再実行するとcleaned_races.csvが無い環境で確率が壊れるため、
