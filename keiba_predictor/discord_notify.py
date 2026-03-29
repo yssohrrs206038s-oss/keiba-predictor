@@ -1272,6 +1272,30 @@ def run_predict_notify(
         if has_cache:
             race_name = cached_entry.get("race_name", race_name)
             logger.info(f"  キャッシュから予想を読み込み: {race_name} ({race_id})")
+
+            # AI解説が空の場合は再生成を試みる
+            if not cached_entry.get("ai_comments"):
+                logger.info(f"  AI解説が空 → 再生成を試みます: {race_name}")
+                try:
+                    # キャッシュのpredicted_top5から簡易DataFrameを構築してAI解説生成
+                    top5_data = cached_entry.get("predicted_top5", [])
+                    if top5_data:
+                        import pandas as _pd
+                        ai_df = _pd.DataFrame(top5_data)
+                        ai_df["prob_top3"] = ai_df["prob"]
+                        if "ev_score" not in ai_df.columns:
+                            ai_df["ev_score"] = ai_df.get("odds", _pd.Series(dtype=float)) * ai_df["prob"]
+                        course_info = cached_entry.get("course_info", "")
+                        ai_comments = generate_comments(
+                            ai_df, race_name=race_name, course_info=course_info)
+                        if ai_comments:
+                            cached_entry["ai_comments"] = ai_comments
+                            cache[race_id] = cached_entry
+                            _save_cache(cache)
+                            logger.info(f"  AI解説再生成成功: {len(ai_comments)} 頭分")
+                except Exception as e:
+                    logger.warning(f"  AI解説再生成失敗（続行）: {e}")
+
             msg1, msg2 = _format_prediction_from_cache(race_name, cached_entry)
         else:
             # キャッシュになければ predict_live() で生成

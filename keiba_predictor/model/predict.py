@@ -468,7 +468,11 @@ def predict_from_csv(
     course_info = _build_course_info(race_id, race_df)
 
     from keiba_predictor.ai_comment import generate_comments, generate_report_text, save_report
-    ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
+    try:
+        ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
+    except Exception as e:
+        logger.warning(f"AI解説生成でエラー（続行）: {e}")
+        ai_comments = {}
 
     msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments=ai_comments,
                                    course_info=course_info)
@@ -585,7 +589,11 @@ def predict_live(
     course_info = shutuba_info.get("course_info", "")
 
     from keiba_predictor.ai_comment import generate_comments, generate_report_text, save_report
-    ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
+    try:
+        ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
+    except Exception as e:
+        logger.warning(f"AI解説生成でエラー（続行）: {e}")
+        ai_comments = {}
 
     msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments=ai_comments, course_info=course_info)
     print(msg1)
