@@ -1,1 +1,5 @@
 date,race_id,race_name,race_grade,pred1_name,pred1_num,pred1_prob,pred2_name,pred2_num,pred2_prob,pred3_name,pred3_num,pred3_prob,actual1_name,actual1_num,actual2_name,actual2_num,actual3_name,actual3_num,fukusho_hit,umaren_hit,umaren_payout,wide_hit,wide_payout,sanrenpuku_hit,sanrenpuku_payout,bet_total,return_total
+2026-03-28,202606030111,日経賞,1勝以下,シャイニングソード,15,53.6,マイユニバース,15,53.4,ミクニインスパイア,1,47.0,,15,,1,,14,True,True,1330,False,0,False,0,1400,1570
+2026-03-28,202609020111,毎日杯,1勝以下,シーズザスローン,2,72.4,ウップヘリーア,6,67.6,カフジエメンタール,2,66.0,,4,,3,,2,True,True,650,False,0,True,420,1400,1290
+2026-03-29,202606030211,マーチS,1勝以下,レヴォントゥレット,6,60.7,チュウワクリスエス,14,58.7,ヴァルツァーシャル,6,56.4,,15,,7,,4,False,False,0,False,0,False,0,1400,0
+2026-03-29,202607010611,高松宮記念,1勝以下,ナムラクレア,14,55.6,レイピア,14,55.3,ジューンブレア,18,52.4,,9,,6,,8,False,False,0,False,0,False,0,1400,0
