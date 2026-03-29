@@ -448,6 +448,69 @@ def update_featured_races_csv(
     return len(found)
 
 
+def _save_upcoming_to_cache() -> None:
+    """featured_races.csv のレース情報を predictions_cache.json に upcoming として保存する。
+
+    既存の予想データがあるレースは上書きしない。
+    """
+    featured_path = DATA_DIR / "featured_races.csv"
+    if not featured_path.exists():
+        logger.warning("featured_races.csv が見つかりません")
+        return
+
+    try:
+        df = pd.read_csv(featured_path, encoding="utf-8-sig", dtype={"race_id": str})
+    except Exception as e:
+        logger.warning(f"featured_races.csv 読み込み失敗: {e}")
+        return
+
+    cache = _load_cache()
+    dates = _weekend_dates()
+
+    VENUE_MAP = {
+        "01": "札幌", "02": "函館", "03": "福島", "04": "新潟",
+        "05": "東京", "06": "中山", "07": "中京", "08": "京都",
+        "09": "阪神", "10": "小倉",
+    }
+
+    added = 0
+    for _, row in df.iterrows():
+        race_id = str(row["race_id"])
+        # 既に予想データがあるレースはスキップ
+        if race_id in cache and cache[race_id].get("predicted_top3_nums"):
+            continue
+
+        race_date_str = ""
+        if len(dates) >= 2:
+            # race_id から土日を判定（末尾2桁がレース番号、その前が日次）
+            race_date_str = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
+
+        venue_code = race_id[4:6] if len(race_id) >= 6 else ""
+        venue = VENUE_MAP.get(venue_code, "")
+
+        cache[race_id] = {
+            "race_name":           str(row.get("race_name", race_id)),
+            "race_date":           race_date_str,
+            "start_time":          "",
+            "venue":               venue,
+            "course_info":         "",
+            "honmei":              None,
+            "taikou":              None,
+            "ana":                 None,
+            "predicted_top3_nums": [],
+            "predicted_top5_nums": [],
+            "predicted_top5":      [],
+            "ev_top3":             [],
+            "dangerous_horses":    [],
+            "ai_comments":         {},
+            "status":              "upcoming",
+        }
+        added += 1
+
+    _save_cache(cache)
+    logger.info(f"upcoming レース {added} 件をキャッシュに保存（既存 {len(cache) - added} 件は維持）")
+
+
 def _load_featured_race_ids_for_weekend(
     featured_path: Optional[Path] = None,
 ) -> list[dict]:

@@ -146,6 +146,12 @@ def cmd_update_featured(args: argparse.Namespace) -> None:
         sys.exit(1)
     logger.info(f"featured_races.csv 更新完了: {count} レース")
 
+    # --save-cache: 今週末のレース情報をキャッシュに保存（ダッシュボード表示用）
+    if getattr(args, "save_cache", False):
+        from keiba_predictor.discord_notify import _save_upcoming_to_cache
+        _save_upcoming_to_cache()
+        logger.info("予想キャッシュにレース情報を保存完了")
+
 
 def cmd_notify(args: argparse.Namespace) -> None:
     import os
@@ -277,6 +283,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_uf = sub.add_parser(
         "update-featured",
         help="翌週末の重賞レースを自動取得して featured_races.csv に保存"
+    )
+    p_uf.add_argument(
+        "--save-cache", action="store_true",
+        help="レース情報を predictions_cache.json にも保存（ダッシュボード表示用）"
     )
     p_uf.set_defaults(func=cmd_update_featured)
 

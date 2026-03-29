@@ -540,6 +540,23 @@ function renderPredictions(cache) {
     const shortName = (r.race_name || raceId).replace(/[（(]G[^）)]*[）)]/g, '').trim();
     const course = r.course_info ? `<span style="color:var(--text-muted);font-size:11px;margin-left:6px;">${esc(r.course_info)}</span>` : '';
 
+    // upcoming（予想未生成）の場合はレース情報のみ表示
+    if (r.status === 'upcoming') {
+      return `
+        <div class="race-card">
+          <div class="race-card-header">
+            <div>
+              <div class="race-name">📅 ${esc(shortName)}${course}</div>
+              <div class="race-meta">${esc(r.race_date || '')}${r.venue ? '　' + esc(r.venue) : ''}${r.start_time ? '　' + esc(r.start_time) + '発走' : ''}</div>
+            </div>
+            ${gLabel ? `<span class="grade-badge ${gClass}">${gLabel}</span>` : ''}
+          </div>
+          <div class="race-card-body">
+            <div style="color:var(--text-muted);padding:16px;text-align:center;">予想生成中…（レース当日14時に公開）</div>
+          </div>
+        </div>`;
+    }
+
     // 予想馬
     const roles = [
       { key: 'honmei', mark: '◎', cls: 'mark-honmei' },

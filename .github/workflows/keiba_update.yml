@@ -90,6 +90,11 @@ jobs:
                   env_file.write('MODEL_FUKUSHO=N/A\n')
           "
 
+      # ── 今週末重賞をキャッシュに保存 ─────────────────────────
+      - name: 今週末重賞をキャッシュに保存
+        continue-on-error: true
+        run: python -m keiba_predictor.main update-featured --save-cache
+
       # ── 成果物をリポジトリにコミット ─────────────────────────
       - name: モデル・CSVをコミット
         run: |
@@ -97,8 +102,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # 大きなファイルをステージング（存在する場合のみ）
-          git add    keiba_predictor/model/xgb_model.pkl          2>/dev/null || true
-          git add -f keiba_predictor/data/featured_races.csv   2>/dev/null || true
+          git add    keiba_predictor/model/xgb_model.pkl              2>/dev/null || true
+          git add -f keiba_predictor/data/featured_races.csv       2>/dev/null || true
+          git add    keiba_predictor/data/predictions_cache.json    2>/dev/null || true
 
           if git diff --staged --quiet; then
             echo "ℹ️ 変更なし（コミットスキップ）"
