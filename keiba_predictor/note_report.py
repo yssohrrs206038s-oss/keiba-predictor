@@ -255,6 +255,157 @@ def _generate_race_analysis(race_data: dict, race_name: str, course_info: str, a
 
 # ── レポート生成 ──────────────────────────────────────────────────────
 
+def _build_note_race_markdown(race_id: str, r: dict, analysis: dict) -> str:
+    """1レース分のnote投稿用Markdownを生成する。"""
+    race_name   = r.get("race_name", race_id)
+    race_date   = r.get("race_date", "")
+    course_info = r.get("course_info", "")
+    grade       = _grade_from_name(race_name)
+    grade_str   = f" {grade}" if grade else ""
+
+    ev_map: dict[int, float] = {
+        int(e["horse_number"]): e["ev_score"]
+        for e in r.get("ev_top3", [])
+        if e.get("horse_number") is not None
+    }
+    pred_set = set(r.get("predicted_top3_nums", []))
+
+    lines: list[str] = []
+
+    # ── タイトル ─────────────────────────────────────────────
+    lines += [
+        f"# 【{race_name}{grade_str}】KEIBA EDGE AI予想 {race_date}",
+        "",
+        "> ⚠️ 本予想はAIによる分析です。馬券購入は自己責任でお願いします。",
+        "",
+    ]
+
+    # ── AIスコア上位馬テーブル ────────────────────────────────
+    lines += [
+        "## 📊 AIスコア上位馬",
+        "",
+        "| 印 | 馬番 | 馬名 | AI確率 | EVスコア |",
+        "|---|---|---|---|---|",
+    ]
+
+    MARKS = ["◎", "○", "▲", "△", "　"]
+    top5 = r.get("predicted_top5", r.get("ev_top3", []))
+    roles_data = []
+    for idx, (role, mark) in enumerate([("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]):
+        p = r.get(role, {})
+        if p and p.get("horse_name"):
+            num  = p.get("horse_number", "?")
+            name = p.get("horse_name", "")
+            prob = p.get("prob", 0) * 100
+            ev   = ev_map.get(int(num), 0) if num is not None else 0
+            ev_str = f"{ev:.2f}" if ev else "—"
+            lines.append(f"| {mark} | {num}番 | {name} | {prob:.1f}% | {ev_str} |")
+            roles_data.append(int(num) if num is not None else 0)
+
+    # △ 連下（4番目の馬）
+    pnums = [n for n in r.get("predicted_top5_nums", r.get("predicted_top3_nums", [])) if n is not None]
+    for num in pnums:
+        if num not in roles_data:
+            # predicted_top5 から馬名等を引く
+            name = ""
+            prob_val = 0
+            for t in (r.get("predicted_top5", []) or []):
+                if t.get("horse_number") == num:
+                    name = t.get("horse_name", "")
+                    prob_val = t.get("prob", 0) * 100
+                    break
+            ev = ev_map.get(num, 0)
+            ev_str = f"{ev:.2f}" if ev else "—"
+            prob_str = f"{prob_val:.1f}%" if prob_val else "—"
+            lines.append(f"| △ | {num}番 | {name} | {prob_str} | {ev_str} |")
+            break
+
+    lines.append("")
+
+    # ── 注目馬AI解説 ─────────────────────────────────────────
+    lines += ["## 🔍 注目馬AI解説", ""]
+    for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
+        p = r.get(role, {})
+        if not p or not p.get("horse_name"):
+            continue
+        num  = p.get("horse_number")
+        name = p.get("horse_name", "")
+        comment = (
+            analysis["horses"].get(str(num))
+            or r.get("ai_comments", {}).get(str(num), "")
+        )
+        lines.append(f"### {mark} {num}番 {name}")
+        if comment:
+            lines.append(comment)
+        lines.append("")
+
+    # ── 危険馬 ───────────────────────────────────────────────
+    dangerous = r.get("dangerous_horses", [])
+    if dangerous:
+        lines += ["## ⚠️ 危険馬", ""]
+        for d in dangerous:
+            dnum    = d.get("horse_number", "?")
+            dname   = d.get("horse_name", "")
+            dpop    = d.get("popularity", "?")
+            reasons = d.get("reasons", [])
+            reason  = reasons[0] if reasons else "要注意"
+            lines.append(f"- **{dnum}番 {dname}**（{dpop}番人気）— {reason}")
+        lines.append("")
+
+    # ── 買い目テーブル ───────────────────────────────────────
+    if len(pnums) >= 2:
+        hon = pnums[0]
+        umaren_pairs = list(combinations(pnums[:3], 2))
+        umaren_str = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
+
+        # 3連複
+        partners = pnums[1:5]
+        cached_ana_num = r.get("ana_horse_num")
+        if cached_ana_num and cached_ana_num not in partners:
+            partners = partners + [cached_ana_num]
+        sanren_pt = len(list(combinations(partners, 2)))
+        partners_str = "/".join(str(n) for n in partners)
+
+        total = 1 + len(umaren_pairs) + sanren_pt
+
+        lines += [
+            f"## 💰 推奨買い目（合計{total}点）",
+            "",
+            "| 券種 | 買い目 | 点数 |",
+            "|---|---|---|",
+            f"| 複勝 | {hon}番 | 1点 |",
+            f"| 馬連 | {umaren_str} | {len(umaren_pairs)}点 |",
+            f"| 3連複 | 軸{hon} × {partners_str} | {sanren_pt}点 |",
+            "",
+        ]
+
+    # ── 期待値分析 ───────────────────────────────────────────
+    lines += ["## 📈 期待値分析", ""]
+    if analysis["ev_analysis"]:
+        lines.append(analysis["ev_analysis"])
+    else:
+        best_ev = r.get("ev_top3", [{}])[0] if r.get("ev_top3") else {}
+        ev_val  = best_ev.get("ev_score", 0)
+        prob    = best_ev.get("prob", 0) * 100
+        if ev_val:
+            lines.append(
+                f"EVスコア{ev_val:.2f}は期待値投資として成立。"
+                f"AI確率{prob:.1f}%の信頼度から、複勝・馬連での安定回収が見込める。"
+            )
+        else:
+            lines.append("（期待値分析データなし）")
+    lines.append("")
+
+    # ── フッター ─────────────────────────────────────────────
+    lines += [
+        "---",
+        "*KEIBA EDGE — XGBoost × Claude AIによる競馬予想システム*",
+        "*詳細はダッシュボードへ👉 https://yssohrrs206038s-oss.github.io/keiba-predictor/*",
+    ]
+
+    return "\n".join(lines)
+
+
 def generate_note_report(output_path: Optional[Path] = None) -> str:
     """
     predictions_cache.json と results_history.csv から note 記事用 Markdown を生成する。
@@ -267,347 +418,151 @@ def generate_note_report(output_path: Optional[Path] = None) -> str:
     if not cache:
         raise ValueError("予想キャッシュが空です。先に notify --mode predict を実行してください。")
 
-    api_key   = os.environ.get("ANTHROPIC_API_KEY", "")
-    today_str = date.today().strftime("%Y/%m/%d")
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
 
-    race_dates    = [r.get("race_date", "") for r in cache.values()]
-    weekend_label = _weekend_label(race_dates)
+    all_reports: list[str] = []
 
-    hist_df = load_history()
-    c_stats = cumulative_summary(hist_df)
-    streak  = hit_streak(hist_df)
-
-    lines: list[str] = []
-
-    # ── タイトル ──────────────────────────────────────────────────
-    lines += [
-        f"# 【KEIBA EDGE】今週の重賞AI予想レポート {today_str}",
-        "",
-    ]
-
-    # ── 今週のレース概要 ──────────────────────────────────────────
-    lines += ["## 今週のレース概要", ""]
-    for race_id, r in cache.items():
-        race_name  = r.get("race_name", race_id)
-        honmei     = r.get("honmei", {})
-        grade      = _grade_from_name(race_name)
-        grade_str  = f"（{grade}）" if grade else ""
-        honmei_str = ""
-        if honmei and honmei.get("horse_name"):
-            honmei_str = f"　◎{honmei['horse_number']}番 {honmei['horse_name']}"
-        lines.append(f"- 🏇 {race_name}{grade_str}{honmei_str}")
-    lines += ["", "---", ""]
-
-    # ── レース別詳細分析 ──────────────────────────────────────────
     for race_id, r in cache.items():
         race_name   = r.get("race_name", race_id)
         course_info = r.get("course_info", "")
-        venue       = r.get("venue", _venue_from_race_id(race_id))
-        grade       = _grade_from_name(race_name)
 
-        grade_str  = f"（{grade}）" if grade else ""
-        venue_str  = f"  {venue}"       if venue       else ""
-        course_str = f"  {course_info}" if course_info else ""
-
-        lines += [f"### 🏇 {race_name}{grade_str}{venue_str}{course_str}", ""]
-
-        # Claude AI 分析生成
         print(f"[note_report] {race_name} の AI分析を生成中...", flush=True)
         analysis = _generate_race_analysis(r, race_name, course_info, api_key)
 
-        ev_map: dict[int, float] = {
-            int(e["horse_number"]): e["ev_score"]
-            for e in r.get("ev_top3", [])
-            if e.get("horse_number") is not None
-        }
-        pred_set = set(r.get("predicted_top3_nums", []))
+        report = _build_note_race_markdown(race_id, r, analysis)
+        all_reports.append(report)
 
-        # ── AIスコア上位馬 ──────────────────────────────────────
-        lines += ["#### AIスコア上位馬", ""]
-        for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
-            p = r.get(role, {})
-            if not p or not p.get("horse_name"):
-                continue
-            num  = p.get("horse_number")
-            name = p.get("horse_name", "")
-            prob = p.get("prob", 0) * 100
-            ev   = ev_map.get(int(num), 0) if num is not None else 0
-            ev_str = f"  EV{ev:.2f}" if ev else ""
-            lines.append(f"{mark} {num}番 **{name}**　AI確率 {prob:.1f}%{ev_str}")
-
-        for e in r.get("ev_top3", []):
-            enum = e.get("horse_number")
-            if enum and int(enum) not in pred_set and e.get("ev_score", 0) >= 1.0:
-                lines.append(
-                    f"穴🚀 {enum}番 **{e.get('horse_name', '')}**"
-                    f"　EV{e['ev_score']:.2f}（{e.get('odds', 0):.0f}倍）"
-                )
-                break
-        lines.append("")
-
-        # ── 展開予測 ────────────────────────────────────────────
-        lines += ["#### 展開予測", ""]
-        lines.append(analysis["tenkai"] if analysis["tenkai"] else "（展開予測データなし）")
-        lines.append("")
-
-        # ── 注目馬 AI解説 ─────────────────────────────────
-        lines += ["#### 注目馬 AI解説", ""]
-        for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
-            p = r.get(role, {})
-            if not p or not p.get("horse_name"):
-                continue
-            num     = p.get("horse_number")
-            name    = p.get("horse_name", "")
-            comment = (
-                analysis["horses"].get(str(num))
-                or r.get("ai_comments", {}).get(str(num), "")
-            )
-            lines += [f"**{mark} {num}番 {name}**", ""]
-            if comment:
-                lines.append(comment)
-            lines.append("")
-
-        # 穴馬解説
-        for e in r.get("ev_top3", []):
-            enum = e.get("horse_number")
-            if enum and int(enum) not in pred_set and e.get("ev_score", 0) >= 1.0:
-                ename   = e.get("horse_name", "")
-                comment = (
-                    analysis["horses"].get(str(enum))
-                    or r.get("ai_comments", {}).get(str(enum), "")
-                )
-                lines += [f"**穴🚀 {enum}番 {ename}**", ""]
-                if comment:
-                    lines.append(comment)
-                lines.append("")
-                break
-
-        # 危険馬
-        dangerous = r.get("dangerous_horses", [])
-        if dangerous:
-            lines += ["#### ⚠️ 危険馬", ""]
-            for d in dangerous:
-                dnum  = d.get("horse_number", "?")
-                dname = d.get("horse_name", "")
-                dpop  = d.get("popularity", "?")
-                lines.append(f"**{dnum}番 {dname}**（{dpop}番人気）")
-                for rsn in d.get("reasons", []):
-                    lines.append(f"- {rsn}")
-            lines.append("")
-
-        # ── 期待値分析 ────────────────────────────────────────
-        lines += ["#### 期待値分析", ""]
-        if analysis["ev_analysis"]:
-            lines.append(analysis["ev_analysis"])
-        else:
-            for e in r.get("ev_top3", []):
-                ev   = e.get("ev_score", 0)
-                prob = e.get("prob", 0) * 100
-                odds = e.get("odds", 0)
-                mark = "★ EV+" if ev >= 1.0 else "　"
-                lines.append(
-                    f"{mark} {e.get('horse_number')}番 {e.get('horse_name', '')}"
-                    f"　EV{ev:.2f}（確率{prob:.1f}% / {odds:.1f}倍）"
-                )
-        lines.append("")
-
-        # ── 買い目 ────────────────────────────────────────────
-        pnums = [n for n in r.get("predicted_top3_nums", []) if n is not None]
-        if len(pnums) >= 2:
-            bet_count = 1 + len(list(combinations(pnums[:3], 2))) + (1 if len(pnums) >= 3 else 0)
-            lines += [f"#### 💰 買い目（{bet_count}点）", ""]
-            lines.append(f"**複勝**：{pnums[0]}番")
-            umaren_combos = " / ".join(f"{a}-{b}" for a, b in combinations(pnums[:3], 2))
-            lines.append(f"**馬連**：{umaren_combos}")
-            if len(pnums) >= 3:
-                others = "/".join(str(n) for n in pnums[1:])
-                lines.append(f"**3連複**：軸{pnums[0]}番 × {others}")
-            lines.append("")
-
-        lines += ["---", ""]
-
-    # ── 的中実績・回収率サマリー ──────────────────────────────────
-    lines += ["## 📊 的中実績・回収率サマリー", ""]
-    if streak >= 1:
-        lines.append(f"✅ 重賞{streak}連続複勝的中")
-    if c_stats["n_races"] > 0:
-        lines += [
-            f"📈 複勝的中率：{c_stats['fukusho_rate'] * 100:.0f}%",
-            f"💰 累計回収率：{c_stats['roi'] * 100:.0f}%",
-            f"📋 通算 {c_stats['n_races']} レース分析済み",
-        ]
-    else:
-        lines.append("（実績データ蓄積中）")
-    lines += ["", "---", ""]
-
-    # ── KEIBA EDGEについて ────────────────────────────────────────
-    lines += [
-        "## KEIBA EDGEについて",
-        "",
-        "KEIBA EDGEは機械学習（XGBoost）と Claude AIを組み合わせた重賞予想システムです。",
-        "- 過去の出走データ・騎手成績・コース適性を学習した独自モデルで3着以内確率を算出",
-        "- 期待値（EV）スコアにより「オッズと確率のギャップ」がある穴馬を発見",
-        "- Claude AIが展開予測・血統分析・個別解説を生成",
-        "",
-        "※本予想はAIによる分析です。馬券購入は自己責任でお願いします。",
-    ]
-
-    report = "\n".join(lines)
+    full_report = "\n\n".join(all_reports)
 
     # 保存
     if output_path is None:
         today_file = date.today().strftime("%Y%m%d")
         output_path = DATA_DIR / f"note_report_{today_file}.md"
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(report, encoding="utf-8")
+    output_path.write_text(full_report, encoding="utf-8")
     logger.info(f"note レポート保存: {output_path}")
 
     # Discord 送信（レースごとに個別メッセージ）
     send_discord_per_race(cache)
 
-    return report
+    return full_report
 
 
 # ── Discord 送信 ──────────────────────────────────────────────────────
 
 def _build_race_discord_message(race_id: str, r: dict) -> str:
-    """レース1件分の Discord 送信メッセージを組み立てる。"""
+    """レース1件分の Discord 送信メッセージをnote風Markdownで組み立てる。"""
     from itertools import combinations as _comb
 
-    SEP = "---"
     race_name   = r.get("race_name", race_id)
     race_date   = r.get("race_date", "")
     course_info = r.get("course_info", "")
     grade       = _grade_from_name(race_name)
-    # レース名に既にグレード表記が含まれている場合は追加しない
-    grade_str   = f"（{grade}）" if grade and grade not in race_name else ""
+    grade_str   = f" {grade}" if grade else ""
 
-    venue  = r.get("venue") or _venue_from_race_id(race_id)
-    course = course_info
-
-    # EV マップ（馬番 → ev_score, odds, popularity）
-    ev_map: dict[int, dict] = {}
-    for e in r.get("ev_top3", []):
-        num = e.get("horse_number")
-        if num is not None:
-            ev_map[int(num)] = e
-
-    def _prob_str(p: dict) -> str:
-        prob = p.get("prob", 0) * 100
-        num  = p.get("horse_number")
-        ev   = ev_map.get(int(num), {}).get("ev_score", 0) if num is not None else 0
-        ev_str = f" EV{ev:.2f}" if ev else ""
-        return f"AI確率{prob:.1f}%{ev_str}"
-
-    honmei = r.get("honmei", {})
-    taikou = r.get("taikou", {})
-    ana    = r.get("ana", {})
-
-    # △ 連下: predicted_top3_nums の4番目 or honmei/taikou/ana 以外の最初
-    pnums    = [n for n in r.get("predicted_top3_nums", []) if n is not None]
-    top3_set = {
-        honmei.get("horse_number"),
-        taikou.get("horse_number"),
-        ana.get("horse_number"),
-    } - {None}
-    renka_num = next((n for n in pnums if n not in top3_set), None)
-
-    # 穴馬: ev_top3 の中で predicted_top3_nums 外かつ EV ≥ 1.0 の最上位
-    pred_set = set(pnums)
-    ana_horse = None
-    for e in r.get("ev_top3", []):
-        enum = e.get("horse_number")
-        if enum and int(enum) not in pred_set and e.get("ev_score", 0) >= 1.0:
-            ana_horse = e
-            break
+    ev_map: dict[int, float] = {
+        int(e["horse_number"]): e["ev_score"]
+        for e in r.get("ev_top3", [])
+        if e.get("horse_number") is not None
+    }
 
     lines = [
-        SEP,
-        f"📝 【{race_date}】{race_name}{grade_str} AI予想レポート",
-        SEP,
+        f"# 【{race_name}{grade_str}】KEIBA EDGE AI予想 {race_date}",
         "",
-        "本日のメインレースのAI分析が完了しました。",
-        "データに基づいた客観的な視点で勝ち馬を炙り出します。",
+        "> ⚠️ 本予想はAIによる分析です。馬券購入は自己責任でお願いします。",
         "",
-        "【レース概要】",
-        f"📅 開催日：{race_date}",
-        f"📍 場所：{venue}",
-        f"🏁 条件：{course}",
+        "## 📊 AIスコア上位馬",
         "",
-        "【AI予想印】",
+        "| 印 | 馬番 | 馬名 | AI確率 | EVスコア |",
+        "|---|---|---|---|---|",
     ]
 
-    if honmei and honmei.get("horse_name"):
-        lines.append(f"◎ 本命：{honmei['horse_number']}番 {honmei['horse_name']}（{_prob_str(honmei)}）")
-    if taikou and taikou.get("horse_name"):
-        lines.append(f"○ 対抗：{taikou['horse_number']}番 {taikou['horse_name']}（{_prob_str(taikou)}）")
-    if ana and ana.get("horse_name"):
-        lines.append(f"▲ 単穴：{ana['horse_number']}番 {ana['horse_name']}（{_prob_str(ana)}）")
-    if renka_num:
-        lines.append(f"△ 連下：{renka_num}番")
-    if ana_horse:
-        ev_val = ana_horse.get("ev_score", 0)
-        pop    = ana_horse.get("popularity", "?")
-        odds   = ana_horse.get("odds", 0)
-        lines.append(
-            f"★ 穴馬：{ana_horse['horse_number']}番 {ana_horse.get('horse_name', '')}"
-            f"（EV{ev_val:.2f} {pop}人気 {odds:.0f}倍）"
-        )
+    for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
+        p = r.get(role, {})
+        if not p or not p.get("horse_name"):
+            continue
+        num  = p.get("horse_number", "?")
+        name = p.get("horse_name", "")
+        prob = p.get("prob", 0) * 100
+        ev   = ev_map.get(int(num), 0) if num is not None else 0
+        ev_str = f"{ev:.2f}" if ev else "—"
+        lines.append(f"| {mark} | {num}番 | {name} | {prob:.1f}% | {ev_str} |")
+
+    lines.append("")
+
+    # 注目馬AI解説
+    ai_comments = r.get("ai_comments", {})
+    if ai_comments:
+        lines += ["## 🔍 注目馬AI解説", ""]
+        for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
+            p = r.get(role, {})
+            if not p or not p.get("horse_name"):
+                continue
+            num     = p.get("horse_number")
+            name    = p.get("horse_name", "")
+            comment = ai_comments.get(str(num), "")
+            lines.append(f"### {mark} {num}番 {name}")
+            if comment:
+                lines.append(comment)
+            lines.append("")
+
+    # 危険馬
+    dangerous = r.get("dangerous_horses", [])
+    if dangerous:
+        lines += ["## ⚠️ 危険馬", ""]
+        for d in dangerous:
+            dnum    = d.get("horse_number", "?")
+            dname   = d.get("horse_name", "")
+            dpop    = d.get("popularity", "?")
+            reasons = d.get("reasons", [])
+            reason  = reasons[0] if reasons else "要注意"
+            lines.append(f"- **{dnum}番 {dname}**（{dpop}番人気）— {reason}")
+        lines.append("")
 
     # 買い目
-    # pnums: top5（predicted_top5_nums があれば優先、なければ top3 で代用）
     pnums = [n for n in (r.get("predicted_top5_nums") or r.get("predicted_top3_nums", [])) if n is not None]
     if len(pnums) >= 2:
-        SEP2 = "━" * 20
-        hon = pnums[0]  # 軸（◎）
-
-        # 馬番 → 馬名マップ
-        name_map: dict[int, str] = {}
-        for p in [honmei, taikou, ana]:
-            if p and p.get("horse_number") is not None:
-                name_map[int(p["horse_number"])] = p.get("horse_name", "")
-        hon_name = name_map.get(hon, "")
-
-        # 馬連: top3 の組み合わせ
+        hon = pnums[0]
         umaren_pairs = list(_comb(pnums[:3], 2))
-        umaren_str   = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
+        umaren_str = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
 
-        # 3連複: 軸1頭 × 相手（2〜5位 + 穴馬）
-        partners  = pnums[1:5]  # 2位〜5位
+        partners = pnums[1:5]
         cached_ana_num = r.get("ana_horse_num")
-        ana_label = ""
         if cached_ana_num and cached_ana_num not in partners:
-            partners  = partners + [cached_ana_num]
-            ana_label = "（穴）"
-        sanren_pt  = len(list(_comb(partners, 2)))  # C(n,2)
-        partners_str = "/".join(
-            f"{n}{ana_label if n == cached_ana_num else ''}" for n in partners
-        )
-
+            partners = partners + [cached_ana_num]
+        sanren_pt = len(list(_comb(partners, 2)))
+        partners_str = "/".join(str(n) for n in partners)
         total = 1 + len(umaren_pairs) + sanren_pt
+
         lines += [
+            f"## 💰 推奨買い目（合計{total}点）",
             "",
-            SEP2,
-            f"💰 {race_name}  買い目",
-            SEP2,
-            "■ 複勝（1点）",
-            f"　{hon}番 {hon_name}",
-            f"■ 馬連（{len(umaren_pairs)}点）",
-            f"　{umaren_str}",
-            f"■ 3連複（{sanren_pt}点）",
-            f"　軸 {hon}番",
-            f"　× {partners_str}",
-            SEP2,
-            f"合計 {total}点",
-            SEP2,
+            "| 券種 | 買い目 | 点数 |",
+            "|---|---|---|",
+            f"| 複勝 | {hon}番 | 1点 |",
+            f"| 馬連 | {umaren_str} | {len(umaren_pairs)}点 |",
+            f"| 3連複 | 軸{hon} × {partners_str} | {sanren_pt}点 |",
+            "",
+        ]
+
+    # 期待値分析
+    best_ev = r.get("ev_top3", [{}])[0] if r.get("ev_top3") else {}
+    ev_val  = best_ev.get("ev_score", 0)
+    prob    = best_ev.get("prob", 0) * 100
+    if ev_val:
+        lines += [
+            "## 📈 期待値分析",
+            f"EVスコア{ev_val:.2f}は期待値投資として成立。"
+            f"AI確率{prob:.1f}%の信頼度から、複勝・馬連での安定回収が見込める。",
+            "",
         ]
 
     lines += [
-        "",
-        SEP,
-        "⚠️ 予想はAIによる分析です。馬券購入は自己責任でお願いします。",
-        SEP,
+        "---",
+        "*KEIBA EDGE — XGBoost × Claude AIによる競馬予想システム*",
+        "*詳細はダッシュボードへ👉 https://yssohrrs206038s-oss.github.io/keiba-predictor/*",
     ]
+
     return "\n".join(lines)
 
 
