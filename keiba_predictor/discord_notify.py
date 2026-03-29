@@ -754,6 +754,22 @@ def _fmt_result(race_name: str, race_date: str,
 
     predicted_nums = pred.get("predicted_top3_nums", [])
 
+    # 馬番→馬名マップを予想キャッシュから構築（結果に馬名がない場合の補完用）
+    num_to_name: dict[int, str] = {}
+    for role in ("honmei", "taikou", "ana"):
+        p = pred.get(role, {})
+        pnum = p.get("horse_number")
+        if pnum is not None:
+            num_to_name[int(pnum)] = p.get("horse_name", "")
+    for h in (pred.get("predicted_top5") or []):
+        hnum = h.get("horse_number")
+        if hnum is not None and int(hnum) not in num_to_name:
+            num_to_name[int(hnum)] = h.get("horse_name", "")
+    for e in (pred.get("ev_top3") or []):
+        enum = e.get("horse_number")
+        if enum is not None and int(enum) not in num_to_name:
+            num_to_name[int(enum)] = e.get("horse_name", "")
+
     # 確定 1〜3 着
     df_copy = actual_df.copy()
     df_copy["_fp"] = pd.to_numeric(df_copy["finish_position"], errors="coerce")
@@ -764,6 +780,8 @@ def _fmt_result(race_name: str, race_date: str,
         fp   = int(r["_fp"])
         num  = int(r["horse_number"]) if pd.notna(r.get("horse_number")) else 0
         name = str(r.get("horse_name", ""))
+        if not name:
+            name = num_to_name.get(num, "")
         actual_top3_nums.append(num)
         mark = pred_num_to_mark.get(num, "　")
         icon = " ✅" if num in predicted_nums else ""
