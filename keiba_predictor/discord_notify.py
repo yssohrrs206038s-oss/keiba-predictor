@@ -1018,13 +1018,18 @@ def run_predict_notify(
         race_date = race.get("race_date", "")
 
         # ── キャッシュ優先: predictions_cache.json にデータがあればそれを使う ──
+        # predict_live() を再実行するとcleaned_races.csvが無い環境で確率が壊れるため、
+        # キャッシュに予想データがあれば常にそちらを使う
         cached_entry = cache.get(race_id, {})
-        if cached_entry and cached_entry.get("honmei"):
+        has_cache = bool(cached_entry and cached_entry.get("predicted_top3_nums"))
+
+        if has_cache:
             race_name = cached_entry.get("race_name", race_name)
             logger.info(f"  キャッシュから予想を読み込み: {race_name} ({race_id})")
             msg1, msg2 = _format_prediction_from_cache(race_name, cached_entry)
         else:
             # キャッシュになければ predict_live() で生成
+            logger.info(f"  キャッシュなし → predict_live 実行: {race_name} ({race_id})")
             try:
                 from keiba_predictor.model.predict import predict_live
                 result = predict_live(race_id, notify=False, model_path=model_path)
