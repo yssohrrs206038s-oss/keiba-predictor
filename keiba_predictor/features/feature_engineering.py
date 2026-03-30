@@ -77,6 +77,11 @@ FEATURE_COLS = [
     "weeks_since_last_race",     # 前走からの週数
     "is_fresh",                  # 休み明けフラグ（中8週以上=1）
     "is_continuous",             # 連闘・中2週フラグ（中2週以下=1）
+    "jockey_trainer_fukusho_rate",  # 騎手×調教師コンビ複勝率（5走以上）
+    "weight_carried_diff",       # 前走からの斤量増減
+    "is_weight_increase",        # 斤量増加フラグ（1=増加）
+    "same_day_rank",             # 同レース内AI確率順位
+    "prob_vs_avg",               # AI確率 - レース平均確率
 ]
 
 
@@ -214,6 +219,19 @@ def add_prev_race_features(df: pd.DataFrame) -> pd.DataFrame:
     df["days_since_last_race"] = df.groupby("horse_id", group_keys=False).apply(
         _days_diff
     ).values
+
+    # 斤量増減
+    if "weight_carried" in df.columns:
+        prev_wc = df.groupby("horse_id", group_keys=False).apply(
+            lambda g: _prev(g, "weight_carried")
+        ).values
+        wc = pd.to_numeric(df["weight_carried"], errors="coerce")
+        prev_wc_num = pd.to_numeric(pd.Series(prev_wc), errors="coerce")
+        df["weight_carried_diff"] = wc - prev_wc_num
+        df["is_weight_increase"] = (df["weight_carried_diff"] > 0).astype(float)
+    else:
+        df["weight_carried_diff"] = np.nan
+        df["is_weight_increase"] = np.nan
 
     # 前走間隔の派生特徴量
     days = pd.to_numeric(df["days_since_last_race"], errors="coerce")
@@ -362,6 +380,27 @@ def add_jockey_horse_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def add_jockey_trainer_features(df: pd.DataFrame) -> pd.DataFrame:
+    """騎手×調教師コンビの過去複勝率を追加する（最低5走以上）。"""
+    logger.info("騎手×調教師コンビ複勝率を計算中...")
+    df = df.sort_values("race_date").reset_index(drop=True)
+    result = pd.Series(np.nan, index=df.index, dtype=float)
+
+    for (_, _), group in df.groupby(["jockey_id", "trainer_id"], sort=False):
+        group = group.sort_values("race_date")
+        idxs = group.index.tolist()
+        top3s = pd.to_numeric(group["top3"], errors="coerce").values
+
+        for i, idx in enumerate(idxs):
+            past = top3s[:i]
+            valid = past[~np.isnan(past)]
+            if len(valid) >= 5:
+                result[idx] = valid.mean()
+
+    df["jockey_trainer_fukusho_rate"] = result
+    return df
+
+
 def _dist_band_label(distance) -> str:
     """距離帯ラベルを返す: 短距離/マイル/中距離/長距離。"""
     d = pd.to_numeric(distance, errors="coerce")
@@ -419,6 +458,14 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df = add_horse_course_dist_features(df)
     df = add_jockey_horse_features(df)      # jockey_fukusho_rate に依存するため最後
     df = add_jockey_course_dist_features(df)
+    df = add_jockey_trainer_features(df)
+
+    # same_day_rank / prob_vs_avg は学習時には使えない（leakage）ため NaN で埋める
+    # ライブ予測時のみ predict_race() 後に計算する
+    if "same_day_rank" not in df.columns:
+        df["same_day_rank"] = np.nan
+    if "prob_vs_avg" not in df.columns:
+        df["prob_vs_avg"] = np.nan
 
     # 存在しない特徴量列を NaN で補完
     for col in FEATURE_COLS:

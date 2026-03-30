@@ -86,6 +86,10 @@ def _horse_hist_features(
     last_dist = pd.to_numeric(last.get("distance"), errors="coerce")
     feats["dist_diff_prev"] = float(last_dist - distance) if pd.notna(last_dist) else np.nan
 
+    # 斤量増減
+    last_wc = pd.to_numeric(last.get("weight_carried"), errors="coerce")
+    feats["_prev_weight_carried"] = last_wc  # row構築時に使用
+
     # 前々走（2走前）
     if len(past) >= 2:
         prev2 = past.iloc[-2]
@@ -232,6 +236,24 @@ def _jockey_dist_rate(
     return float(top3.mean()) if len(top3) >= 1 else np.nan
 
 
+def _jockey_trainer_rate(
+    jockey_id: str,
+    trainer_id: str,
+    history: pd.DataFrame,
+    race_date: pd.Timestamp,
+) -> float:
+    """騎手×調教師コンビの過去複勝率（5走以上）を返す。"""
+    if not jockey_id or not trainer_id or history.empty or "race_date" not in history.columns:
+        return np.nan
+    past = history[
+        (history["jockey_id"].astype(str) == jockey_id) &
+        (history["trainer_id"].astype(str) == trainer_id) &
+        (history["race_date"] < race_date)
+    ]
+    top3 = pd.to_numeric(past["top3"], errors="coerce").dropna()
+    return float(top3.mean()) if len(top3) >= 5 else np.nan
+
+
 def _horse_track_rate(
     horse_hist: pd.DataFrame,
     race_date: pd.Timestamp,
@@ -314,6 +336,7 @@ def build_live_features(
         combo_rate   = _jockey_horse_rate(horse_hist, jockey_id, race_date, jockey_rate)
         jockey_course_rate = _jockey_course_rate(jockey_id, history, race_date, venue, course_type_enc)
         jockey_dist_rate   = _jockey_dist_rate(jockey_id, history, race_date, distance)
+        jt_rate = _jockey_trainer_rate(jockey_id, trainer_id, history, race_date)
 
         row: dict = {
             # メタ情報（モデル特徴量ではないが後処理で使用）
@@ -353,7 +376,17 @@ def build_live_features(
             "running_style_enc": h.get("running_style_enc"),
             "jockey_course_fukusho_rate": jockey_course_rate,
             "jockey_dist_fukusho_rate":   jockey_dist_rate,
+            "jockey_trainer_fukusho_rate": jt_rate,
         }
+
+        # 斤量増減
+        cur_wc = pd.to_numeric(h.get("weight_carried"), errors="coerce")
+        prev_wc = hist_feats.get("_prev_weight_carried")
+        if pd.notna(cur_wc) and pd.notna(prev_wc):
+            row["weight_carried_diff"] = float(cur_wc - prev_wc)
+            row["is_weight_increase"] = 1.0 if cur_wc > prev_wc else 0.0
+        # _prev_weight_carried は内部用なので削除
+        row.pop("_prev_weight_carried", None)
 
         # FEATURE_COLS に含まれる列が NaN なら中央値で補完
         for col in FEATURE_COLS:

@@ -80,6 +80,11 @@ FEATURE_LABELS: dict[str, str] = {
     "weeks_since_last_race": "レース間隔",
     "is_fresh": "休み明け",
     "is_continuous": "連闘・中2週",
+    "jockey_trainer_fukusho_rate": "騎手調教師相性",
+    "weight_carried_diff": "斤量増減",
+    "is_weight_increase": "斤量増加",
+    "same_day_rank": "レース内順位",
+    "prob_vs_avg": "平均比確率",
 }
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -288,6 +293,11 @@ def predict_race(
 
     result = race_df.copy()
     result["prob_top3"] = probs
+
+    # 同レース内相対評価
+    result["same_day_rank"] = result["prob_top3"].rank(ascending=False, method="first")
+    avg_prob = result["prob_top3"].mean()
+    result["prob_vs_avg"] = result["prob_top3"] - avg_prob
 
     # SHAP値を計算して各馬に付与
     shap_tops = compute_shap_top(model_bundle, X, feature_cols)
