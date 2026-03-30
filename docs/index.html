@@ -854,6 +854,16 @@ function renderPredictions(cache) {
       }
     }
 
+    // 大口投票検知
+    let largeBetHTML = '';
+    const lbFlags = r.large_bet_flags || [];
+    if (lbFlags.length) {
+      largeBetHTML = lbFlags.map(f => {
+        const icon = f.rank === 'A' ? '🚨' : '⚠️';
+        return `<div class="alert-item alert-danger">${icon} <span>大口検知：${esc(f.horse_number)}番 ${esc(f.horse_name)}（ランク${f.rank} スコア${f.score}）</span></div>`;
+      }).join('');
+    }
+
     // 買い目（bet_strategy があれば使用）
     const bs = r.bet_strategy;
     let betHTML = '';
@@ -960,7 +970,7 @@ function renderPredictions(cache) {
         </div>
         <div class="race-card-body">
           <div class="horse-list">${horseHTML}</div>
-          ${(dangerous || anaBakkeHTML) ? `<div class="alert-section">${dangerous}${anaBakkeHTML}</div>` : ''}
+          ${(dangerous || anaBakkeHTML || largeBetHTML) ? `<div class="alert-section">${dangerous}${anaBakkeHTML}${largeBetHTML}</div>` : ''}
           ${betHTML}
           ${simHTML}
         </div>

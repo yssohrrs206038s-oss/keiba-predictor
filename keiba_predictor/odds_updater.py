@@ -123,6 +123,38 @@ def update_odds_for_race(race_id: str, entry: dict) -> dict:
     if best_num:
         entry["ana_horse_num"] = best_num
 
+    # 大口投票検知
+    try:
+        from keiba_predictor.odds_monitor import detect_large_bets
+        horses_for_detect = []
+        for _, row in horses_df.iterrows():
+            num = row.get("horse_number")
+            if not pd.notna(num):
+                continue
+            o = pd.to_numeric(row.get("odds"), errors="coerce")
+            fo = pd.to_numeric(row.get("fukusho_odds"), errors="coerce") if "fukusho_odds" in row.index else None
+            p = pd.to_numeric(row.get("popularity"), errors="coerce")
+            horses_for_detect.append({
+                "horse_number": int(num),
+                "horse_name": str(row.get("horse_name", "")),
+                "odds": float(o) if pd.notna(o) else 0,
+                "popularity": int(p) if pd.notna(p) else 0,
+                "fukusho_odds": float(fo) if pd.notna(fo) else None,
+            })
+        flags = detect_large_bets(race_id, horses_for_detect)
+        if flags:
+            entry["large_bet_flags"] = [
+                {"horse_number": f["horse_number"], "horse_name": f["horse_name"],
+                 "rank": f["rank"], "score": f["score"],
+                 "gap_score": f["gap_score"], "divergence_score": f["divergence_score"]}
+                for f in flags
+            ]
+            logger.info(f"[{race_id}] 大口検知: {len(flags)}頭")
+        else:
+            entry.pop("large_bet_flags", None)
+    except Exception as e:
+        logger.debug(f"[{race_id}] 大口検知失敗: {e}")
+
     return entry
 
 
@@ -275,6 +307,22 @@ def run_odds_update() -> int:
                 logger.info(f"直前期待値ランク Discord送信{'完了' if ok else '失敗'}")
             except Exception as e:
                 logger.warning(f"直前期待値ランク Discord送信失敗: {e}")
+
+    # 大口投票検知アラートを Discord に送信
+    if webhook_url:
+        try:
+            from keiba_predictor.odds_monitor import format_large_bet_alert
+            for race_id, entry in cache.items():
+                flags = entry.get("large_bet_flags", [])
+                if flags:
+                    race_name = entry.get("race_name", race_id)
+                    alert = format_large_bet_alert(race_name, flags)
+                    if alert:
+                        import requests as _req
+                        _req.post(webhook_url, json={"content": alert}, timeout=15)
+                        logger.info(f"大口検知アラート送信: {race_name}")
+        except Exception as e:
+            logger.warning(f"大口検知アラート送信失敗: {e}")
 
     return updated
 
