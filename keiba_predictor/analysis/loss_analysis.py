@@ -258,10 +258,42 @@ def analyze_week() -> str:
                 lines.append(f"🤖 AI分析: 「{comment}」")
             lines.append("")
 
+    # 危険馬・穴馬の的中率追跡
+    try:
+        from keiba_predictor.history import (
+            load_history, jockey_stats, course_stats,
+            dangerous_horse_stats, ana_horse_stats,
+        )
+        hist_df = load_history()
+
+        if not hist_df.empty and cache:
+            d_stats = dangerous_horse_stats(cache, hist_df)
+            a_stats = ana_horse_stats(cache, hist_df)
+
+            if d_stats["total"] > 0:
+                lines += ["", sep, "⚠️ **危険馬分析**"]
+                lines.append(
+                    f"回避精度: {d_stats['accuracy']*100:.0f}%"
+                    f"（{d_stats['total']}回中{d_stats['total']-d_stats['hit']}回正解）"
+                )
+                for d in d_stats["details"][-3:]:
+                    icon = "❌来た" if d["came"] else "✅回避"
+                    lines.append(f"　{d['race']} {d['horse']}({d['popularity']}人気) → {icon}")
+
+            if a_stats["total"] > 0:
+                lines += ["", "★ **穴馬分析**"]
+                lines.append(
+                    f"的中率: {a_stats['hit_rate']*100:.0f}%"
+                    f"（{a_stats['total']}回中{a_stats['hit']}回）"
+                )
+                for d in a_stats["details"][-3:]:
+                    icon = "✅的中" if d["came"] else "❌ハズレ"
+                    lines.append(f"　★{d['race']} {d['horse']}({d['popularity']}人気) → {icon}")
+    except Exception as e:
+        logger.debug(f"危険馬・穴馬分析失敗: {e}")
+
     # 騎手別・コース別成績サマリー
     try:
-        from keiba_predictor.history import load_history, jockey_stats, course_stats
-        hist_df = load_history()
         if not hist_df.empty:
             lines += ["", sep, "📊 **成績サマリー**"]
 

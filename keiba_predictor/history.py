@@ -420,6 +420,94 @@ def course_stats(df: pd.DataFrame) -> list[dict]:
     return sorted(results, key=lambda x: -x["fukusho_rate"])
 
 
+def _build_actual_top3_map(hist_df: pd.DataFrame) -> dict[str, list[int]]:
+    """race_id → [1着馬番, 2着馬番, 3着馬番] のマップを構築する。"""
+    result = {}
+    for _, row in hist_df.iterrows():
+        rid = str(row.get("race_id", ""))
+        if not rid:
+            continue
+        nums = []
+        for k in ("actual1_num", "actual2_num", "actual3_num"):
+            v = pd.to_numeric(row.get(k), errors="coerce")
+            nums.append(int(v) if pd.notna(v) else 0)
+        result[rid] = nums
+    return result
+
+
+def dangerous_horse_stats(cache: dict, hist_df: pd.DataFrame) -> dict:
+    """
+    危険馬指定した馬が実際に3着以内に来た割合を計算する。
+
+    Returns:
+        {"total": int, "hit": int, "hit_rate": float, "accuracy": float, "details": [...]}
+    """
+    actual_map = _build_actual_top3_map(hist_df)
+    details = []
+
+    for race_id, pred in cache.items():
+        actual_top3 = set(actual_map.get(race_id, []))
+        if not actual_top3 or actual_top3 == {0}:
+            continue
+        for d in pred.get("dangerous_horses", []):
+            dnum = d.get("horse_number")
+            if dnum is None:
+                continue
+            came = int(dnum) in actual_top3
+            details.append({
+                "race": pred.get("race_name", race_id),
+                "horse": d.get("horse_name", f"{dnum}番"),
+                "came": came,
+                "popularity": d.get("popularity", "?"),
+            })
+
+    total = len(details)
+    hit = sum(1 for d in details if d["came"])
+    return {
+        "total": total,
+        "hit": hit,
+        "hit_rate": hit / total if total else 0.0,
+        "accuracy": 1.0 - (hit / total) if total else 0.0,
+        "details": details,
+    }
+
+
+def ana_horse_stats(cache: dict, hist_df: pd.DataFrame) -> dict:
+    """
+    穴馬指定した馬が実際に3着以内に来た割合を計算する。
+
+    Returns:
+        {"total": int, "hit": int, "hit_rate": float, "details": [...]}
+    """
+    actual_map = _build_actual_top3_map(hist_df)
+    details = []
+
+    for race_id, pred in cache.items():
+        ana_num = pred.get("ana_horse_num")
+        if ana_num is None:
+            continue
+        actual_top3 = set(actual_map.get(race_id, []))
+        if not actual_top3 or actual_top3 == {0}:
+            continue
+        ana_info = pred.get("ana_horse_info", {})
+        came = int(ana_num) in actual_top3
+        details.append({
+            "race": pred.get("race_name", race_id),
+            "horse": ana_info.get("horse_name", f"{ana_num}番"),
+            "came": came,
+            "popularity": ana_info.get("popularity", "?"),
+        })
+
+    total = len(details)
+    hit = sum(1 for d in details if d["came"])
+    return {
+        "total": total,
+        "hit": hit,
+        "hit_rate": hit / total if total else 0.0,
+        "details": details,
+    }
+
+
 # ══════════════════════════════════════════════════════════════
 # note 用週次レポート生成
 # ══════════════════════════════════════════════════════════════

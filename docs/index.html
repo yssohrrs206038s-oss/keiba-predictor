@@ -469,6 +469,14 @@
 
   <!-- タブ3: 分析 -->
   <div class="tab-panel" id="panel-analysis">
+    <div class="section-title">⚠️ 危険馬・穴馬分析</div>
+    <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:24px;">
+      <div class="stat-card"><div class="stat-value" id="a-danger-acc">—</div><div class="stat-label">危険馬回避精度</div></div>
+      <div class="stat-card green"><div class="stat-value" id="a-ana-hit">—</div><div class="stat-label">穴馬的中率</div></div>
+    </div>
+    <div id="danger-detail" style="margin-bottom:24px;"></div>
+    <div id="ana-detail" style="margin-bottom:24px;"></div>
+
     <div class="section-title">🏅 本命馬別成績ランキング</div>
     <div style="overflow-x:auto;">
       <table class="history-table" id="jockey-table">
@@ -1006,6 +1014,71 @@ const VENUE_MAP = {
   '06':'中山','07':'中京','08':'京都','09':'阪神','10':'小倉',
 };
 
+function renderDangerAnaStats(cache, rows) {
+  // 実績マップ: race_id → [actual1_num, actual2_num, actual3_num]
+  const actualMap = {};
+  rows.forEach(r => {
+    const rid = (r.race_id || '').trim();
+    if (!rid) return;
+    actualMap[rid] = [+(r.actual1_num||0), +(r.actual2_num||0), +(r.actual3_num||0)];
+  });
+
+  // 危険馬集計
+  const dangerDetails = [];
+  const anaDetails = [];
+  for (const [raceId, pred] of Object.entries(cache)) {
+    const top3 = new Set(actualMap[raceId] || []);
+    if (!top3.size || (top3.size === 1 && top3.has(0))) continue;
+
+    (pred.dangerous_horses || []).forEach(d => {
+      if (d.horse_number == null) return;
+      dangerDetails.push({
+        race: pred.race_name || raceId,
+        horse: d.horse_name || d.horse_number + '番',
+        came: top3.has(+d.horse_number),
+        pop: d.popularity || '?',
+      });
+    });
+
+    const anaNum = pred.ana_horse_num;
+    if (anaNum != null) {
+      const info = pred.ana_horse_info || {};
+      anaDetails.push({
+        race: pred.race_name || raceId,
+        horse: info.horse_name || anaNum + '番',
+        came: top3.has(+anaNum),
+        pop: info.popularity || '?',
+      });
+    }
+  }
+
+  // 危険馬
+  const dTotal = dangerDetails.length;
+  const dHit = dangerDetails.filter(d => d.came).length;
+  const dAcc = dTotal ? ((1 - dHit / dTotal) * 100).toFixed(0) + '%' : '—';
+  document.getElementById('a-danger-acc').textContent = dAcc;
+
+  const ddEl = document.getElementById('danger-detail');
+  if (dTotal) {
+    const recent = dangerDetails.slice(-5).reverse();
+    ddEl.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">直近の危険馬指定（${dTotal}件中${dTotal-dHit}件回避成功）</div>` +
+      recent.map(d => `<div style="font-size:12px;padding:3px 0;">${esc(d.race)} ${esc(d.horse)}(${d.pop}人気) → ${d.came ? '❌来た' : '✅回避成功'}</div>`).join('');
+  }
+
+  // 穴馬
+  const aTotal = anaDetails.length;
+  const aHit = anaDetails.filter(d => d.came).length;
+  const aRate = aTotal ? ((aHit / aTotal) * 100).toFixed(0) + '%' : '—';
+  document.getElementById('a-ana-hit').textContent = aRate;
+
+  const aaEl = document.getElementById('ana-detail');
+  if (aTotal) {
+    const recent = anaDetails.slice(-5).reverse();
+    aaEl.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">直近の穴馬指定（${aTotal}件中${aHit}件的中）</div>` +
+      recent.map(d => `<div style="font-size:12px;padding:3px 0;">★${esc(d.race)} ${esc(d.horse)}(${d.pop}人気) → ${d.came ? '✅的中！' : '❌ハズレ'}</div>`).join('');
+  }
+}
+
 function renderRankings(rows) {
   if (!rows.length) return;
 
@@ -1114,9 +1187,10 @@ async function main() {
   const errors = [];
 
   // 予想データ
+  let predCache = {};
   try {
-    const cache = await fetchJSON(CACHE_URL);
-    renderPredictions(cache);
+    predCache = await fetchJSON(CACHE_URL);
+    renderPredictions(predCache);
   } catch (e) {
     errors.push('予想データ: ' + e.message);
     document.getElementById('race-grid').innerHTML =
@@ -1132,6 +1206,7 @@ async function main() {
     renderWeeklyChart(rows);
     renderHistory(rows);
     renderRankings(rows);
+    renderDangerAnaStats(predCache, rows);
   } catch (e) {
     errors.push('履歴データ: ' + e.message);
     document.getElementById('history-tbody').innerHTML =
