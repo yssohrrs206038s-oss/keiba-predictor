@@ -374,7 +374,7 @@ def jockey_stats(df: pd.DataFrame) -> list[dict]:
     predictions_cache.json から騎手情報が取れる場合はそちらを使う。
 
     最低3レース以上のデータがある馬/騎手のみ。
-    Returns: [{"name": str, "fukusho_rate": float, "umaren_rate": float, "n": int}, ...]
+    Returns: [{"name": str, "fukusho_rate": float, "rentai_rate": float, "n": int}, ...]
     """
     if df.empty or "pred1_name" not in df.columns:
         return []
@@ -385,10 +385,11 @@ def jockey_stats(df: pd.DataFrame) -> list[dict]:
         n = len(g)
         if n < 3 or not name:
             continue
+        rentai = (g["umaren_hit"] | g["wide_hit"]).sum() if "wide_hit" in g.columns else g["umaren_hit"].sum()
         results.append({
             "name": str(name),
             "fukusho_rate": float(g["fukusho_hit"].sum() / n),
-            "umaren_rate": float(g["umaren_hit"].sum() / n),
+            "rentai_rate": float(rentai / n),
             "n": n,
         })
     return sorted(results, key=lambda x: -x["fukusho_rate"])
@@ -397,7 +398,7 @@ def jockey_stats(df: pd.DataFrame) -> list[dict]:
 def course_stats(df: pd.DataFrame) -> list[dict]:
     """
     race_id からvenue（競馬場）を抽出し、コース別の複勝・馬連的中率を集計。
-    Returns: [{"course": str, "fukusho_rate": float, "umaren_rate": float, "n": int}, ...]
+    Returns: [{"course": str, "fukusho_rate": float, "rentai_rate": float, "n": int}, ...]
     """
     if df.empty or "race_id" not in df.columns:
         return []
@@ -411,10 +412,11 @@ def course_stats(df: pd.DataFrame) -> list[dict]:
         n = len(g)
         if n < 1 or venue == "不明":
             continue
+        rentai = (g["umaren_hit"] | g["wide_hit"]).sum() if "wide_hit" in g.columns else g["umaren_hit"].sum()
         results.append({
             "course": str(venue),
             "fukusho_rate": float(g["fukusho_hit"].sum() / n),
-            "umaren_rate": float(g["umaren_hit"].sum() / n),
+            "rentai_rate": float(rentai / n),
             "n": n,
         })
     return sorted(results, key=lambda x: -x["fukusho_rate"])
