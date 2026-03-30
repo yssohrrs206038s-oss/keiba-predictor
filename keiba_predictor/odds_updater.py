@@ -92,14 +92,15 @@ def update_odds_for_race(race_id: str, entry: dict) -> dict:
 
     logger.info(f"[{race_id}] オッズ取得: {len(odds_map)}頭分")
 
-    # honmei / taikou / ana のオッズも更新
+    # honmei / taikou / ana のオッズのみ更新（horse_number, prob は変更しない）
+    # ※ 印（本命・対抗・単穴）はAI確率ベースで固定。直前オッズで変更しない。
     for role in ("honmei", "taikou", "ana"):
         h = entry.get(role, {})
         num = h.get("horse_number")
         if num and num in odds_map:
             h["odds"] = round(odds_map[num], 1)
 
-    # ev_top3 の EV を再計算
+    # ev_top3 の EV を再計算（オッズのみ更新、prob は固定）
     ev_top3 = entry.get("ev_top3", [])
     for h in ev_top3:
         num = h.get("horse_number")
@@ -112,16 +113,7 @@ def update_odds_for_race(race_id: str, entry: dict) -> dict:
 
     entry["ev_top3"] = sorted(ev_top3, key=lambda x: x.get("ev_score", 0), reverse=True)
 
-    # ana_horse_num の更新: predicted_top5_nums 外で最高 EV の馬
-    top5_set = set(entry.get("predicted_top5_nums", []))
-    best_num, best_ev = None, 0.0
-    for h in entry["ev_top3"]:
-        num = h.get("horse_number")
-        ev  = h.get("ev_score", 0.0)
-        if num and num not in top5_set and ev > best_ev:
-            best_ev, best_num = ev, num
-    if best_num:
-        entry["ana_horse_num"] = best_num
+    # ※ ana_horse_num は AI確率ベースで選定済みのため、オッズ更新では変更しない
 
     # 大口投票検知
     try:
