@@ -158,6 +158,27 @@ def analyze_week() -> str:
     else:
         lines.append("💡 来週への示唆: 好調維持。現在のモデル設定を継続")
 
+    # 騎手別・コース別成績サマリー
+    try:
+        from keiba_predictor.history import load_history, jockey_stats, course_stats
+        hist_df = load_history()
+        if not hist_df.empty:
+            lines += ["", sep, "📊 **成績サマリー**"]
+
+            j_stats = jockey_stats(hist_df)
+            if j_stats:
+                lines.append("🏅 本命馬別（3戦以上）:")
+                for j in j_stats[:5]:
+                    lines.append(f"　{j['name']} 複勝{j['fukusho_rate']*100:.0f}% ({j['n']}戦)")
+
+            c_stats = course_stats(hist_df)
+            if c_stats:
+                lines.append("📍 コース別:")
+                for c in c_stats[:5]:
+                    lines.append(f"　{c['course']} 複勝{c['fukusho_rate']*100:.0f}% ({c['n']}戦)")
+    except Exception as e:
+        logger.debug(f"成績サマリー生成失敗: {e}")
+
     return "\n".join(lines)
 
 

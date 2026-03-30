@@ -436,6 +436,27 @@
     </table>
   </div>
 
+  <!-- ⑤ 本命馬別・コース別成績 -->
+  <div class="section-title">🏅 本命馬別成績ランキング</div>
+  <div style="overflow-x:auto;">
+    <table class="history-table" id="jockey-table">
+      <thead><tr><th>本命馬名</th><th>複勝率</th><th>馬連率</th><th>予想回数</th></tr></thead>
+      <tbody id="jockey-tbody">
+        <tr><td colspan="4" class="no-data">データ蓄積中…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-title" style="margin-top:32px;">📍 コース別成績</div>
+  <div style="overflow-x:auto;">
+    <table class="history-table" id="course-table">
+      <thead><tr><th>コース</th><th>複勝率</th><th>馬連率</th><th>予想回数</th></tr></thead>
+      <tbody id="course-tbody">
+        <tr><td colspan="4" class="no-data">データ蓄積中…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
 </main>
 
 <footer>
@@ -917,6 +938,77 @@ function renderHistory(rows) {
 }
 
 /* ════════════════════════════════════════════════════════════
+   本命馬別・コース別成績
+════════════════════════════════════════════════════════════ */
+const VENUE_MAP = {
+  '01':'札幌','02':'函館','03':'福島','04':'新潟','05':'東京',
+  '06':'中山','07':'中京','08':'京都','09':'阪神','10':'小倉',
+};
+
+function renderRankings(rows) {
+  if (!rows.length) return;
+
+  // 本命馬別（pred1_name）
+  const jockeyMap = {};
+  rows.forEach(r => {
+    const name = (r.pred1_name || '').trim();
+    if (!name) return;
+    if (!jockeyMap[name]) jockeyMap[name] = { f: 0, u: 0, n: 0 };
+    jockeyMap[name].n++;
+    if (r.fukusho_hit === 'True') jockeyMap[name].f++;
+    if (r.umaren_hit === 'True') jockeyMap[name].u++;
+  });
+
+  const jockeyArr = Object.entries(jockeyMap)
+    .filter(([, v]) => v.n >= 3)
+    .map(([name, v]) => ({ name, fr: v.f / v.n, ur: v.u / v.n, n: v.n }))
+    .sort((a, b) => b.fr - a.fr);
+
+  const jtbody = document.getElementById('jockey-tbody');
+  if (jockeyArr.length) {
+    jtbody.innerHTML = jockeyArr.map(j => `
+      <tr>
+        <td>${esc(j.name)}</td>
+        <td style="color:${j.fr >= 0.5 ? 'var(--green)' : 'var(--text)'};font-weight:700">${(j.fr*100).toFixed(0)}%</td>
+        <td>${(j.ur*100).toFixed(0)}%</td>
+        <td style="color:var(--text-muted)">${j.n}戦</td>
+      </tr>`).join('');
+  } else {
+    jtbody.innerHTML = '<tr><td colspan="4" class="no-data">3戦以上のデータ蓄積中…</td></tr>';
+  }
+
+  // コース別（race_id[4:6] → venue）
+  const courseMap = {};
+  rows.forEach(r => {
+    const rid = (r.race_id || '').trim();
+    if (rid.length < 6) return;
+    const venue = VENUE_MAP[rid.slice(4, 6)] || '';
+    if (!venue) return;
+    if (!courseMap[venue]) courseMap[venue] = { f: 0, u: 0, n: 0 };
+    courseMap[venue].n++;
+    if (r.fukusho_hit === 'True') courseMap[venue].f++;
+    if (r.umaren_hit === 'True') courseMap[venue].u++;
+  });
+
+  const courseArr = Object.entries(courseMap)
+    .map(([course, v]) => ({ course, fr: v.f / v.n, ur: v.u / v.n, n: v.n }))
+    .sort((a, b) => b.fr - a.fr);
+
+  const ctbody = document.getElementById('course-tbody');
+  if (courseArr.length) {
+    ctbody.innerHTML = courseArr.map(c => `
+      <tr>
+        <td>${esc(c.course)}</td>
+        <td style="color:${c.fr >= 0.5 ? 'var(--green)' : 'var(--text)'};font-weight:700">${(c.fr*100).toFixed(0)}%</td>
+        <td>${(c.ur*100).toFixed(0)}%</td>
+        <td style="color:var(--text-muted)">${c.n}戦</td>
+      </tr>`).join('');
+  } else {
+    ctbody.innerHTML = '<tr><td colspan="4" class="no-data">データ蓄積中…</td></tr>';
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
    メイン
 ════════════════════════════════════════════════════════════ */
 async function main() {
@@ -940,6 +1032,7 @@ async function main() {
     renderChart(rows);
     renderWeeklyChart(rows);
     renderHistory(rows);
+    renderRankings(rows);
   } catch (e) {
     errors.push('履歴データ: ' + e.message);
     document.getElementById('history-tbody').innerHTML =
