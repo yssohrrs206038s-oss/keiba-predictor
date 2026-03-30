@@ -141,13 +141,17 @@ def post_predict_tweet(race_name: str, cache_entry: dict) -> bool:
 
 # ── 結果ツイート ──────────────────────────────────────────────────────
 
-def build_result_tweet(
+def _build_result_tweets(
     race_name: str,
     actual_df: pd.DataFrame,
     pred: dict,
     payouts: dict,
     roi_pct: float,
-) -> str:
+) -> tuple[str, str]:
+    """
+    結果ツイートを構築する。(1投稿目, 2投稿目) を返す。
+    2投稿目は的中時のみ（外れ時は空文字列）。
+    """
     from keiba_predictor.discord_notify import (
         _check_sanrenpuku_raw, _check_umaren_raw,
     )
@@ -158,7 +162,6 @@ def build_result_tweet(
     predicted_nums = pred.get("predicted_top3_nums", [])
     ana_horse_num = pred.get("ana_horse_num")
 
-    # 本命情報
     honmei = pred.get("honmei", {})
     honmei_num = honmei.get("horse_number")
     honmei_name = honmei.get("horse_name", "")
@@ -168,9 +171,13 @@ def build_result_tweet(
     df["_fp"] = pd.to_numeric(df["finish_position"], errors="coerce")
     top3 = df[df["_fp"].isin([1, 2, 3])].sort_values("_fp").head(3)
     actual_nums: list[int] = []
+    actual_entries: list[tuple[int, int, str]] = []  # (fp, num, name)
     for _, r in top3.iterrows():
+        fp  = int(r["_fp"])
         num = int(r["horse_number"]) if pd.notna(r.get("horse_number")) else 0
+        name = str(r.get("horse_name", ""))
         actual_nums.append(num)
+        actual_entries.append((fp, num, name))
 
     # 的中判定
     fukusho_hit = honmei_num is not None and int(honmei_num) in actual_nums
@@ -182,44 +189,92 @@ def build_result_tweet(
     u_icon = "✅" if umaren_hit else "❌"
     s_icon = "✅" if sanren_hit else "❌"
 
-    SEP = "━━━━━━━━━━━━━━━━"
-
     any_hit = fukusho_hit or umaren_hit or sanren_hit
 
+    # ── 1投稿目 ──────────────────────────────────────────────
     if sanren_hit:
-        # 3連複的中: 特別フォーマット
         pay_str = re.sub(r"[¥,]", "", str(sanren_pay)) if sanren_pay else ""
-        lines = [
-            "🎯💥 KEIBA EDGE 的中！",
-            SEP,
+        # 本命の着順を取得
+        hon_fp = ""
+        if honmei_num:
+            for fp, num, _ in actual_entries:
+                if num == int(honmei_num):
+                    hon_fp = f"{fp}着"
+                    break
+        lines1 = [
+            "🎯💥 KEIBA EDGE 3連複的中！",
             f"【{short}{' ' + grade if grade else ''}】",
-            f"複勝{f_icon} 馬連{u_icon} 3連複{s_icon}",
-            "",
-            f"3連複 {pay_str}円的中！" if pay_str else "3連複 的中！",
-            f"回収率 {roi_pct:.0f}%" if roi_pct > 0 else "",
-            "",
-            f"◎{honmei_num}番{honmei_name}" if honmei_num else "",
+            f"{pay_str}円 回収率{roi_pct:.0f}%" if pay_str and roi_pct > 0
+                else (f"{pay_str}円的中！" if pay_str else f"回収率{roi_pct:.0f}%"),
+            f"◎{honmei_name}が{hon_fp}！" if honmei_name and hon_fp else "",
             f"#競馬的中 #{short} #KEIBA_EDGE",
         ]
     elif any_hit:
-        # 複勝または馬連のみ的中
-        lines = [
+        lines1 = [
             "🎯 KEIBA EDGE 的中！",
-            f"【{short}{' ' + grade if grade else ''}】",
-            f"複勝{f_icon} 馬連{u_icon} 3連複{s_icon}",
+            f"【{short}】",
+            f"複勝{f_icon} 馬連{u_icon}",
             f"回収率{roi_pct:.0f}%" if roi_pct > 0 else "",
             f"#競馬的中 #{short} #KEIBA_EDGE",
         ]
     else:
-        # 全外れ: ハッシュタグなし
-        lines = [
-            f"🏆【{short}{' ' + grade if grade else ''}】KEIBA EDGE結果",
-            f"複勝{f_icon} 馬連{u_icon} 3連複{s_icon}",
-            f"累計回収率{roi_pct:.0f}%" if roi_pct > 0 else "",
+        # 外れ: 着順のみ
+        result_line = " ".join(f"{fp}着{num}番" for fp, num, _ in actual_entries[:3])
+        lines1 = [
+            f"【{short}】",
+            result_line,
+            f"複勝❌ 馬連❌ 3連複❌",
         ]
 
-    # 空行を除去
-    return "\n".join(line for line in lines if line)
+    tweet1 = "\n".join(line for line in lines1 if line)
+
+    # ── 2投稿目（的中時のみ）────────────────────────────────
+    tweet2 = ""
+    if any_hit:
+        lines2 = ["🔍 AIが見抜いた理由"]
+
+        # SHAP プラス要因（本命のshap_top）
+        shap_top = honmei.get("shap_top", [])
+        if shap_top:
+            for s in shap_top:
+                if s.get("value", 0) > 0:
+                    lines2.append(f"✅ {s['label']}")
+
+        # 危険馬を回避した場合
+        dangerous = pred.get("dangerous_horses", [])
+        if dangerous:
+            for d in dangerous:
+                d_num = d.get("horse_number")
+                if d_num and int(d_num) not in actual_nums[:3]:
+                    lines2.append(
+                        f"⚠️ {d.get('horse_name', '')}({d.get('popularity', '?')}番人気)"
+                        f"を事前に危険馬指定！"
+                    )
+                    break
+
+        # モンテカルロ安定軸
+        sim = pred.get("simulation", {})
+        if honmei_num and sim.get(str(honmei_num), {}).get("is_stable"):
+            lines2.append("🔒 モンテカルロ1万回で安定軸と判定")
+
+        lines2.append("")
+        lines2.append("#KEIBA_EDGE")
+
+        tweet2 = "\n".join(lines2)
+
+    return tweet1, tweet2
+
+
+# 後方互換: 旧関数名
+def build_result_tweet(
+    race_name: str,
+    actual_df: pd.DataFrame,
+    pred: dict,
+    payouts: dict,
+    roi_pct: float,
+) -> str:
+    tweet1, _ = _build_result_tweets(race_name, actual_df, pred, payouts, roi_pct)
+    return tweet1
 
 
 def post_result_tweet(
@@ -228,7 +283,7 @@ def post_result_tweet(
     pred: dict,
     payouts: dict,
 ) -> bool:
-    """結果ツイートを X に投稿する。累計回収率は results_history.csv から自動取得。"""
+    """結果ツイートを X に投稿。的中時は2投稿目をリプライでスレッド投稿。"""
     client = _build_client()
     if client is None:
         return False
@@ -240,9 +295,35 @@ def post_result_tweet(
     except Exception as e:
         logger.debug(f"[X] 累計回収率取得失敗: {e}")
 
-    text = build_result_tweet(race_name, actual_df, pred, payouts, roi_pct)
-    print(f"[X結果ツイート]\n{text}", flush=True)
-    return _safe_post(client, text)
+    tweet1, tweet2 = _build_result_tweets(race_name, actual_df, pred, payouts, roi_pct)
+    print(f"[X結果ツイート1]\n{tweet1}", flush=True)
+
+    # 1投稿目
+    if len(tweet1) > _CHAR_LIMIT:
+        tweet1 = tweet1[: _CHAR_LIMIT - 1] + "…"
+    try:
+        resp1 = client.create_tweet(text=tweet1)
+        tweet_id = resp1.data.get("id", "")
+        logger.info(f"[X] 1投稿目完了 id={tweet_id}")
+    except Exception as e:
+        logger.warning(f"[X] 1投稿目失敗: {e}")
+        return False
+
+    # 2投稿目（的中時のみ・リプライ）
+    if tweet2 and tweet_id:
+        print(f"[X結果ツイート2（リプライ）]\n{tweet2}", flush=True)
+        if len(tweet2) > _CHAR_LIMIT:
+            tweet2 = tweet2[: _CHAR_LIMIT - 1] + "…"
+        try:
+            client.create_tweet(
+                text=tweet2,
+                in_reply_to_tweet_id=tweet_id,
+            )
+            logger.info(f"[X] 2投稿目（リプライ）完了")
+        except Exception as e:
+            logger.warning(f"[X] 2投稿目（リプライ）失敗: {e}")
+
+    return True
 
 
 # ── 週次サマリーツイート ─────────────────────────────────────────────────
