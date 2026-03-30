@@ -256,12 +256,31 @@ def _build_ev_rank_message(cache: dict) -> str:
     return "\n".join(header + ["\n".join(race_blocks)] + footer)
 
 
+def _load_snapshot_13() -> dict:
+    """13時スナップショットを読み込む。なければ空dictを返す。"""
+    import json as _json
+    snap_path = PRED_CACHE.parent / "predictions_snapshot_13.json"
+    if snap_path.exists():
+        try:
+            with open(snap_path, encoding="utf-8") as f:
+                data = _json.load(f)
+            data.pop("_snapshot_time", None)
+            return data
+        except Exception:
+            pass
+    return {}
+
+
 def _check_bet_strategy_changes(cache: dict) -> list[str]:
-    """オッズ更新後に買い目を再計算し、変更があったレースの通知メッセージを返す。"""
+    """13時スナップショットのbet_strategyと現在のbet_strategyを比較し、
+    変更があったレースの通知メッセージを返す。"""
     from datetime import datetime
 
     now = datetime.now()
     messages = []
+
+    # 13時スナップショットを基準に比較
+    snap13 = _load_snapshot_13()
 
     for race_id, entry in cache.items():
         if entry.get("race_date") != date.today().isoformat():
@@ -280,7 +299,10 @@ def _check_bet_strategy_changes(cache: dict) -> list[str]:
             continue
 
         race_name = entry.get("race_name", race_id)
-        old_bs = entry.get("bet_strategy", {})
+
+        # 13時スナップショットのbet_strategyと比較
+        snap_entry = snap13.get(race_id, {})
+        old_bs = snap_entry.get("bet_strategy", entry.get("bet_strategy", {}))
         old_total = old_bs.get("total_points", 0)
         old_note = old_bs.get("strategy_note", "")
         old_wide = old_bs.get("use_wide", False)
@@ -339,7 +361,7 @@ def _check_bet_strategy_changes(cache: dict) -> list[str]:
             jiku_str = str(jiku[0]) if len(jiku) == 1 else f"{jiku[0]}-{jiku[1]}"
             lines.append(f"3連複: 軸{jiku_str} × {'/'.join(str(n) for n in sr['aite'])}")
 
-        lines += [SEP, "⚠️ スナップショットとの差異あり"]
+        lines += [SEP, "⚠️ 13時スナップショットとの差異あり"]
         messages.append("\n".join(lines))
 
     return messages

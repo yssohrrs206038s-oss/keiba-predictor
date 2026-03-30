@@ -153,18 +153,45 @@ def cmd_report(args: argparse.Namespace) -> None:
 
 
 def cmd_snapshot(args: argparse.Namespace) -> None:
-    """predictions_cache.json のスナップショットを日付付きで保存する。"""
-    import shutil
-    from datetime import date as _date
+    """predictions_cache.json のスナップショットを時間帯別で保存する。
+
+    13時台: predictions_snapshot_13.json（本スナップショット・上書きしない）
+    14時台: predictions_snapshot_14.json（最終更新用）
+    """
+    import json as _json
+    from datetime import datetime as _dt
     from pathlib import Path as _Path
 
     src = _Path("keiba_predictor/data/predictions_cache.json")
     if not src.exists():
         logger.error(f"キャッシュファイルが見つかりません: {src}")
         sys.exit(1)
-    dst = _Path(f"keiba_predictor/data/predictions_snapshot_{_date.today().strftime('%Y%m%d')}.json")
-    shutil.copy(src, dst)
-    logger.info(f"スナップショット保存: {dst}")
+
+    now = _dt.now()
+    hour = now.hour
+    # JST判定: UTC実行の場合は+9する
+    import time as _time
+    if _time.timezone >= 0:  # UTC環境（GitHub Actions等）
+        hour = (hour + 9) % 24
+
+    if hour < 14:
+        tag = "13"
+    else:
+        tag = "14"
+
+    dst = _Path(f"keiba_predictor/data/predictions_snapshot_{tag}.json")
+
+    # 13時のスナップショットは上書きしない（後出し防止）
+    if tag == "13" and dst.exists():
+        logger.info(f"13時スナップショットは既に存在 → スキップ: {dst}")
+        return
+
+    # タイムスタンプを付与して保存
+    with open(src, encoding="utf-8") as f:
+        cache = _json.load(f)
+    cache["_snapshot_time"] = now.strftime("%Y-%m-%d %H:%M:%S")
+    dst.write_text(_json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info(f"スナップショット保存: {dst} ({cache['_snapshot_time']})")
 
 
 def cmd_update_featured(args: argparse.Namespace) -> None:
