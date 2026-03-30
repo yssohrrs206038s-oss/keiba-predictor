@@ -2,10 +2,10 @@ name: 予想生成・通知（土日）
 
 on:
   schedule:
-    - cron: '0 2 * * 6'   # 土曜 11:00 JST — 予想生成
-    - cron: '0 2 * * 0'   # 日曜 11:00 JST — 予想生成
-    - cron: '0 5 * * 6'   # 土曜 14:00 JST — 通知
-    - cron: '0 5 * * 0'   # 日曜 14:00 JST — 通知
+    - cron: '0 0 * * 6'   # 土曜 09:00 JST — 平場＋重賞の予想生成
+    - cron: '0 0 * * 0'   # 日曜 09:00 JST — 平場＋重賞の予想生成
+    - cron: '0 5 * * 6'   # 土曜 14:00 JST — Discord/X通知
+    - cron: '0 5 * * 0'   # 日曜 14:00 JST — Discord/X通知
   workflow_dispatch:
     inputs:
       mode:
