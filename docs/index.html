@@ -762,6 +762,7 @@ function renderWeeklyChart(rows) {
 function renderPredictions(cache) {
   const grid = document.getElementById('race-grid');
   const entries = Object.entries(cache)
+    .filter(([k]) => !k.startsWith('_'))
     .sort((a, b) => {
       const da = (a[1].race_date || '') + ' ' + (a[1].start_time || '99:99');
       const db = (b[1].race_date || '') + ' ' + (b[1].start_time || '99:99');
@@ -1036,7 +1037,7 @@ function renderDangerAnaStats(cache, rows) {
   // 危険馬集計
   const dangerDetails = [];
   const anaDetails = [];
-  for (const [raceId, pred] of Object.entries(cache)) {
+  for (const [raceId, pred] of Object.entries(cache).filter(([k]) => !k.startsWith('_'))) {
     const top3 = new Set(actualMap[raceId] || []);
     if (!top3.size || (top3.size === 1 && top3.has(0))) continue;
 
