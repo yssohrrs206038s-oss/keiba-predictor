@@ -110,7 +110,7 @@ def _get_result_html_with_playwright(url: str) -> Optional[str]:
             )
             page = ctx.new_page()
             page.goto("https://db.netkeiba.com/", wait_until="domcontentloaded", timeout=20000)
-            time.sleep(1)
+            time.sleep(random.uniform(1.0, 3.0))
             page.goto(url, wait_until="networkidle", timeout=30000)
             try:
                 page.wait_for_selector(

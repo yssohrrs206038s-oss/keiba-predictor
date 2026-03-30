@@ -5,6 +5,7 @@ netkeiba から出馬表を取得する。
   https://race.netkeiba.com/race/shutuba.html?race_id={race_id}
 """
 
+import random
 import re
 import logging
 import time
@@ -46,7 +47,7 @@ def _get_html_with_playwright(url: str) -> Optional[str]:
             page = ctx.new_page()
             # トップページで Cookie を取得してから出馬表へ
             page.goto("https://race.netkeiba.com/", wait_until="domcontentloaded", timeout=20000)
-            time.sleep(1)
+            time.sleep(random.uniform(1.0, 3.0))
             page.goto(url, wait_until="networkidle", timeout=30000)
             # 出馬表テーブルが描画されるまで最大10秒待機
             try:
@@ -310,7 +311,7 @@ def scrape_shutuba(race_id: str) -> Optional[dict]:
         session.headers.update(HEADERS)
         try:
             session.get("https://race.netkeiba.com/", headers=HEADERS, timeout=15)
-            time.sleep(1.0)
+            time.sleep(random.uniform(0.5, 1.5))
         except Exception:
             pass
         soup = _get(url, session)

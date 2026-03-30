@@ -264,6 +264,95 @@ def _build_ev_rank_message(cache: dict) -> str:
     return "\n".join(header + ["\n".join(race_blocks)] + footer)
 
 
+def _check_bet_strategy_changes(cache: dict) -> list[str]:
+    """オッズ更新後に買い目を再計算し、変更があったレースの通知メッセージを返す。"""
+    from datetime import datetime
+
+    now = datetime.now()
+    messages = []
+
+    for race_id, entry in cache.items():
+        if entry.get("race_date") != date.today().isoformat():
+            continue
+
+        # 発走2時間以内のレースのみ
+        start_time = entry.get("start_time", "")
+        if not start_time:
+            continue
+        try:
+            st = datetime.strptime(f"{entry['race_date']} {start_time}", "%Y-%m-%d %H:%M")
+            diff_min = (st - now).total_seconds() / 60
+            if diff_min < 0 or diff_min > 120:
+                continue
+        except Exception:
+            continue
+
+        race_name = entry.get("race_name", race_id)
+        old_bs = entry.get("bet_strategy", {})
+        old_total = old_bs.get("total_points", 0)
+        old_note = old_bs.get("strategy_note", "")
+        old_wide = old_bs.get("use_wide", False)
+
+        # predicted_top5 から簡易DataFrameを構築して再計算
+        try:
+            top5_data = entry.get("predicted_top5", [])
+            if not top5_data:
+                continue
+            import pandas as _pd
+            df = _pd.DataFrame(top5_data)
+            df["prob_top3"] = df["prob"]
+            odds_col = _pd.to_numeric(df.get("odds", _pd.Series(dtype=float)), errors="coerce")
+            df["ev_score"] = df["prob"] * odds_col
+            if "popularity" not in df.columns:
+                df["popularity"] = range(1, len(df) + 1)
+
+            from keiba_predictor.model.predict import _decide_bet_strategy
+            new_bs = _decide_bet_strategy(df)
+        except Exception:
+            continue
+
+        new_total = new_bs.get("total_points", 0)
+        new_note = new_bs.get("strategy_note", "")
+        new_wide = new_bs.get("use_wide", False)
+
+        # 変更がなければスキップ
+        if new_total == old_total and new_wide == old_wide and new_note == old_note:
+            continue
+
+        # 変更あり → 通知生成 & キャッシュ更新
+        entry["bet_strategy"] = new_bs
+
+        SEP = "━" * 20
+        lines = [
+            f"📊 【最終買い目更新】{race_name}",
+            SEP,
+            "⚡ 直前オッズで買い目が変更されました",
+            "",
+            f"変更前: {old_note}（{old_total}点）",
+            f"変更後: {new_note}（{new_total}点）",
+            "",
+            "💰 最終買い目:",
+        ]
+
+        if new_bs.get("fukusho"):
+            f = new_bs["fukusho"][0]
+            lines.append(f"複勝: {f['num']}番")
+        if new_wide and new_bs.get("wide"):
+            lines.append("ワイド: " + " / ".join(f"{w['nums'][0]}-{w['nums'][1]}" for w in new_bs["wide"]))
+        if new_bs.get("umaren"):
+            lines.append("馬連: " + " / ".join(f"{u['nums'][0]}-{u['nums'][1]}" for u in new_bs["umaren"]))
+        sr = new_bs.get("sanrenpuku", {})
+        if sr and sr.get("jiku") and sr.get("aite"):
+            jiku = sr["jiku"]
+            jiku_str = str(jiku[0]) if len(jiku) == 1 else f"{jiku[0]}-{jiku[1]}"
+            lines.append(f"3連複: 軸{jiku_str} × {'/'.join(str(n) for n in sr['aite'])}")
+
+        lines += [SEP, "⚠️ スナップショットとの差異あり"]
+        messages.append("\n".join(lines))
+
+    return messages
+
+
 def run_odds_update() -> int:
     """当日開催レースのオッズを更新して保存する。更新件数を返す。"""
     cache = _load_cache()
@@ -307,6 +396,19 @@ def run_odds_update() -> int:
                 logger.info(f"直前期待値ランク Discord送信{'完了' if ok else '失敗'}")
             except Exception as e:
                 logger.warning(f"直前期待値ランク Discord送信失敗: {e}")
+
+    # 最終買い目変更通知
+    if webhook_url:
+        try:
+            change_msgs = _check_bet_strategy_changes(cache)
+            if change_msgs:
+                _save_cache(cache)  # 更新された bet_strategy を保存
+                import requests as _req2
+                for msg in change_msgs:
+                    _req2.post(webhook_url, json={"content": msg}, timeout=15)
+                logger.info(f"最終買い目変更通知: {len(change_msgs)}件")
+        except Exception as e:
+            logger.warning(f"最終買い目変更通知失敗: {e}")
 
     # 大口投票検知アラートを Discord に送信
     if webhook_url:
