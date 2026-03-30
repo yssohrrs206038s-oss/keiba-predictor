@@ -854,7 +854,8 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
     # 買い目自動決定
     try:
         from keiba_predictor.model.predict import _decide_bet_strategy
-        cache[race_id]["bet_strategy"] = _decide_bet_strategy(result_df)
+        _is_vol = cache[race_id].get("simulation", {}).get("is_volatile_race", False)
+        cache[race_id]["bet_strategy"] = _decide_bet_strategy(result_df, is_volatile_race=_is_vol)
     except Exception as e:
         logger.warning(f"買い目自動決定失敗: {e}")
 
@@ -880,12 +881,14 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
                 "running_style_enc": int(r.get("running_style_enc", 2)) if pd.notna(r.get("running_style_enc")) else 2,
             })
         mc_result = run_monte_carlo(mc_horses)
-        # 上位5頭のみ保存
+        # 上位5頭のみ保存 + レース全体の波乱度
         top5_mc = {}
         for num in top5_nums[:5]:
             k = str(num)
             if k in mc_result:
                 top5_mc[k] = mc_result[k]
+        top5_mc["race_volatility"] = mc_result.get("race_volatility", 0)
+        top5_mc["is_volatile_race"] = mc_result.get("is_volatile_race", False)
         cache[race_id]["simulation"] = top5_mc
     except Exception as e:
         logger.warning(f"モンテカルロシミュレーション失敗: {e}")

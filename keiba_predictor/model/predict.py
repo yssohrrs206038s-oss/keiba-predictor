@@ -147,6 +147,10 @@ def calc_ev_and_flags(result_df: pd.DataFrame) -> pd.DataFrame:
             out.append(f"AI確率{prob*100:.0f}%（3番人気以内なのに低い）")
         if pd.notna(pop) and pop <= 2 and pd.notna(pfp) and pfp >= 5:
             out.append(f"1〜2番人気だが前走{int(pfp)}着")
+        # モンテカルロ掲示板外し確率
+        mc_oob = row.get("_mc_oob_rate")
+        if pd.notna(pop) and pop <= 3 and mc_oob is not None and mc_oob > 0.15:
+            out.append(f"モンテカルロで掲示板外し確率{mc_oob*100:.0f}%")
         return out
 
     df["danger_reasons"] = df.apply(_reasons, axis=1)
@@ -356,19 +360,24 @@ def _calc_confidence(pred: dict) -> tuple[int, str]:
     if len(probs) >= 3 and (max(probs) - min(probs)) < 0.10:
         score -= 1
 
+    # 波乱レース判定
+    if sim.get("is_volatile_race"):
+        score -= 1
+
     score = max(1, min(5, score))
     stars = "★" * score
     return score, stars
 
 
-def _decide_bet_strategy(result_df: pd.DataFrame) -> dict:
+def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False) -> dict:
     """
     予測結果DataFrameから最適な買い目を自動決定する。
 
     判断ロジック:
     【複勝】本命EV>1.0 & 1番人気でない → 買い
-    【馬連/ワイド】上位3頭の確率差5%以内 → ワイド、それ以外 → 馬連
-    【3連複】本命確率50%以上→軸1×相手4(6点)、40-50%→軸1×相手5(10点)、拮抗→2頭軸×3(3点)
+    【馬連/ワイド】上位3頭の確率差5%以内 or 波乱レース → ワイド
+    【3連複】本命確率50%以上→軸1×相手4、40-50%→軸1×相手5、拮抗→2頭軸×3
+    【波乱レース】ワイド強制 + 3連複相手+1頭
     【穴馬】穴馬EV≥10 → 穴馬軸の馬連1点追加
     """
     from itertools import combinations as _comb
@@ -421,7 +430,8 @@ def _decide_bet_strategy(result_df: pd.DataFrame) -> dict:
         "sanrenpuku": {},
         "total_points": 0,
         "strategy_note": "",
-        "use_wide": is_tight,
+        "use_wide": is_tight or is_volatile_race,
+        "is_volatile_race": is_volatile_race,
     }
     notes = []
 
@@ -431,11 +441,12 @@ def _decide_bet_strategy(result_df: pd.DataFrame) -> dict:
         notes.append("複勝")
 
     # 【馬連 or ワイド】
-    use_wide = is_tight
+    use_wide = is_tight or is_volatile_race
     if use_wide:
         pairs = [{"nums": list(p)} for p in _comb(nums[:3], 2)]
         strategy["wide"] = pairs
-        notes.append("ワイド（上位拮抗）")
+        reason = "波乱レースのため広め買い" if is_volatile_race else "上位拮抗"
+        notes.append(f"ワイド（{reason}）")
     else:
         pairs = [{"nums": list(p)} for p in _comb(nums[:3], 2)]
         strategy["umaren"] = pairs
@@ -446,23 +457,21 @@ def _decide_bet_strategy(result_df: pd.DataFrame) -> dict:
         strategy["umaren"].append({"nums": [hon, ana_num]})
         notes.append("穴馬馬連追加")
 
-    # 【3連複】
+    # 【3連複】（波乱レース時は相手+1頭）
+    extra = 1 if is_volatile_race else 0
     if hon_prob >= 0.50:
-        # 軸1頭×相手4頭 = C(4,2) = 6点
-        aite = nums[1:5]
+        aite = nums[1:5 + extra]
         strategy["sanrenpuku"] = {"jiku": [hon], "aite": aite}
-        notes.append("3連複軸1×4")
+        notes.append(f"3連複軸1×{len(aite)}")
     elif hon_prob >= 0.40:
-        # 軸1頭×相手5頭 = C(5,2) = 10点
-        aite = nums[1:5]
+        aite = nums[1:5 + extra]
         if ana_num and ana_num not in aite:
             aite = aite + [ana_num]
         strategy["sanrenpuku"] = {"jiku": [hon], "aite": aite}
-        notes.append("3連複軸1×5")
+        notes.append(f"3連複軸1×{len(aite)}")
     elif is_tight and len(nums) >= 5:
-        # 2頭軸×3頭 = C(3,1)*1 = 3点
-        strategy["sanrenpuku"] = {"jiku": nums[:2], "aite": nums[2:5]}
-        notes.append("3連複2頭軸×3")
+        strategy["sanrenpuku"] = {"jiku": nums[:2], "aite": nums[2:5 + extra]}
+        notes.append(f"3連複2頭軸×{len(nums[2:5 + extra])}")
 
     # 合計点数
     total = len(strategy["fukusho"])

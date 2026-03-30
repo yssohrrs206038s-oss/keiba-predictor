@@ -127,6 +127,22 @@ def run_monte_carlo(
     else:
         top3_std = np.zeros(n_horses)
 
+    # 各馬の着順（1-indexed）を算出
+    # rankings[sim][rank] = horse_index → horse_index の着順を逆引き
+    finish_positions = np.zeros((n_simulations, n_horses), dtype=np.int32)
+    for rank in range(n_horses):
+        finish_positions[np.arange(n_simulations), rankings[:, rank]] = rank + 1
+
+    # 掲示板外し確率（5着以下）
+    out_of_board = (finish_positions > 5).mean(axis=0)
+
+    # 着順の標準偏差（波乱度）
+    finish_std = finish_positions.std(axis=0)
+
+    # レース全体の波乱度
+    race_volatility = float(finish_std.mean())
+    is_volatile_race = race_volatility >= 0.6
+
     # 結果を辞書に変換
     results = {}
     for i, h in enumerate(horses):
@@ -137,14 +153,20 @@ def run_monte_carlo(
             "top3_rate": round(float(overall_top3_rate[i]), 3),
             "top3_std": round(float(top3_std[i]), 3),
             "is_stable": is_stable,
+            "out_of_board_rate": round(float(out_of_board[i]), 3),
+            "variance": round(float(finish_std[i]), 3),
             "scenario": {
                 pace: round(float(scenario_top3[pace][i]), 2)
                 for pace in pace_names
             },
         }
 
+    results["race_volatility"] = round(race_volatility, 3)
+    results["is_volatile_race"] = is_volatile_race
+
     logger.info(
-        f"モンテカルロシミュレーション完了: {n_simulations}回, {n_horses}頭"
+        f"モンテカルロ完了: {n_simulations}回, {n_horses}頭, "
+        f"波乱度={race_volatility:.3f} ({'波乱' if is_volatile_race else '安定'})"
     )
 
     return results
