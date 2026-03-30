@@ -35,7 +35,10 @@ jobs:
           fetch-depth: 0
 
       - name: 最新コミットをプル
-        run: git pull --ff-only origin ${{ github.ref_name }} || true
+        run: |
+          git config pull.rebase true
+          git config rebase.autoStash true
+          git pull --rebase origin ${{ github.ref_name }} || true
 
       - name: 実行モードを判定
         id: mode
@@ -122,11 +125,14 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config pull.rebase true
+          git config rebase.autoStash true
           git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "ℹ️ 変更なし"
           else
             git commit -m "chore: 予想キャッシュ更新 [skip ci]"
+            git pull --rebase -X theirs origin ${{ github.ref_name }} || true
             git push
             echo "✅ コミット・プッシュ完了"
           fi
@@ -159,6 +165,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config pull.rebase true
+          git config rebase.autoStash true
           git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
           git add keiba_predictor/data/predictions_snapshot_*.json 2>/dev/null || true
           git add keiba_predictor/data/note_report_*.md 2>/dev/null || true
@@ -166,6 +174,7 @@ jobs:
             echo "ℹ️ 変更なし"
           else
             git commit -m "chore: 予想キャッシュ・レポート更新 [skip ci]"
+            git pull --rebase -X theirs origin ${{ github.ref_name }} || true
             git push
           fi
 

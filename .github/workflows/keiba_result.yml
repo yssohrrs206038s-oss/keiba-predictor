@@ -35,7 +35,9 @@ jobs:
 
       - name: 最新コミットをプル（金曜の予想キャッシュを反映）
         run: |
-          git pull --ff-only origin ${{ github.ref_name }} || true
+          git config pull.rebase true
+          git config rebase.autoStash true
+          git pull --rebase origin ${{ github.ref_name }} || true
           echo "📦 予想キャッシュ確認:"
           ls -la keiba_predictor/data/predictions_cache.json 2>/dev/null \
             && echo "✅ キャッシュあり" \
@@ -87,12 +89,15 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config pull.rebase true
+          git config rebase.autoStash true
           git add keiba_predictor/data/results_history.csv 2>/dev/null || true
           git add keiba_predictor/data/manual_results.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "ℹ️ 変更なし（コミットスキップ）"
           else
             git commit -m "chore: 結果履歴を更新 [skip ci]"
+            git pull --rebase -X theirs origin ${{ github.ref_name }} || true
             git push
             echo "✅ コミット・プッシュ完了"
           fi

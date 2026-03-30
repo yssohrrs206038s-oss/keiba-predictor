@@ -100,6 +100,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config pull.rebase true
+          git config rebase.autoStash true
 
           # 大きなファイルをステージング（存在する場合のみ）
           git add    keiba_predictor/model/xgb_model.pkl              2>/dev/null || true
@@ -110,6 +112,7 @@ jobs:
             echo "ℹ️ 変更なし（コミットスキップ）"
           else
             git commit -m "chore: 水曜データ更新 AUC=${MODEL_AUC} 複勝=${MODEL_FUKUSHO}% [skip ci]"
+            git pull --rebase -X theirs origin ${{ github.ref_name }} || true
             git push
             echo "✅ コミット・プッシュ完了"
           fi
