@@ -114,6 +114,13 @@
       text-align: center;
       box-shadow: var(--shadow);
       animation: fadeUp .5s ease both;
+      min-height: 120px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .stat-note {
+      font-size: 0.65rem; color: #888888;
+      margin-top: 4px; line-height: 1.3;
     }
     .stat-value {
       font-size: 32px; font-weight: 900;
@@ -502,20 +509,20 @@
   <div class="tab-panel" id="panel-info">
     <div class="section-title">ℹ️ システム情報</div>
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-value" id="i-auc">—</div><div class="stat-label">モデル AUC</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">予測精度指標（1.0が最高・0.5がランダム）</div></div>
-      <div class="stat-card green"><div class="stat-value" id="i-fukusho">—</div><div class="stat-label">CV複勝的中率</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">過去データの交差検証による3着以内的中率</div></div>
+      <div class="stat-card"><div class="stat-value" id="i-auc">—</div><div class="stat-label">モデル AUC</div><div class="stat-note">予測精度指標（1.0が最高・0.5がランダム）</div></div>
+      <div class="stat-card green"><div class="stat-value" id="i-fukusho">—</div><div class="stat-label">CV複勝的中率</div><div class="stat-note">過去データの交差検証による3着以内的中率</div></div>
       <div class="stat-card"><div class="stat-value" id="i-features">—</div><div class="stat-label">特徴量数</div></div>
       <div class="stat-card blue"><div class="stat-value" id="i-updated">—</div><div class="stat-label">最終更新</div></div>
     </div>
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-top:16px;">
       <h3 style="color:var(--gold);margin-bottom:12px;">KEIBA EDGE について</h3>
-      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;">
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:12px;">
         KEIBA EDGEは機械学習（XGBoost）とClaude AIを組み合わせた重賞予想システムです。
       </p>
-      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-top:8px;">
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:12px;">
         過去の出走データ・騎手成績・コース適性・馬場状態・脚質など47の特徴量を学習した独自モデルで3着以内確率を算出。期待値（EV）スコアにより「オッズと確率のギャップ」がある馬を発見します。
       </p>
-      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-top:8px;">
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:12px;">
         モデル精度AUC 0.8638は競馬予想AIとして高水準（ランダム予測は0.5）。1万回のモンテカルロシミュレーションで安定軸・展開依存馬を判定し、SHAP値で予測根拠を可視化します。
       </p>
       <p style="font-size:12px;color:var(--text-muted);margin-top:12px;">
