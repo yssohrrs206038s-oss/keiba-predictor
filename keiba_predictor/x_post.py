@@ -97,7 +97,10 @@ def build_predict_tweet(race_name: str, cache_entry: dict) -> str:
     ev_map = {e["horse_number"]: e["ev_score"]
               for e in cache_entry.get("ev_top3", [])}
 
+    conf_stars = cache_entry.get("confidence_stars", "")
     lines = [f"🏇【{short}{' ' + grade if grade else ''}】KEIBA EDGE予想"]
+    if conf_stars:
+        lines.append(f"🎯{conf_stars}")
 
     for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
         p = cache_entry.get(role, {})

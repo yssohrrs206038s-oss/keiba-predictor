@@ -772,6 +772,15 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
     except Exception as e:
         logger.warning(f"買い目自動決定失敗: {e}")
 
+    # 自信度計算
+    try:
+        from keiba_predictor.model.predict import _calc_confidence
+        score, stars = _calc_confidence(cache[race_id])
+        cache[race_id]["confidence"] = score
+        cache[race_id]["confidence_stars"] = stars
+    except Exception as e:
+        logger.warning(f"自信度計算失敗: {e}")
+
     # モンテカルロシミュレーション
     try:
         from keiba_predictor.simulation import run_monte_carlo
@@ -1091,9 +1100,12 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
     ai_comments = entry.get("ai_comments", {})
 
     # ── Message 1: 予想 ───────────────────────────────────────
+    conf_stars = entry.get("confidence_stars", "")
     lines1 = [sep, f"🏇 {race_name}"]
     if course_info:
         lines1.append(course_info)
+    if conf_stars:
+        lines1.append(f"🎯 自信度: {conf_stars}")
     lines1.append(sep)
 
     MARKS = ["◎", "○", "▲", "△", "　"]

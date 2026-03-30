@@ -307,6 +307,54 @@ def predict_race(
     return result
 
 
+def _calc_confidence(pred: dict) -> tuple[int, str]:
+    """
+    予想の自信度を1〜5で算出し (score, stars) を返す。
+
+    判定基準:
+    - 本命確率50%以上: +2, 40-50%: +1
+    - EVスコア10以上: +2, 7-10: +1
+    - モンテカルロ安定軸: +1
+    - 危険馬なし: +1
+    - 上位3頭の確率差10%以内（拮抗）: -1
+    """
+    score = 0
+
+    honmei = pred.get("honmei", {})
+    hon_prob = honmei.get("prob", 0)
+    if hon_prob >= 0.50:
+        score += 2
+    elif hon_prob >= 0.40:
+        score += 1
+
+    ev_top3 = pred.get("ev_top3", [])
+    if ev_top3:
+        max_ev = max(e.get("ev_score", 0) for e in ev_top3)
+        if max_ev >= 10:
+            score += 2
+        elif max_ev >= 7:
+            score += 1
+
+    sim = pred.get("simulation", {})
+    hon_num = honmei.get("horse_number")
+    if hon_num and sim.get(str(hon_num), {}).get("is_stable"):
+        score += 1
+
+    if not pred.get("dangerous_horses"):
+        score += 1
+
+    # 拮抗判定
+    taikou = pred.get("taikou", {})
+    ana = pred.get("ana", {})
+    probs = [p.get("prob", 0) for p in [honmei, taikou, ana] if p]
+    if len(probs) >= 3 and (max(probs) - min(probs)) < 0.10:
+        score -= 1
+
+    score = max(1, min(5, score))
+    stars = "★" * score
+    return score, stars
+
+
 def _decide_bet_strategy(result_df: pd.DataFrame) -> dict:
     """
     予測結果DataFrameから最適な買い目を自動決定する。
