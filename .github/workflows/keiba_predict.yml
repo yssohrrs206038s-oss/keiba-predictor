@@ -97,14 +97,15 @@ jobs:
           import sys, json, logging
           sys.stdout.reconfigure(encoding='utf-8', errors='replace')
           logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-          from keiba_predictor.discord_notify import _load_cache, scrape_grade_race_ids
+          from keiba_predictor.discord_notify import _load_cache, scrape_grade_race_ids, scrape_flat_race_ids
           from keiba_predictor.model.predict import predict_live
           import requests
 
           session = requests.Session()
-          grade_races = scrape_grade_race_ids(session)
           cache = _load_cache()
 
+          # 重賞
+          grade_races = scrape_grade_race_ids(session)
           for race in grade_races:
               rid = race['race_id']
               name = race.get('race_name', rid)
@@ -112,8 +113,22 @@ jobs:
                   print(f'  キャッシュ済みスキップ: {name}')
                   continue
               try:
-                  print(f'  予想生成: {name} ({rid})')
-                  predict_live(rid, notify=False)
+                  print(f'  重賞予想: {name} ({rid})')
+                  predict_live(rid, notify=False, is_grade=True)
+              except Exception as e:
+                  print(f'  失敗: {name}: {e}')
+
+          # 平場（芝・1勝以上）
+          flat_races = scrape_flat_race_ids(session)
+          for race in flat_races:
+              rid = race['race_id']
+              name = race.get('race_name', rid)
+              if cache.get(rid, {}).get('predicted_top3_nums'):
+                  print(f'  キャッシュ済みスキップ: {name}')
+                  continue
+              try:
+                  print(f'  平場予想: {name} ({rid})')
+                  predict_live(rid, notify=False, is_grade=False)
               except Exception as e:
                   print(f'  失敗: {name}: {e}')
           print('予想生成完了')

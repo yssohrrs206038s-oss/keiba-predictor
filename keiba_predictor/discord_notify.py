@@ -318,6 +318,87 @@ def scrape_grade_race_ids(session: requests.Session) -> list[dict]:
     return found
 
 
+# 除外キーワード
+_FLAT_EXCLUDE = {"未勝利", "新馬", "障害"}
+
+
+def scrape_flat_race_ids(session: requests.Session) -> list[dict]:
+    """今週末の平場レース（芝・1勝クラス以上）を venue ごとに取得する。
+
+    Returns:
+        [{"race_id", "race_name", "race_date", "venue", "is_grade": False}, ...]
+    """
+    found: list[dict] = []
+    seen: set[str] = set()
+
+    dates = _weekend_dates()
+
+    for kaisai_date in dates:
+        race_date_str = f"{kaisai_date[:4]}-{kaisai_date[4:6]}-{kaisai_date[6:]}"
+        url = f"https://race.netkeiba.com/top/race_list_sub.html?kaisai_date={kaisai_date}"
+        soup = _get(url, session)
+        if soup is None:
+            continue
+
+        for li in soup.select("li.RaceList_DataItem"):
+            a_tag = None
+            for a in li.select("a[href]"):
+                if re.search(r"race_id=\d{12}", a.get("href", "")):
+                    a_tag = a
+                    break
+            if a_tag is None:
+                continue
+            m = re.search(r"race_id=(\d{12})", a_tag.get("href", ""))
+            if not m:
+                continue
+            race_id = m.group(1)
+            if race_id in seen:
+                continue
+
+            # JRA のみ
+            venue_code = race_id[4:6]
+            if venue_code not in {"01","02","03","04","05","06","07","08","09","10"}:
+                continue
+
+            # 重賞は除外（別途取得済み）
+            if _is_grade_race(li):
+                continue
+
+            # レース名・条件を取得
+            name_el = (
+                li.select_one(".Race_Name") or li.select_one(".RaceName")
+                or li.select_one(".RaceList_ItemTitle")
+            )
+            race_name = name_el.get_text(strip=True) if name_el else a_tag.get_text(" ", strip=True)
+
+            # 除外キーワード
+            li_text = li.get_text()
+            if any(kw in li_text for kw in _FLAT_EXCLUDE):
+                continue
+
+            # 芝のみ（"芝" を含むか、Turf クラスがあるか）
+            is_turf = ("芝" in li_text
+                       or li.select_one("[class*='Turf']") is not None
+                       or "Icon_Turf" in str(li))
+            if not is_turf:
+                continue
+
+            seen.add(race_id)
+            venue_name = VENUE_MAP.get(venue_code, "")
+            found.append({
+                "race_id": race_id,
+                "race_name": race_name,
+                "race_date": race_date_str,
+                "venue": venue_name,
+                "is_grade": False,
+            })
+
+        _sleep()
+
+    logger.info(f"平場（芝・1勝以上）: {len(found)} レース")
+    return found
+
+
 def update_featured_races_csv(
     path: Optional[Path] = None,
     session: Optional[requests.Session] = None,
@@ -632,7 +713,8 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
                       ai_comments: Optional[dict] = None,
                       course_info: str = "",
                       start_time: str = "",
-                      venue: str = "") -> None:
+                      venue: str = "",
+                      is_grade: bool = True) -> None:
     """予想結果をキャッシュに保存する（日曜結果比較・note レポート生成に使用）。"""
     cache = _load_cache()
 
@@ -766,6 +848,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "ev_top3":             ev_top3,
         "dangerous_horses":    dangerous,
         "ai_comments":         ai_comments or {},
+        "is_grade":            is_grade,
     }
 
     # 買い目自動決定

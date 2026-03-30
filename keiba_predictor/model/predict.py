@@ -750,6 +750,7 @@ def predict_live(
     webhook_url: Optional[str] = None,
     model_path: Optional[Path] = None,
     cleaned_path: Optional[Path] = None,
+    is_grade: bool = True,
 ) -> pd.DataFrame:
     """
     出馬表をリアルタイムでスクレイピングして予測する。
@@ -802,11 +803,14 @@ def predict_live(
     course_info = shutuba_info.get("course_info", "")
 
     from keiba_predictor.ai_comment import generate_comments, generate_report_text, save_report
-    try:
-        ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
-    except Exception as e:
-        logger.warning(f"AI解説生成でエラー（続行）: {e}")
-        ai_comments = {}
+    if is_grade:
+        try:
+            ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
+        except Exception as e:
+            logger.warning(f"AI解説生成でエラー（続行）: {e}")
+            ai_comments = {}
+    else:
+        ai_comments = {}  # 平場はAI解説を生成しない
 
     msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments=ai_comments, course_info=course_info)
     print(msg1)
@@ -826,7 +830,7 @@ def predict_live(
     from keiba_predictor.discord_notify import _store_prediction
     _store_prediction(race_id, race_name, race_date, result,
                       ai_comments=ai_comments, course_info=course_info,
-                      start_time=start_time, venue=venue)
+                      start_time=start_time, venue=venue, is_grade=is_grade)
 
     if notify:
         import os

@@ -433,6 +433,9 @@
 
   <!-- タブ1: 今週の予想 -->
   <div class="tab-panel active" id="panel-predict">
+    <div id="venue-tabs" style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px;">
+      <button class="tab-btn active" data-venue="grade" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">重賞</button>
+    </div>
     <div class="section-title">🏇 今週の予想</div>
     <div class="race-grid" id="race-grid">
       <div class="no-data">予想データを読み込んでいます…</div>
@@ -768,6 +771,10 @@ function renderWeeklyChart(rows) {
 /* ════════════════════════════════════════════════════════════
    予想カード
 ════════════════════════════════════════════════════════════ */
+let _predHtmlMap = {};  // raceId → html
+let _allPredEntries = [];
+let _currentVenue = 'grade';
+
 function renderPredictions(cache) {
   const grid = document.getElementById('race-grid');
   const entries = Object.entries(cache)
@@ -777,12 +784,45 @@ function renderPredictions(cache) {
       const db = (b[1].race_date || '') + ' ' + (b[1].start_time || '99:99');
       return da.localeCompare(db);
     });
+  _allPredEntries = entries;
+
+  // 開催場タブを動的生成
+  const venues = new Set();
+  entries.forEach(([, r]) => {
+    if (r.is_grade === false && r.venue) venues.add(r.venue);
+  });
+  const vtabs = document.getElementById('venue-tabs');
+  if (vtabs && venues.size) {
+    let btns = '<button class="tab-btn active" data-venue="grade" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">重賞</button>';
+    for (const v of [...venues].sort()) {
+      btns += `<button class="tab-btn" data-venue="${esc(v)}" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">${esc(v)}</button>`;
+    }
+    vtabs.innerHTML = btns;
+    vtabs.addEventListener('click', e => {
+      const btn = e.target.closest('[data-venue]');
+      if (!btn) return;
+      vtabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _currentVenue = btn.dataset.venue;
+      _renderFilteredPredictions();
+    });
+  }
+
   if (!entries.length) {
     grid.innerHTML = '<div class="no-data">今週の予想データがありません</div>';
     return;
   }
 
-  grid.innerHTML = entries.map(([raceId, r]) => {
+  _predHtmlMap = {};
+  entries.forEach(([raceId, r]) => {
+    if (r.is_grade === false) {
+      _predHtmlMap[raceId] = _renderFlatCard(raceId, r);
+      return;
+    }
+    // 重賞は既存の詳細カード生成（以下にcontinue）
+  });
+
+  grid.innerHTML = entries.filter(([,r]) => r.is_grade !== false).map(([raceId, r]) => {
     const gLabel = gradeLabel(r.race_name);
     const gClass = gradeClass(r.race_name);
     const shortName = (r.race_name || raceId).replace(/[（(]G[^）)]*[）)]/g, '').trim();
@@ -969,7 +1009,7 @@ function renderPredictions(cache) {
     const confStars = r.confidence_stars || '';
     const confHTML = confStars ? `<span style="font-size:12px;color:var(--gold);margin-left:8px;">🎯${esc(confStars)}</span>` : '';
 
-    return `
+    const html = `
       <div class="race-card">
         <div class="race-card-header">
           <div>
@@ -985,7 +1025,51 @@ function renderPredictions(cache) {
           ${simHTML}
         </div>
       </div>`;
+    _predHtmlMap[raceId] = html;
+    return html;
   }).join('');
+
+  // 初回は重賞のみ表示
+  _renderFilteredPredictions();
+}
+
+function _renderFlatCard(raceId, r) {
+  const shortName = (r.race_name || raceId).replace(/[（(]G[^）)]*[）)]/g, '').trim();
+  const course = r.course_info || '';
+  const top3 = (r.predicted_top5 || []).slice(0, 3);
+  const marks = ['◎', '○', '▲'];
+  const horseLine = top3.map((h, i) =>
+    `<span style="margin-right:10px;">${marks[i]}${h.horse_number}番 ${((h.prob||0)*100).toFixed(0)}%</span>`
+  ).join('');
+  const bs = r.bet_strategy || {};
+  let betLine = '';
+  if (bs.total_points) {
+    const parts = [];
+    if (bs.fukusho && bs.fukusho.length) parts.push(`複勝:${bs.fukusho[0].num}番`);
+    if (bs.umaren && bs.umaren.length) parts.push(`馬連:${bs.umaren.map(u=>u.nums.join('-')).join('/')}`);
+    if (bs.use_wide && bs.wide && bs.wide.length) parts.push(`ワイド:${bs.wide.map(w=>w.nums.join('-')).join('/')}`);
+    betLine = `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${parts.join(' / ')} 計${bs.total_points}点</div>`;
+  }
+  return `<div class="race-card" style="padding:12px 16px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px;">
+      ${esc(shortName)} <span style="font-size:11px;color:var(--text-muted);">${esc(course)} ${r.start_time ? r.start_time+'発走' : ''}</span>
+    </div>
+    <div style="font-size:12px;">${horseLine}</div>
+    ${betLine}
+  </div>`;
+}
+
+function _renderFilteredPredictions() {
+  const grid = document.getElementById('race-grid');
+  const filtered = _allPredEntries.filter(([, r]) => {
+    if (_currentVenue === 'grade') return r.is_grade !== false;
+    return r.is_grade === false && r.venue === _currentVenue;
+  });
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="no-data">該当レースがありません</div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(([id]) => _predHtmlMap[id] || '').join('');
 }
 
 /* ════════════════════════════════════════════════════════════
