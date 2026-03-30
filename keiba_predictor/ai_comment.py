@@ -240,6 +240,22 @@ def _generate_comments_inner(
             if concerns:
                 entry["AI判定の懸念"] = "、".join(concerns)
 
+            # SHAP展開シナリオの言語化
+            shap_map = {s.get("feature"): s.get("value", 0) for s in shap_top}
+            scenario_parts = []
+            if shap_map.get("running_style_enc", 0) > 0:
+                scenario_parts.append("脚質的に展開が向く")
+            if shap_map.get("pace_pressure", 0) > 0:
+                scenario_parts.append("逃げ先行馬多数でハイペース想定・差し有利")
+            elif shap_map.get("pace_pressure", 0) < 0:
+                scenario_parts.append("スローペース想定・先行有利")
+            if shap_map.get("track_condition_enc", 0) > 0:
+                scenario_parts.append("馬場状態との相性良好")
+            if shap_map.get("days_since_last_race", 0) > 0:
+                scenario_parts.append("休養明けで体力充実")
+            if scenario_parts:
+                entry["展開想定"] = "。".join(scenario_parts)
+
         horses_data.append(entry)
 
     _dbg(f"Step3 OK: {len(horses_data)} 頭分データ組み立て完了（◎○▲のみ）")
@@ -270,7 +286,8 @@ def _generate_comments_inner(
         f"3. 馬場適性：馬場状態やコース特性との相性\n"
         f"4. 騎手評価：騎手複勝率を活用した評価\n"
         f"5. 期待値評価：「期待値評価」が「妙味あり」なら明記、「穴馬候補」があれば強調\n"
-        f"6. 懸念点：「AI判定の懸念」があれば最後に1つだけ言及\n\n"
+        f"6. 懸念点：「AI判定の懸念」があれば最後に1つだけ言及\n"
+        f"7. 「展開想定」があれば解説末尾に展開シナリオを1文で追加\n\n"
         f"【禁止】\n"
         f"・馬名を含めない\n"
         f"・オッズや配当金額\n"

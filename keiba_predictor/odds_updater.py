@@ -130,6 +130,108 @@ def update_odds_for_race(race_id: str, entry: dict) -> dict:
 # メイン処理
 # ══════════════════════════════════════════════════════════════
 
+def _build_ev_rank_message(cache: dict) -> str:
+    """発走2時間以内のレースで EV≥1.2 の馬を抽出して直前期待値ランクメッセージを生成する。"""
+    from datetime import datetime
+
+    now = datetime.now()
+    now_str = now.strftime("%H:%M")
+    SEP = "━" * 20
+
+    race_blocks: list[str] = []
+
+    for race_id, entry in cache.items():
+        race_date = entry.get("race_date", "")
+        if race_date != date.today().isoformat():
+            continue
+
+        # 発走2時間以内か判定
+        start_time = entry.get("start_time", "")
+        if start_time:
+            try:
+                st = datetime.strptime(f"{race_date} {start_time}", "%Y-%m-%d %H:%M")
+                diff_min = (st - now).total_seconds() / 60
+                if diff_min < 0 or diff_min > 120:
+                    continue
+            except Exception:
+                continue
+        else:
+            continue
+
+        race_name = entry.get("race_name", race_id)
+
+        # EV≥1.2 の馬を収集
+        ev_horses: list[dict] = []
+        for h in entry.get("ev_top3", []):
+            ev = h.get("ev_score", 0)
+            if ev >= 1.2:
+                ev_horses.append(h)
+
+        # predicted_top5 からも補完
+        top5 = entry.get("predicted_top5", [])
+        seen = {h.get("horse_number") for h in ev_horses}
+        for h in top5:
+            num = h.get("horse_number")
+            odds = h.get("odds")
+            prob = h.get("prob", 0)
+            if num not in seen and odds and prob:
+                ev = prob * float(odds)
+                if ev >= 1.2:
+                    ev_horses.append({
+                        "horse_number": num,
+                        "horse_name": h.get("horse_name", ""),
+                        "ev_score": round(ev, 2),
+                        "prob": prob,
+                        "odds": odds,
+                    })
+
+        if not ev_horses:
+            continue
+
+        ev_horses.sort(key=lambda x: -x.get("ev_score", 0))
+        lines = [f"🏇 {race_name}"]
+        for h in ev_horses[:5]:
+            num  = h.get("horse_number", "?")
+            name = h.get("horse_name", "")
+            ev   = h.get("ev_score", 0)
+            prob = h.get("prob", 0) * 100
+            odds = h.get("odds", 0)
+
+            if ev >= 5.0:
+                icon = "🔥"
+            elif ev >= 2.0:
+                icon = "✅"
+            else:
+                icon = "⚠️"
+
+            note = ""
+            pop = h.get("popularity")
+            if pop and int(pop) <= 2 and ev < 2.0:
+                note = "・過剰人気"
+
+            lines.append(
+                f"{icon} {num}番{name} EV{ev:.2f}"
+                f"（確率{prob:.0f}% × {float(odds):.1f}倍{note}）"
+            )
+
+        race_blocks.append("\n".join(lines))
+
+    if not race_blocks:
+        return ""
+
+    header = [
+        SEP,
+        f"📊 直前期待値ランク更新（{now_str}時点）",
+        SEP,
+    ]
+    footer = [
+        SEP,
+        "EV1.2以上 = 買い得、1.0未満 = 割高",
+    ]
+
+    return "\n".join(header + ["\n".join(race_blocks)] + footer)
+
+
 def run_odds_update() -> int:
     """当日開催レースのオッズを更新して保存する。更新件数を返す。"""
     cache = _load_cache()
@@ -159,6 +261,21 @@ def run_odds_update() -> int:
 
     _save_cache(cache)
     logger.info(f"更新完了: {updated} レース")
+
+    # 直前期待値ランクを Discord に送信
+    import os
+    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL", "")
+    if webhook_url:
+        msg = _build_ev_rank_message(cache)
+        if msg:
+            try:
+                import requests
+                resp = requests.post(webhook_url, json={"content": msg}, timeout=15)
+                ok = resp.status_code in (200, 204)
+                logger.info(f"直前期待値ランク Discord送信{'完了' if ok else '失敗'}")
+            except Exception as e:
+                logger.warning(f"直前期待値ランク Discord送信失敗: {e}")
+
     return updated
 
 
