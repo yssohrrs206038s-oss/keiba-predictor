@@ -1230,20 +1230,18 @@ async function main() {
   // 情報タブ
   const iUpdated = document.getElementById('i-updated');
   if (iUpdated) iUpdated.textContent = now.split(' ')[0] || now;
-  // モデル情報（キャッシュから推定）
+  // モデル情報（predictions_cache.json の _model_metrics から取得）
   try {
-    const cache = await fetchJSON(CACHE_URL).catch(() => null);
-    if (cache) {
-      const firstEntry = Object.values(cache)[0] || {};
-      // 特徴量数は固定値（コードベースから）
+    const mm = predCache._model_metrics;
+    if (mm) {
+      const iAuc = document.getElementById('i-auc');
+      const iFuk = document.getElementById('i-fukusho');
       const iFeat = document.getElementById('i-features');
-      if (iFeat) iFeat.textContent = '47';
+      if (iAuc) iAuc.textContent = mm.auc || '—';
+      if (iFuk) iFuk.textContent = mm.fukusho_rate ? mm.fukusho_rate + '%' : '—';
+      if (iFeat) iFeat.textContent = mm.n_features || '—';
     }
   } catch(e) {}
-  const iAuc = document.getElementById('i-auc');
-  const iFuk = document.getElementById('i-fukusho');
-  if (iAuc) iAuc.textContent = '—';
-  if (iFuk) iFuk.textContent = '—';
 
   // ローディング非表示
   const loading = document.getElementById('loading');

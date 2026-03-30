@@ -807,6 +807,21 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
     except Exception as e:
         logger.warning(f"モンテカルロシミュレーション失敗: {e}")
 
+    # モデルメトリクスをキャッシュのトップレベルに保存（ダッシュボード表示用）
+    try:
+        import pickle
+        _model_path = Path(__file__).parent / "model" / "xgb_model.pkl"
+        if _model_path.exists():
+            with open(_model_path, "rb") as _f:
+                _bundle = pickle.load(_f)
+            cache["_model_metrics"] = {
+                "auc": round(_bundle.get("cv_auc_mean", 0), 4),
+                "fukusho_rate": round(_bundle.get("cv_fukusho_mean", 0) * 100, 1),
+                "n_features": len(_bundle.get("feature_cols", [])),
+            }
+    except Exception:
+        pass
+
     _save_cache(cache)
 
 
