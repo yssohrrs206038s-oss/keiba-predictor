@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KEIBA EDGE | AI競馬予想ダッシュボード</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <style>
     /* ── リセット・基底 ──────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -262,8 +262,36 @@
       border-radius: var(--radius);
       padding: 20px;
       box-shadow: var(--shadow);
+      margin-bottom: 20px;
     }
     .chart-wrap canvas { max-height: 280px; }
+
+    /* ── モンテカルロ分析 ───────────────────────────────────── */
+    .sim-box {
+      margin-top: 12px;
+      background: rgba(52,152,219,.06);
+      border: 1px solid rgba(52,152,219,.2);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .sim-title {
+      font-size: 12px; font-weight: 700; color: var(--blue);
+      margin-bottom: 6px;
+    }
+    .sim-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; padding: 3px 0;
+      flex-wrap: wrap;
+    }
+    .sim-mark { font-weight: 700; min-width: 48px; }
+    .sim-rate { color: var(--gold); font-weight: 600; }
+    .sim-tag {
+      font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 4px;
+    }
+    .tag-stable  { background: rgba(46,204,113,.15); color: #2ecc71; border: 1px solid rgba(46,204,113,.3); }
+    .tag-volatile { background: rgba(243,156,18,.15); color: #f39c12; border: 1px solid rgba(243,156,18,.3); }
+    .sim-scenario { color: var(--text-muted); font-size: 10px; }
 
     /* ── 履歴テーブル ────────────────────────────────────────── */
     .history-table {
@@ -374,6 +402,12 @@
   <div class="section-title">📈 回収率推移</div>
   <div class="chart-wrap">
     <canvas id="roi-chart"></canvas>
+  </div>
+
+  <!-- ②-b 週別成績推移 -->
+  <div class="section-title">📊 週別成績推移（直近4週）</div>
+  <div class="chart-wrap">
+    <canvas id="weekly-chart"></canvas>
   </div>
 
   <!-- ③ 今週の予想 -->
@@ -517,17 +551,28 @@ function renderChart(rows) {
     type: 'line',
     data: {
       labels,
-      datasets: [{
-        label: '累計回収率 (%)',
-        data: roiData,
-        borderColor: '#d4af37',
-        backgroundColor: 'rgba(212,175,55,.08)',
-        borderWidth: 2,
-        pointRadius: 4,
-        pointBackgroundColor: '#d4af37',
-        tension: 0.3,
-        fill: true,
-      }]
+      datasets: [
+        {
+          label: '累計回収率 (%)',
+          data: roiData,
+          borderColor: '#d4af37',
+          backgroundColor: 'rgba(212,175,55,.08)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#d4af37',
+          tension: 0.3,
+          fill: true,
+        },
+        {
+          label: '損益分岐点 (100%)',
+          data: roiData.map(() => 100),
+          borderColor: '#e74c3c',
+          borderWidth: 1.5,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false,
+        }
+      ]
     },
     options: {
       responsive: true,
@@ -551,6 +596,74 @@ function renderChart(rows) {
           grid:  { color: 'rgba(255,255,255,.04)' },
           suggestedMin: 50,
           suggestedMax: 150,
+        }
+      }
+    }
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   週別成績推移（直近4週）
+════════════════════════════════════════════════════════════ */
+function renderWeeklyChart(rows) {
+  if (!rows.length) return;
+
+  // 各行にweek labelを付与
+  const weekMap = {};
+  rows.forEach(r => {
+    const d = (r.date || '').slice(0, 10);
+    if (!d) return;
+    const dt = new Date(d);
+    // ISO week start (Monday)
+    const mon = new Date(dt);
+    mon.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+    const wk = `${mon.getMonth()+1}/${mon.getDate()}週`;
+    if (!weekMap[wk]) weekMap[wk] = [];
+    weekMap[wk].push(r);
+  });
+
+  const weeks = Object.keys(weekMap).slice(-4);
+  if (!weeks.length) return;
+
+  const fukushoRates = [], umarenRates = [], sanrenRates = [];
+  weeks.forEach(wk => {
+    const wr = weekMap[wk];
+    const n = wr.length;
+    fukushoRates.push(n ? +(wr.filter(r => r.fukusho_hit === 'True').length / n * 100).toFixed(0) : 0);
+    umarenRates.push(n ? +(wr.filter(r => r.umaren_hit === 'True').length / n * 100).toFixed(0) : 0);
+    sanrenRates.push(n ? +(wr.filter(r => r.sanrenpuku_hit === 'True').length / n * 100).toFixed(0) : 0);
+  });
+
+  const ctx = document.getElementById('weekly-chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: weeks,
+      datasets: [
+        { label: '複勝的中率', data: fukushoRates, backgroundColor: 'rgba(46,204,113,.7)', borderRadius: 4 },
+        { label: '馬連的中率', data: umarenRates, backgroundColor: 'rgba(52,152,219,.7)', borderRadius: 4 },
+        { label: '3連複的中率', data: sanrenRates, backgroundColor: 'rgba(243,156,18,.7)', borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#8888aa', font: { size: 11 } } },
+        tooltip: {
+          backgroundColor: '#13131e', borderColor: '#2a2a40', borderWidth: 1,
+          titleColor: '#d4af37', bodyColor: '#e8e8f0',
+          callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%` },
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8888aa', font: { size: 11 } },
+          grid: { color: 'rgba(255,255,255,.04)' },
+        },
+        y: {
+          ticks: { color: '#8888aa', callback: v => v + '%', font: { size: 11 } },
+          grid: { color: 'rgba(255,255,255,.04)' },
+          suggestedMin: 0, suggestedMax: 100,
         }
       }
     }
@@ -822,6 +935,7 @@ async function main() {
     const rows = parseCSV(csv);
     renderStats(rows);
     renderChart(rows);
+    renderWeeklyChart(rows);
     renderHistory(rows);
   } catch (e) {
     errors.push('履歴データ: ' + e.message);
