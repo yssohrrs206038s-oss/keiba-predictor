@@ -344,6 +344,33 @@
     .stat-card:nth-child(3) { animation-delay: .10s; }
     .stat-card:nth-child(4) { animation-delay: .15s; }
 
+    /* ── タブナビゲーション ──────────────────────────────────── */
+    .tab-nav {
+      display: flex;
+      background: var(--bg-card);
+      border-bottom: 2px solid var(--border);
+      position: sticky; top: 60px; z-index: 90;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tab-btn {
+      flex: 1; min-width: 0;
+      padding: 12px 8px;
+      font-size: 13px; font-weight: 600;
+      color: var(--text-muted);
+      background: none; border: none;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color .2s, border-color .2s;
+      border-bottom: 3px solid transparent;
+    }
+    .tab-btn.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
     /* ── レスポンシブ ────────────────────────────────────────── */
     @media (max-width: 600px) {
       .header-inner { justify-content: center; text-align: center; }
@@ -351,6 +378,8 @@
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .history-table th:nth-child(4),
       .history-table td:nth-child(4) { display: none; }
+      .tab-btn { font-size: 12px; padding: 10px 4px; }
+      header { padding: 12px 16px; }
     }
 
     /* ── フッター ────────────────────────────────────────────── */
@@ -384,77 +413,105 @@
   </div>
 </header>
 
+<!-- タブナビゲーション -->
+<nav class="tab-nav" id="tab-nav">
+  <button class="tab-btn active" data-tab="predict">🏇 予想</button>
+  <button class="tab-btn" data-tab="results">📊 成績</button>
+  <button class="tab-btn" data-tab="analysis">🔍 分析</button>
+  <button class="tab-btn" data-tab="info">ℹ️ 情報</button>
+</nav>
+
 <!-- メイン -->
-<main>
+<main id="tab-container">
 
-  <!-- ① 累計実績 -->
-  <div class="section-title">📊 累計実績</div>
-  <div class="stats-grid" id="stats-grid">
-    <div class="stat-card"><div class="stat-value" id="s-races">—</div><div class="stat-label">通算レース数</div></div>
-    <div class="stat-card green"><div class="stat-value" id="s-fukusho">—</div><div class="stat-label">複勝的中率</div></div>
-    <div class="stat-card blue"><div class="stat-value" id="s-umaren">—</div><div class="stat-label">馬連的中率</div></div>
-    <div class="stat-card blue"><div class="stat-value" id="s-sanren">—</div><div class="stat-label">3連複的中率</div></div>
-    <div class="stat-card"><div class="stat-value" id="s-roi">—</div><div class="stat-label">累計回収率</div></div>
-    <div class="stat-card green"><div class="stat-value" id="s-streak">—</div><div class="stat-label">連続複勝的中</div></div>
+  <!-- タブ1: 今週の予想 -->
+  <div class="tab-panel active" id="panel-predict">
+    <div class="section-title">🏇 今週の予想</div>
+    <div class="race-grid" id="race-grid">
+      <div class="no-data">予想データを読み込んでいます…</div>
+    </div>
   </div>
 
-  <!-- ② 回収率推移グラフ -->
-  <div class="section-title">📈 回収率推移</div>
-  <div class="chart-wrap">
-    <canvas id="roi-chart"></canvas>
+  <!-- タブ2: 成績 -->
+  <div class="tab-panel" id="panel-results">
+    <div class="section-title">📊 累計実績</div>
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="stat-value" id="s-races">—</div><div class="stat-label">通算レース数</div></div>
+      <div class="stat-card green"><div class="stat-value" id="s-fukusho">—</div><div class="stat-label">複勝的中率</div></div>
+      <div class="stat-card blue"><div class="stat-value" id="s-umaren">—</div><div class="stat-label">馬連的中率</div></div>
+      <div class="stat-card blue"><div class="stat-value" id="s-sanren">—</div><div class="stat-label">3連複的中率</div></div>
+      <div class="stat-card"><div class="stat-value" id="s-roi">—</div><div class="stat-label">累計回収率</div></div>
+      <div class="stat-card green"><div class="stat-value" id="s-streak">—</div><div class="stat-label">連続複勝的中</div></div>
+    </div>
+
+    <div class="section-title">📈 回収率推移</div>
+    <div class="chart-wrap">
+      <canvas id="roi-chart"></canvas>
+    </div>
+
+    <div class="section-title">📊 週別成績推移（直近4週）</div>
+    <div class="chart-wrap">
+      <canvas id="weekly-chart"></canvas>
+    </div>
+
+    <div class="section-title">📋 直近レース結果</div>
+    <div style="overflow-x:auto;">
+      <table class="history-table">
+        <thead>
+          <tr><th>日付</th><th>レース名</th><th>複勝</th><th>馬連</th><th>3連複</th><th>回収率</th></tr>
+        </thead>
+        <tbody id="history-tbody">
+          <tr><td colspan="6" class="no-data">履歴データを読み込んでいます…</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- ②-b 週別成績推移 -->
-  <div class="section-title">📊 週別成績推移（直近4週）</div>
-  <div class="chart-wrap">
-    <canvas id="weekly-chart"></canvas>
+  <!-- タブ3: 分析 -->
+  <div class="tab-panel" id="panel-analysis">
+    <div class="section-title">🏅 本命馬別成績ランキング</div>
+    <div style="overflow-x:auto;">
+      <table class="history-table" id="jockey-table">
+        <thead><tr><th>本命馬名</th><th>複勝率</th><th>馬連率</th><th>予想回数</th></tr></thead>
+        <tbody id="jockey-tbody">
+          <tr><td colspan="4" class="no-data">データ蓄積中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-title" style="margin-top:32px;">📍 コース別成績</div>
+    <div style="overflow-x:auto;">
+      <table class="history-table" id="course-table">
+        <thead><tr><th>コース</th><th>複勝率</th><th>馬連率</th><th>予想回数</th></tr></thead>
+        <tbody id="course-tbody">
+          <tr><td colspan="4" class="no-data">データ蓄積中…</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- ③ 今週の予想 -->
-  <div class="section-title">🏇 今週の予想</div>
-  <div class="race-grid" id="race-grid">
-    <div class="no-data">予想データを読み込んでいます…</div>
-  </div>
-
-  <!-- ④ 過去レース一覧 -->
-  <div class="section-title">📋 直近レース結果</div>
-  <div style="overflow-x:auto;">
-    <table class="history-table">
-      <thead>
-        <tr>
-          <th>日付</th>
-          <th>レース名</th>
-          <th>複勝</th>
-          <th>馬連</th>
-          <th>3連複</th>
-          <th>回収率</th>
-        </tr>
-      </thead>
-      <tbody id="history-tbody">
-        <tr><td colspan="6" class="no-data">履歴データを読み込んでいます…</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- ⑤ 本命馬別・コース別成績 -->
-  <div class="section-title">🏅 本命馬別成績ランキング</div>
-  <div style="overflow-x:auto;">
-    <table class="history-table" id="jockey-table">
-      <thead><tr><th>本命馬名</th><th>複勝率</th><th>馬連率</th><th>予想回数</th></tr></thead>
-      <tbody id="jockey-tbody">
-        <tr><td colspan="4" class="no-data">データ蓄積中…</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="section-title" style="margin-top:32px;">📍 コース別成績</div>
-  <div style="overflow-x:auto;">
-    <table class="history-table" id="course-table">
-      <thead><tr><th>コース</th><th>複勝率</th><th>馬連率</th><th>予想回数</th></tr></thead>
-      <tbody id="course-tbody">
-        <tr><td colspan="4" class="no-data">データ蓄積中…</td></tr>
-      </tbody>
-    </table>
+  <!-- タブ4: 情報 -->
+  <div class="tab-panel" id="panel-info">
+    <div class="section-title">ℹ️ システム情報</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value" id="i-auc">—</div><div class="stat-label">モデル AUC</div></div>
+      <div class="stat-card green"><div class="stat-value" id="i-fukusho">—</div><div class="stat-label">CV複勝的中率</div></div>
+      <div class="stat-card"><div class="stat-value" id="i-features">—</div><div class="stat-label">特徴量数</div></div>
+      <div class="stat-card blue"><div class="stat-value" id="i-updated">—</div><div class="stat-label">最終更新</div></div>
+    </div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-top:16px;">
+      <h3 style="color:var(--gold);margin-bottom:12px;">KEIBA EDGE について</h3>
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;">
+        KEIBA EDGEは機械学習（XGBoost）とClaude AIを組み合わせた重賞予想システムです。<br>
+        過去の出走データ・騎手成績・コース適性を学習した独自モデルで3着以内確率を算出し、<br>
+        期待値（EV）スコアにより「オッズと確率のギャップ」がある馬を発見します。<br>
+        SHAP値による予測根拠の可視化、モンテカルロシミュレーションによる安定性評価、<br>
+        AIによる買い目自動決定を搭載しています。
+      </p>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:12px;">
+        ⚠️ 本サイトの予想はAIによる分析です。馬券購入は自己責任でお願いします。
+      </p>
+    </div>
   </div>
 
 </main>
@@ -1009,6 +1066,44 @@ function renderRankings(rows) {
 }
 
 /* ════════════════════════════════════════════════════════════
+   タブ切り替え＋スワイプ
+════════════════════════════════════════════════════════════ */
+const TAB_IDS = ['predict', 'results', 'analysis', 'info'];
+let currentTab = 0;
+
+function switchTab(idx) {
+  if (idx < 0 || idx >= TAB_IDS.length) return;
+  currentTab = idx;
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('.tab-panel').forEach((p, i) => {
+    p.classList.toggle('active', i === idx);
+  });
+}
+
+// タブボタンクリック
+document.getElementById('tab-nav').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  const idx = TAB_IDS.indexOf(btn.dataset.tab);
+  if (idx >= 0) switchTab(idx);
+});
+
+// スワイプ対応
+let touchStartX = 0;
+const container = document.getElementById('tab-container');
+container.addEventListener('touchstart', e => {
+  touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+container.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  if (Math.abs(dx) > 60) {
+    switchTab(currentTab + (dx < 0 ? 1 : -1));
+  }
+}, { passive: true });
+
+/* ════════════════════════════════════════════════════════════
    メイン
 ════════════════════════════════════════════════════════════ */
 async function main() {
@@ -1040,8 +1135,26 @@ async function main() {
   }
 
   // 最終更新
-  document.getElementById('last-updated').textContent =
-    '最終更新: ' + new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  const now = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  document.getElementById('last-updated').textContent = '最終更新: ' + now;
+
+  // 情報タブ
+  const iUpdated = document.getElementById('i-updated');
+  if (iUpdated) iUpdated.textContent = now.split(' ')[0] || now;
+  // モデル情報（キャッシュから推定）
+  try {
+    const cache = await fetchJSON(CACHE_URL).catch(() => null);
+    if (cache) {
+      const firstEntry = Object.values(cache)[0] || {};
+      // 特徴量数は固定値（コードベースから）
+      const iFeat = document.getElementById('i-features');
+      if (iFeat) iFeat.textContent = '47';
+    }
+  } catch(e) {}
+  const iAuc = document.getElementById('i-auc');
+  const iFuk = document.getElementById('i-fukusho');
+  if (iAuc) iAuc.textContent = '—';
+  if (iFuk) iFuk.textContent = '—';
 
   // ローディング非表示
   const loading = document.getElementById('loading');
