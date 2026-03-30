@@ -256,10 +256,11 @@ def _generate_race_analysis(race_data: dict, race_name: str, course_info: str, a
 # ── レポート生成 ──────────────────────────────────────────────────────
 
 def _build_note_race_markdown(race_id: str, r: dict, analysis: dict) -> str:
-    """1レース分のnote投稿用Markdownを生成する。"""
+    """1レース分のnote/BOOKERS用プレミアムレポートMarkdownを生成する。"""
     race_name   = r.get("race_name", race_id)
     race_date   = r.get("race_date", "")
     course_info = r.get("course_info", "")
+    venue       = r.get("venue", _venue_from_race_id(race_id))
     grade       = _grade_from_name(race_name)
     grade_str   = f" {grade}" if grade else ""
 
@@ -268,139 +269,268 @@ def _build_note_race_markdown(race_id: str, r: dict, analysis: dict) -> str:
         for e in r.get("ev_top3", [])
         if e.get("horse_number") is not None
     }
-    pred_set = set(r.get("predicted_top3_nums", []))
+    sim = r.get("simulation", {})
+    ai_comments = r.get("ai_comments", {})
+
+    # モデル精度情報を取得
+    auc_str = "N/A"
+    fukusho_str = "N/A"
+    try:
+        import pickle
+        model_path = Path(__file__).parent / "model" / "xgb_model.pkl"
+        if model_path.exists():
+            with open(model_path, "rb") as f:
+                bundle = pickle.load(f)
+            auc_str = f"{bundle.get('cv_auc_mean', 0):.4f}"
+            fukusho_str = f"{bundle.get('cv_fukusho_mean', 0) * 100:.1f}"
+    except Exception:
+        pass
+
+    # 出走頭数
+    top5_data = r.get("predicted_top5", [])
+    n_horses = len(top5_data) if top5_data else "?"
 
     lines: list[str] = []
 
     # ── タイトル ─────────────────────────────────────────────
     lines += [
-        f"# 【{race_name}{grade_str}】KEIBA EDGE AI予想 {race_date}",
+        f"# 【{race_name}{grade_str}】KEIBA EDGE プレミアム予想 {race_date}",
         "",
         "> ⚠️ 本予想はAIによる分析です。馬券購入は自己責任でお願いします。",
         "",
     ]
 
-    # ── AIスコア上位馬テーブル ────────────────────────────────
+    # ── レース概要 ───────────────────────────────────────────
     lines += [
-        "## 📊 AIスコア上位馬",
+        "## 📊 レース概要",
+        f"- 開催：{race_date} {venue} {course_info}",
+        f"- 出走頭数：{n_horses}頭",
+        f"- AIモデル精度：AUC {auc_str} / 複勝的中率 {fukusho_str}%",
         "",
-        "| 印 | 馬番 | 馬名 | AI確率 | EVスコア |",
-        "|---|---|---|---|---|",
     ]
 
-    MARKS = ["◎", "○", "▲", "△", "　"]
-    top5 = r.get("predicted_top5", r.get("ev_top3", []))
-    roles_data = []
-    for idx, (role, mark) in enumerate([("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]):
-        p = r.get(role, {})
-        if p and p.get("horse_name"):
-            num  = p.get("horse_number", "?")
-            name = p.get("horse_name", "")
-            prob = p.get("prob", 0) * 100
-            ev   = ev_map.get(int(num), 0) if num is not None else 0
-            ev_str = f"{ev:.2f}" if ev else "—"
-            lines.append(f"| {mark} | {num}番 | {name} | {prob:.1f}% | {ev_str} |")
-            roles_data.append(int(num) if num is not None else 0)
+    # ── AI予想印テーブル ─────────────────────────────────────
+    lines += [
+        "## 🏆 AI予想印",
+        "",
+        "| 印 | 馬番 | 馬名 | AI確率 | EVスコア | 判定 |",
+        "|---|---|---|---|---|---|",
+    ]
 
-    # △ 連下（4番目の馬）
-    pnums = [n for n in r.get("predicted_top5_nums", r.get("predicted_top3_nums", [])) if n is not None]
-    for num in pnums:
-        if num not in roles_data:
-            # predicted_top5 から馬名等を引く
-            name = ""
-            prob_val = 0
-            for t in (r.get("predicted_top5", []) or []):
-                if t.get("horse_number") == num:
-                    name = t.get("horse_name", "")
-                    prob_val = t.get("prob", 0) * 100
-                    break
-            ev = ev_map.get(num, 0)
-            ev_str = f"{ev:.2f}" if ev else "—"
-            prob_str = f"{prob_val:.1f}%" if prob_val else "—"
-            lines.append(f"| △ | {num}番 | {name} | {prob_str} | {ev_str} |")
-            break
-
-    lines.append("")
-
-    # ── 注目馬AI解説 ─────────────────────────────────────────
-    lines += ["## 🔍 注目馬AI解説", ""]
+    roles_data: list[dict] = []
     for role, mark in [("honmei", "◎"), ("taikou", "○"), ("ana", "▲")]:
         p = r.get(role, {})
         if not p or not p.get("horse_name"):
             continue
-        num  = p.get("horse_number")
+        num  = p.get("horse_number", "?")
         name = p.get("horse_name", "")
-        comment = (
-            analysis["horses"].get(str(num))
-            or r.get("ai_comments", {}).get(str(num), "")
-        )
+        prob = p.get("prob", 0) * 100
+        ev   = ev_map.get(int(num), 0) if num is not None else 0
+        ev_str = f"{ev:.2f}" if ev else "—"
+
+        # 安定軸 / 展開依存 判定
+        mc = sim.get(str(num), {})
+        if mc and mc.get("is_stable") is not None:
+            tag = "🔒安定軸" if mc["is_stable"] else "⚡展開依存"
+        elif prob >= 50:
+            tag = "🔒安定軸"
+        else:
+            tag = "⚡展開依存"
+
+        lines.append(f"| {mark} | {num}番 | {name} | {prob:.1f}% | {ev_str} | {tag} |")
+        roles_data.append({
+            "role": role, "mark": mark, "num": num, "name": name,
+            "prob": prob, "ev": ev, "tag": tag, "mc": mc,
+        })
+
+    lines.append("")
+
+    # ── 注目馬詳細分析 ───────────────────────────────────────
+    lines += ["## 🔍 注目馬詳細分析", ""]
+
+    for rd in roles_data:
+        num, name, mark = rd["num"], rd["name"], rd["mark"]
+        prob, ev, tag = rd["prob"], rd["ev"], rd["tag"]
+        mc = rd["mc"]
+
         lines.append(f"### {mark} {num}番 {name}")
-        if comment:
-            lines.append(comment)
+        lines.append(f"**AI確率{prob:.1f}% / EVスコア{ev:.2f} / {tag}**")
         lines.append("")
 
-    # ── 危険馬 ───────────────────────────────────────────────
+        # 【強み】: SHAP プラス要因
+        shap_top = None
+        for role_key in ["honmei", "taikou", "ana"]:
+            p = r.get(role_key, {})
+            if p.get("horse_number") == num and p.get("shap_top"):
+                shap_top = p["shap_top"]
+                break
+
+        strengths = []
+        concerns = []
+        if shap_top:
+            strengths = [s["label"] for s in shap_top if s.get("value", 0) > 0]
+            concerns = [s["label"] for s in shap_top if s.get("value", 0) < 0]
+
+        lines.append("**【強み】**")
+        if strengths:
+            for s in strengths:
+                lines.append(f"- {s}")
+        else:
+            lines.append(f"- AI確率{prob:.1f}%で上位評価")
+        lines.append("")
+
+        # 【モンテカルロ分析】
+        if mc:
+            hi = mc.get("scenario", {}).get("high_pace", 0) * 100
+            sl = mc.get("scenario", {}).get("slow_pace", 0) * 100
+            lines += [
+                "**【モンテカルロ分析（1万回シミュレーション）】**",
+                f"- ハイペース時：3着以内{hi:.0f}%",
+                f"- スローペース時：3着以内{sl:.0f}%",
+                "",
+            ]
+
+        # 【AI解説】
+        comment = (
+            analysis.get("horses", {}).get(str(num))
+            or ai_comments.get(str(num), "")
+        )
+        if comment:
+            lines += ["**【AI解説】**", comment, ""]
+
+        # 【SHAP要因分析】
+        if shap_top:
+            lines.append("**【SHAP要因分析】**")
+            if strengths:
+                lines.append(f"✅ プラス要因：{'、'.join(strengths)}")
+            if concerns:
+                lines.append(f"⚠️ マイナス要因：{'、'.join(concerns)}")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+    # ── 危険馬分析 ───────────────────────────────────────────
     dangerous = r.get("dangerous_horses", [])
     if dangerous:
-        lines += ["## ⚠️ 危険馬", ""]
+        lines += ["## ⚠️ 危険馬分析", ""]
         for d in dangerous:
             dnum    = d.get("horse_number", "?")
             dname   = d.get("horse_name", "")
             dpop    = d.get("popularity", "?")
+            dprob   = d.get("prob", 0) * 100
             reasons = d.get("reasons", [])
-            reason  = reasons[0] if reasons else "要注意"
-            lines.append(f"- **{dnum}番 {dname}**（{dpop}番人気）— {reason}")
+            lines.append(f"### {dnum}番 {dname}（{dpop}番人気）")
+            for rsn in reasons:
+                lines.append(f"- 理由：{rsn}")
+            lines.append(f"- AI確率：{dprob:.1f}%（人気に対して低い）")
+            lines.append("")
+
+    # ── 穴馬候補 ─────────────────────────────────────────────
+    ana_info = r.get("ana_horse_info", {})
+    ana_num = r.get("ana_horse_num")
+    if ana_num and ana_info.get("horse_name"):
+        a_name = ana_info["horse_name"]
+        a_prob = ana_info.get("prob", 0) * 100
+        a_pop  = ana_info.get("popularity", "?")
+        a_ev   = ev_map.get(ana_num, 0)
+        lines += [
+            "## 🎯 穴馬候補",
+            "",
+            f"### ★ {ana_num}番 {a_name}（{a_pop}番人気）",
+            f"- AI確率：{a_prob:.1f}%（{a_pop}番人気なのに高評価）",
+            f"- EVスコア：{a_ev:.2f}" if a_ev else "",
+        ]
+        # モンテカルロの激走条件
+        a_mc = sim.get(str(ana_num), {})
+        if a_mc:
+            hi = a_mc.get("scenario", {}).get("high_pace", 0) * 100
+            sl = a_mc.get("scenario", {}).get("slow_pace", 0) * 100
+            better = "ハイペース" if hi > sl else "スローペース"
+            better_pct = max(hi, sl)
+            lines.append(f"- 激走条件：{better}で確率{better_pct:.0f}%まで上昇")
         lines.append("")
 
-    # ── 買い目テーブル ───────────────────────────────────────
-    if len(pnums) >= 2:
-        hon = pnums[0]
-        umaren_pairs = list(combinations(pnums[:3], 2))
-        umaren_str = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
-
-        # 3連複
-        partners = pnums[1:5]
-        cached_ana_num = r.get("ana_horse_num")
-        if cached_ana_num and cached_ana_num not in partners:
-            partners = partners + [cached_ana_num]
-        sanren_pt = len(list(combinations(partners, 2)))
-        partners_str = "/".join(str(n) for n in partners)
-
-        total = 1 + len(umaren_pairs) + sanren_pt
-
+    # ── AI自動決定買い目 ─────────────────────────────────────
+    bs = r.get("bet_strategy", {})
+    if bs and bs.get("total_points", 0) > 0:
+        total = bs["total_points"]
         lines += [
-            f"## 💰 推奨買い目（合計{total}点）",
+            f"## 💰 AI自動決定買い目",
             "",
             "| 券種 | 買い目 | 点数 |",
             "|---|---|---|",
-            f"| 複勝 | {hon}番 | 1点 |",
-            f"| 馬連 | {umaren_str} | {len(umaren_pairs)}点 |",
-            f"| 3連複 | 軸{hon} × {partners_str} | {sanren_pt}点 |",
+        ]
+        if bs.get("fukusho"):
+            f = bs["fukusho"][0]
+            lines.append(f"| 複勝 | {f['num']}番 {f.get('name', '')} | 1点 |")
+
+        if bs.get("use_wide") and bs.get("wide"):
+            wide_str = " / ".join(f"{w['nums'][0]}-{w['nums'][1]}" for w in bs["wide"])
+            lines.append(f"| ワイド | {wide_str} | {len(bs['wide'])}点 |")
+        if bs.get("umaren"):
+            umaren_str = " / ".join(f"{u['nums'][0]}-{u['nums'][1]}" for u in bs["umaren"])
+            lines.append(f"| 馬連 | {umaren_str} | {len(bs['umaren'])}点 |")
+
+        sr = bs.get("sanrenpuku", {})
+        if sr and sr.get("jiku") and sr.get("aite"):
+            jiku = sr["jiku"]
+            aite = sr["aite"]
+            if len(jiku) == 1:
+                sr_pt = len(list(combinations(aite, 2)))
+                lines.append(f"| 3連複 | 軸{jiku[0]} × {'/'.join(str(n) for n in aite)} | {sr_pt}点 |")
+            elif len(jiku) == 2:
+                sr_pt = len(aite)
+                lines.append(f"| 3連複 | 軸{jiku[0]}-{jiku[1]} × {'/'.join(str(n) for n in aite)} | {sr_pt}点 |")
+
+        lines += [
+            "",
+            f"合計{total}点 / 想定投資額{total * 100}円",
             "",
         ]
+        if bs.get("strategy_note"):
+            lines.append(f"💡 {bs['strategy_note']}")
+            lines.append("")
+    else:
+        # フォールバック: 従来の固定買い目
+        pnums = [n for n in r.get("predicted_top5_nums", r.get("predicted_top3_nums", [])) if n is not None]
+        if len(pnums) >= 2:
+            hon = pnums[0]
+            umaren_pairs = list(combinations(pnums[:3], 2))
+            umaren_str = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
+            partners = pnums[1:5]
+            sanren_pt = len(list(combinations(partners, 2)))
+            total = 1 + len(umaren_pairs) + sanren_pt
+            lines += [
+                f"## 💰 推奨買い目（合計{total}点）",
+                "",
+                "| 券種 | 買い目 | 点数 |",
+                "|---|---|---|",
+                f"| 複勝 | {hon}番 | 1点 |",
+                f"| 馬連 | {umaren_str} | {len(umaren_pairs)}点 |",
+                f"| 3連複 | 軸{hon} × {'/'.join(str(n) for n in partners)} | {sanren_pt}点 |",
+                "",
+            ]
 
     # ── 期待値分析 ───────────────────────────────────────────
     lines += ["## 📈 期待値分析", ""]
-    if analysis["ev_analysis"]:
+    if analysis.get("ev_analysis"):
         lines.append(analysis["ev_analysis"])
     else:
-        best_ev = r.get("ev_top3", [{}])[0] if r.get("ev_top3") else {}
-        ev_val  = best_ev.get("ev_score", 0)
-        prob    = best_ev.get("prob", 0) * 100
-        if ev_val:
-            lines.append(
-                f"EVスコア{ev_val:.2f}は期待値投資として成立。"
-                f"AI確率{prob:.1f}%の信頼度から、複勝・馬連での安定回収が見込める。"
-            )
-        else:
-            lines.append("（期待値分析データなし）")
+        for e in r.get("ev_top3", []):
+            ev   = e.get("ev_score", 0)
+            prob = e.get("prob", 0) * 100
+            name = e.get("horse_name", "")
+            num  = e.get("horse_number", "?")
+            tag  = "★妙味あり" if ev >= 3.0 else ""
+            lines.append(f"- {num}番 {name}：EV{ev:.2f}（AI確率{prob:.1f}%）{tag}")
     lines.append("")
 
     # ── フッター ─────────────────────────────────────────────
     lines += [
         "---",
-        "*KEIBA EDGE — XGBoost × Claude AIによる競馬予想システム*",
-        "*詳細はダッシュボードへ👉 https://yssohrrs206038s-oss.github.io/keiba-predictor/*",
+        f"*KEIBA EDGE — XGBoost({auc_str}) × Claude AIによる競馬予想システム*",
+        "*ダッシュボード：https://yssohrrs206038s-oss.github.io/keiba-predictor/*",
     ]
 
     return "\n".join(lines)
