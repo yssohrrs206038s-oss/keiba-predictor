@@ -1381,7 +1381,50 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
 
 
 # ══════════════════════════════════════════════════════════════
-# 機能1: 金曜予想
+# 機能0: 金曜予告
+# ══════════════════════════════════════════════════════════════
+
+def run_preview_notify() -> None:
+    """金曜21時: 今週末の重賞予告をXに投稿する。"""
+    if os.environ.get("ENABLE_X_POST", "false").lower() != "true":
+        logger.info("[preview] ENABLE_X_POST=false → スキップ")
+        return
+
+    cache = _load_cache()
+    if not cache:
+        # キャッシュがなければスクレイピングで取得
+        session = requests.Session()
+        grade_races = scrape_grade_race_ids(session)
+    else:
+        # キャッシュから重賞を抽出
+        grade_races = []
+        for race_id, entry in cache.items():
+            if race_id.startswith("_"):
+                continue
+            if entry.get("is_grade") is False:
+                continue
+            grade_races.append({
+                "race_id": race_id,
+                "race_name": entry.get("race_name", race_id),
+                "race_date": entry.get("race_date", ""),
+                "venue": entry.get("venue", ""),
+                "course_info": entry.get("course_info", ""),
+            })
+
+    if not grade_races:
+        logger.info("[preview] 今週末の重賞が見つかりませんでした")
+        return
+
+    logger.info(f"[preview] 重賞 {len(grade_races)} レースの予告を投稿")
+    try:
+        from keiba_predictor.x_post import post_preview_tweet
+        post_preview_tweet(grade_races)
+    except Exception as e:
+        logger.warning(f"[preview] X投稿失敗: {e}")
+
+
+# ══════════════════════════════════════════════════════════════
+# 機能1: 土日予想
 # ══════════════════════════════════════════════════════════════
 
 def run_predict_notify(

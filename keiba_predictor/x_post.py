@@ -326,6 +326,73 @@ def post_result_tweet(
     return True
 
 
+# ── 週末重賞予告ツイート ──────────────────────────────────────────────────
+
+def build_preview_tweet(races: list[dict]) -> str:
+    """
+    今週末の重賞予告ツイートを生成（140字以内）。
+
+    Args:
+        races: [{"race_name", "race_date", "venue", "course_info"}, ...]
+    """
+    if not races:
+        return ""
+
+    # 土曜/日曜に分類
+    sat = [r for r in races if r.get("race_date", "").endswith(("土", "")) and "土" not in r.get("race_date", "")]
+    sun = []
+    # race_date が YYYY-MM-DD 形式なら曜日で分ける
+    from datetime import datetime
+    sat_races, sun_races = [], []
+    for r in races:
+        try:
+            d = datetime.strptime(r["race_date"], "%Y-%m-%d")
+            if d.weekday() == 5:
+                sat_races.append(r)
+            else:
+                sun_races.append(r)
+        except Exception:
+            sat_races.append(r)
+
+    lines = ["🏇 今週末の注目重賞"]
+
+    for label, rs in [("【土曜】", sat_races), ("【日曜】", sun_races)]:
+        if not rs:
+            continue
+        lines.append(label)
+        for r in rs[:2]:  # 各日最大2レース（140字制限）
+            name = _short_name(r.get("race_name", ""))
+            grade = _grade_label(r.get("race_name", ""))
+            venue = r.get("venue", "")
+            course = r.get("course_info", "")
+            parts = [f"📍{venue}", name]
+            if grade:
+                parts.append(grade)
+            if course:
+                parts.append(course)
+            lines.append(" ".join(parts))
+
+    lines += ["", "AI予想は各レース当日14時公開🤖", "#KEIBA_EDGE #競馬"]
+
+    text = "\n".join(lines)
+    # 140字超の場合は末尾を切り詰め
+    if len(text) > 140:
+        text = text[:139] + "…"
+    return text
+
+
+def post_preview_tweet(races: list[dict]) -> bool:
+    """週末重賞予告をXに投稿する。"""
+    client = _build_client()
+    if client is None:
+        return False
+    text = build_preview_tweet(races)
+    if not text:
+        return False
+    print(f"[X予告ツイート]\n{text}", flush=True)
+    return _safe_post(client, text)
+
+
 # ── 週次サマリーツイート ─────────────────────────────────────────────────
 
 def build_weekly_summary_tweet(results: list[dict]) -> str:

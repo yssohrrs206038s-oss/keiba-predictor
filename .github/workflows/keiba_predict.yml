@@ -2,6 +2,7 @@ name: 予想生成・通知（土日）
 
 on:
   schedule:
+    - cron: '0 12 * * 5'  # 金曜 21:00 JST — 週末重賞予告X投稿
     - cron: '0 0 * * 6'   # 土曜 09:00 JST — 平場＋重賞の予想生成
     - cron: '0 0 * * 0'   # 日曜 09:00 JST — 平場＋重賞の予想生成
     - cron: '0 5 * * 6'   # 土曜 14:00 JST — Discord/X通知
@@ -9,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'predict=予想生成のみ / notify=通知のみ / both=両方'
+        description: 'predict=予想生成のみ / notify=通知のみ / preview=金曜予告 / both=両方'
         required: false
         default: 'both'
 
@@ -44,10 +45,14 @@ jobs:
         id: mode
         run: |
           HOUR=$(date -u +%H)
+          DOW=$(date -u +%u)
           INPUT_MODE="${{ inputs.mode }}"
           if [ -n "$INPUT_MODE" ] && [ "$INPUT_MODE" != "" ]; then
             echo "mode=$INPUT_MODE" >> $GITHUB_OUTPUT
             echo "📋 手動実行モード: $INPUT_MODE"
+          elif [ "$DOW" = "5" ]; then
+            echo "mode=preview" >> $GITHUB_OUTPUT
+            echo "📋 スケジュール: 金曜予告モード (UTC $HOUR時)"
           elif [ "$HOUR" -lt 4 ]; then
             echo "mode=predict" >> $GITHUB_OUTPUT
             echo "📋 スケジュール: 予想生成モード (UTC $HOUR時)"
@@ -174,6 +179,21 @@ jobs:
           "; then
             python -m keiba_predictor.note_report
           fi
+
+      # ── 金曜予告（21時JST） ──────────────────────────────────
+      - name: 週末重賞予告をX投稿
+        if: steps.mode.outputs.mode == 'preview'
+        continue-on-error: true
+        run: |
+          echo "📢 金曜予告を投稿中..."
+          python -c "
+          import sys, logging
+          sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+          logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+          from keiba_predictor.discord_notify import run_preview_notify
+          run_preview_notify()
+          "
+          echo "✅ 予告投稿完了"
 
       - name: レポートをコミット
         if: always()
