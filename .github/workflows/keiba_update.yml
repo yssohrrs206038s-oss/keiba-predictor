@@ -101,6 +101,13 @@ jobs:
           TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
         run: python -m keiba_predictor.credit_monitor
 
+      # ── セキュリティチェック ──────────────────────────────────
+      - name: セキュリティチェック（pip-audit）
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit --ignore-vuln GHSA-r9hx-vwmv-q579 || true
+
       # ── エラー時の Discord 通知 ──────────────────────────────
       - name: ❌ エラーを Discord に通知
         if: failure()
