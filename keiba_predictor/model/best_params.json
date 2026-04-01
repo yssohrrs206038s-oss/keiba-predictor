@@ -2,11 +2,11 @@
   "objective": "binary:logistic",
   "eval_metric": "auc",
   "n_estimators": 850,
-  "learning_rate": 0.04432564779248528,
-  "max_depth": 4,
-  "min_child_weight": 6,
-  "subsample": 0.8948761339829406,
-  "colsample_bytree": 0.7870655841570485,
+  "learning_rate": 0.020699561240200247,
+  "max_depth": 6,
+  "min_child_weight": 9,
+  "subsample": 0.8263368435061214,
+  "colsample_bytree": 0.879723993595807,
   "reg_alpha": 0.1,
   "reg_lambda": 1.0,
   "scale_pos_weight": 2.0,
@@ -14,5 +14,5 @@
   "n_jobs": -1,
   "use_label_encoder": false,
   "verbosity": 0,
-  "gamma": 4.251686754312745
+  "gamma": 4.911520123257532
 }
