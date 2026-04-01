@@ -4,13 +4,14 @@ on:
   schedule:
     - cron: '0 12 * * 5'  # 金曜 21:00 JST — 週末重賞予告X投稿
     - cron: '0 0 * * 6'   # 土曜 09:00 JST — 平場＋重賞の予想生成
+    - cron: '0 3 * * 6'   # 土曜 12:00 JST — note記事生成
     - cron: '0 0 * * 0'   # 日曜 09:00 JST — 平場＋重賞の予想生成
     - cron: '0 5 * * 6'   # 土曜 14:00 JST — Discord/X通知
     - cron: '0 5 * * 0'   # 日曜 14:00 JST — Discord/X通知
   workflow_dispatch:
     inputs:
       mode:
-        description: 'predict=予想生成のみ / notify=通知のみ / preview=金曜予告 / both=両方'
+        description: 'predict=予想生成 / notify=通知 / preview=金曜予告 / note=note記事 / both=両方'
         required: false
         default: 'both'
 
@@ -53,6 +54,9 @@ jobs:
           elif [ "$DOW" = "5" ]; then
             echo "mode=preview" >> $GITHUB_OUTPUT
             echo "📋 スケジュール: 金曜予告モード (UTC $HOUR時)"
+          elif [ "$HOUR" = "3" ]; then
+            echo "mode=note" >> $GITHUB_OUTPUT
+            echo "📋 スケジュール: note記事生成モード (UTC $HOUR時)"
           elif [ "$HOUR" -lt 4 ]; then
             echo "mode=predict" >> $GITHUB_OUTPUT
             echo "📋 スケジュール: 予想生成モード (UTC $HOUR時)"
@@ -196,7 +200,7 @@ jobs:
           echo "✅ 予告投稿完了"
 
       - name: note記事を生成
-        if: steps.mode.outputs.mode == 'preview'
+        if: steps.mode.outputs.mode == 'note'
         continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
