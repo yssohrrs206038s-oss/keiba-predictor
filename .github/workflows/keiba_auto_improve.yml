@@ -2,7 +2,7 @@ name: AUC自動改善ループ（火曜深夜）
 
 on:
   schedule:
-    - cron: '0 17 * * 1'  # 月曜 17:00 UTC = 火曜 02:00 JST
+    - cron: '0 3 * * 3'   # 水曜 03:00 UTC = 水曜 12:00 JST（keiba_update完了後）
   workflow_dispatch:
 
 env:
