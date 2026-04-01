@@ -194,6 +194,13 @@ def cmd_snapshot(args: argparse.Namespace) -> None:
     logger.info(f"スナップショット保存: {dst} ({cache['_snapshot_time']})")
 
 
+def _cmd_note_report() -> None:
+    """note記事（アナリストレポート）を生成する。"""
+    from keiba_predictor.note_analyst import generate_all_reports
+    paths = generate_all_reports()
+    logger.info(f"note記事生成完了: {len(paths)} 記事")
+
+
 def cmd_update_featured(args: argparse.Namespace) -> None:
     """翌週末の重賞レースをスクレイピングして featured_races.csv に保存する。"""
     from keiba_predictor.discord_notify import update_featured_races_csv
@@ -351,6 +358,10 @@ def build_parser() -> argparse.ArgumentParser:
     # ── snapshot ───────────────────────────────────────────
     p_snap = sub.add_parser("snapshot", help="predictions_cache.json のスナップショットを保存")
     p_snap.set_defaults(func=cmd_snapshot)
+
+    # ── note_report ────────────────────────────────────────
+    p_note = sub.add_parser("note_report", help="note記事（アナリストレポート）を生成")
+    p_note.set_defaults(func=lambda args: _cmd_note_report())
 
     # ── update-featured ────────────────────────────────────
     p_uf = sub.add_parser(

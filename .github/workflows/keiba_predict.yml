@@ -195,6 +195,16 @@ jobs:
           "
           echo "✅ 予告投稿完了"
 
+      - name: note記事を生成
+        if: steps.mode.outputs.mode == 'preview'
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "📝 note記事生成中..."
+          python -m keiba_predictor.main note_report
+          echo "✅ note記事生成完了"
+
       - name: レポートをコミット
         if: always()
         run: |
@@ -205,6 +215,7 @@ jobs:
           git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
           git add keiba_predictor/data/predictions_snapshot_*.json 2>/dev/null || true
           git add keiba_predictor/data/note_report_*.md 2>/dev/null || true
+          git add keiba_predictor/data/note_articles/*.md 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "ℹ️ 変更なし"
           else
