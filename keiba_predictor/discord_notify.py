@@ -12,8 +12,8 @@
 
 【前提条件】
     学習済みモデル: keiba_predictor/model/xgb_model.pkl
-    特徴量 CSV  : keiba_predictor/data/featured_races.csv
-    ない場合は先に: python -m keiba_predictor.main all --start 2023-01 --end YYYY-MM
+    予想はpredict_live()で出馬表を直接スクレイピングするため
+    featured_races.csvは不要（キャッシュ優先運用）
 """
 
 import json
@@ -1451,8 +1451,6 @@ def run_predict_notify(
     """
     webhook_url = _resolve_webhook(webhook_url)
 
-    if featured_path is None:
-        featured_path = DATA_DIR / "featured_races.csv"
     if model_path is None:
         model_path = MODEL_PATH
 
