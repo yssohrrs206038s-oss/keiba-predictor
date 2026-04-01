@@ -738,6 +738,14 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         shap_top = r.get("shap_top")
         if isinstance(shap_top, list) and shap_top:
             entry["shap_top"] = shap_top
+        # 前走展開データ
+        for col, key in [
+            ("prev_passing", "prev_passing"), ("prev_last_3f", "prev_last_3f"),
+            ("prev2_passing", "prev2_passing"), ("prev2_last_3f", "prev2_last_3f"),
+        ]:
+            val = r.get(col)
+            if val is not None and pd.notna(val) and str(val).strip():
+                entry[key] = str(val).strip()
         return entry
 
     # 穴馬: AI確率35%以上 & 6番人気以下 & TOP3外 → AI確率最高の1頭

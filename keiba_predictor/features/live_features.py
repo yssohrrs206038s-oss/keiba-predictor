@@ -77,6 +77,8 @@ def _horse_hist_features(
     # 前走情報
     feats["prev_finish_pos"]    = pd.to_numeric(last.get("finish_position"), errors="coerce")
     feats["prev_odds"]          = pd.to_numeric(last.get("odds"),            errors="coerce")
+    feats["prev_passing"]       = str(last.get("passing", "")) if pd.notna(last.get("passing")) else ""
+    feats["prev_last_3f"]       = pd.to_numeric(last.get("last_3f"), errors="coerce")
     days_since = (race_date - last["race_date"]).days
     feats["days_since_last_race"] = days_since
     feats["weeks_since_last_race"] = days_since / 7.0
@@ -96,6 +98,7 @@ def _horse_hist_features(
         feats["prev2_finish_pos"] = pd.to_numeric(prev2.get("finish_position"), errors="coerce")
         feats["prev2_odds"]       = pd.to_numeric(prev2.get("odds"), errors="coerce")
         feats["prev2_last_3f"]    = pd.to_numeric(prev2.get("last_3f"), errors="coerce")
+        feats["prev2_passing"]    = str(prev2.get("passing", "")) if pd.notna(prev2.get("passing")) else ""
     # 前3走（3走前）
     if len(past) >= 3:
         prev3 = past.iloc[-3]

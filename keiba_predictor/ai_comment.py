@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 MODEL_ID = "claude-haiku-4-5-20251001"
 
 # ── 1頭あたりの最大解説文字数（Discord の行幅に合わせて調整） ──
-MAX_COMMENT_LEN = 150
+MAX_COMMENT_LEN = 500
 
 
 # ══════════════════════════════════════════════════════════════
@@ -204,6 +204,21 @@ def _generate_comments_inner(
         if pd.notna(pfp):
             entry["前走着順"] = int(pfp)
 
+        # 前走展開データ
+        pp = row.get("prev_passing")
+        if pp and str(pp).strip() and str(pp).strip() != "nan":
+            entry["前走通過順位"] = str(pp).strip()
+        pl3f = pd.to_numeric(row.get("prev_last_3f"), errors="coerce")
+        if pd.notna(pl3f):
+            entry["前走上がり3F"] = f"{pl3f:.1f}"
+        # 前々走展開データ
+        pp2 = row.get("prev2_passing")
+        if pp2 and str(pp2).strip() and str(pp2).strip() != "nan":
+            entry["前々走通過順位"] = str(pp2).strip()
+        pl3f2 = pd.to_numeric(row.get("prev2_last_3f"), errors="coerce")
+        if pd.notna(pl3f2):
+            entry["前々走上がり3F"] = f"{pl3f2:.1f}"
+
         jfr = pd.to_numeric(row.get("jockey_fukusho_rate"), errors="coerce")
         if pd.notna(jfr):
             entry["騎手複勝率"] = f"{jfr:.3f}"
@@ -280,9 +295,12 @@ def _generate_comments_inner(
         f"{race_label}の本命◎○▲3頭のAI予測データです。\n\n"
         f"{json.dumps(horses_data, ensure_ascii=False)}\n\n"
         f"各馬について{MAX_COMMENT_LEN}文字以内で解説してください。\n\n"
-        f"【必須要素】\n"
+        f"【必須要素（400〜500字で記述）】\n"
         f"1. AI印（◎🔥/○✨/▲⚡）を文頭に付ける\n"
-        f"2. 展開予測：脚質から展開を予測し有利/不利を言及\n"
+        f"2. 前走展開分析：前走通過順位から脚質・位置取りを分析し、\n"
+        f"   今回のペース想定・コース取りへの影響を具体的に記述\n"
+        f"   上がり3Fが速い馬は差し・追込み適性あり、\n"
+        f"   先行レースなら前走で前目にいた馬を評価\n"
         f"3. 馬場適性：馬場状態やコース特性との相性\n"
         f"4. 騎手評価：騎手複勝率を活用した評価\n"
         f"5. 期待値評価：「期待値評価」が「妙味あり」なら明記、「穴馬候補」があれば強調\n"
@@ -293,7 +311,7 @@ def _generate_comments_inner(
         f"・オッズや配当金額\n"
         f"・データにない数値の捏造\n\n"
         f"出力：JSONのみ（コードブロック不要）\n"
-        f"キー：馬番（文字列）、値：解説テキスト"
+        f"キー：馬番（文字列）、値：解説テキスト（400〜500字）"
     )
     _dbg(f"Step4 OK: プロンプト {len(prompt)} 文字")
 
@@ -311,7 +329,7 @@ def _generate_comments_inner(
             try:
                 response = client.messages.create(
                     model=MODEL_ID,
-                    max_tokens=1000,
+                    max_tokens=1500,
                     system=system_prompt,
                     messages=[{"role": "user", "content": prompt}],
                 )
