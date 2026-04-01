@@ -212,6 +212,16 @@ def run_auto_improve() -> dict:
         {"trials": int, "initial_auc": float, "final_auc": float,
          "adopted": list[str], "log": list[str]}
     """
+    # 前提チェック
+    if not FEATURED_PATH.exists():
+        logger.warning(f"featured_races.csv なし → 自動改善スキップ")
+        return {"trials": 0, "initial_auc": 0, "final_auc": 0, "adopted": [],
+                "log": ["featured_races.csv が見つからないためスキップ"]}
+    if not MODEL_PATH.exists():
+        logger.warning(f"xgb_model.pkl なし → 自動改善スキップ")
+        return {"trials": 0, "initial_auc": 0, "final_auc": 0, "adopted": [],
+                "log": ["モデルファイルが見つからないためスキップ"]}
+
     initial_auc = _load_current_auc()
     current_auc = initial_auc
     adopted = []
