@@ -1456,12 +1456,7 @@ def run_predict_notify(
     if model_path is None:
         model_path = MODEL_PATH
 
-    # 前提ファイル確認
-    if not featured_path.exists():
-        send_discord(webhook_url,
-            "⚠️ 特徴量データが見つかりません。\n"
-            "```\npython -m keiba_predictor.main all --start 2023-01 --end YYYY-MM\n```")
-        return
+    # 前提ファイル確認（モデルのみ必須、featured_races.csvはキャッシュ優先のため任意）
     if not model_path.exists():
         send_discord(webhook_url,
             "⚠️ モデルファイルが見つかりません。\n"
@@ -1469,7 +1464,6 @@ def run_predict_notify(
         return
 
     model_bundle = load_model(model_path)
-    df_all = pd.read_csv(featured_path, encoding="utf-8-sig")
 
     # --test-race-id が指定された場合は重賞検索をスキップ
     from_featured = False
