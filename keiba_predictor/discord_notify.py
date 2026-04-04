@@ -1775,7 +1775,9 @@ def run_result_notify(
     notified = 0
     for race in grade_races:
         race_id   = race["race_id"]
-        race_name = race.get("race_name", race_id)
+        # キャッシュのrace_nameを優先（スクレイプ由来は文字化けの可能性あり）
+        cached_name = cache.get(race_id, {}).get("race_name", "")
+        race_name = cached_name or race.get("race_name", race_id)
         race_date = race.get("race_date", "")
 
         # 手動結果があればスクレイピングをスキップ
