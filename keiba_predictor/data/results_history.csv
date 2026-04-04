@@ -1,3 +1,5 @@
 ﻿date,race_id,race_name,race_grade,pred1_name,pred1_num,pred1_prob,pred2_name,pred2_num,pred2_prob,pred3_name,pred3_num,pred3_prob,actual1_name,actual1_num,actual2_name,actual2_num,actual3_name,actual3_num,fukusho_hit,umaren_hit,umaren_payout,wide_hit,wide_payout,sanrenpuku_hit,sanrenpuku_payout,bet_total,return_total
 2026-04-04,202606030311,�����若�����CT,1勝以下,ファーヴェント,8,0.1,ミニトランザット,2,0.1,マテンロウオリオン,6,0.1,スズハローム,11,サイルーン,16,ファーヴェント,8,True,False,0,False,0,False,0,2300,2100
 2026-04-04,202609020311,�����ｃ�若�����C,1勝以下,アンドゥーリル,8,0.3,サンダーストラック,6,0.3,アスクイキゴミ,14,0.2,アスクイキゴミ,14,ユウファラオ,11,バルセシート,10,False,False,0,False,0,False,0,2300,0
+2026-04-04,202606030311,ダービー卿CT,1勝以下,ファーヴェント,8,0.1,ミニトランザット,2,0.1,マテンロウオリオン,6,0.1,スズハローム,11,サイルーン,16,ファーヴェント,8,True,False,0,False,0,False,0,2300,2100
+2026-04-04,202609020311,チャーチルダウンズC,1勝以下,アンドゥーリル,8,0.3,サンダーストラック,6,0.3,アスクイキゴミ,14,0.2,アスクイキゴミ,14,ユウファラオ,11,バルセシート,10,False,False,0,False,0,False,0,2300,0
