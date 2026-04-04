@@ -529,15 +529,17 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         or soup.select_one("table.nk_tb_common")
     )
 
-    # db.netkeiba.com でテーブルが見つからなければ race.netkeiba.com を試す
-    if result_table is None:
+    # db.netkeiba.com でテーブルが見つからない、またはデータ行が0なら race.netkeiba.com を試す
+    _data_rows = [tr for tr in result_table.select("tr") if tr.select("td")] if result_table else []
+    if result_table is None or len(_data_rows) == 0:
         alt_url = f"{RACE_RESULT_SITE_URL}?race_id={race_id}"
         logger.info(f"db.netkeiba でテーブル未検出 → race.netkeiba を試行: {alt_url}")
         alt_html = _get_result_html_with_playwright(alt_url)
         if alt_html:
             alt_soup = BeautifulSoup(alt_html, "html.parser")
             result_table = (
-                alt_soup.select_one("table.race_table_01")
+                alt_soup.select_one("table.ResultMain")
+                or alt_soup.select_one("table.race_table_01")
                 or alt_soup.select_one("div.ResultTableWrap table")
                 or alt_soup.select_one("table.Shutuba_Table")
                 or alt_soup.select_one("table[summary*='結果']")
