@@ -198,6 +198,10 @@
     }
     .horse-name { font-size: 14px; font-weight: 600; }
     .horse-comment { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .horse-summary {
+      font-size: 11px; color: var(--gold-lt); margin-top: 3px;
+      line-height: 1.4; font-weight: 500;
+    }
     .horse-shap { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
     .shap-tag {
       font-size: 10px; font-weight: 600;
@@ -863,7 +867,7 @@ function renderPredictions(cache) {
       const evStr = ev ? `EV${ev.toFixed(2)}` : '';
       const comment = aiComments[String(p.horse_number)] || '';
 
-      // SHAP値の上位要因タグ
+      // SHAP値タグ
       let shapHTML = '';
       if (p.shap_top && p.shap_top.length) {
         const tags = p.shap_top.map(s => {
@@ -874,6 +878,21 @@ function renderPredictions(cache) {
         shapHTML = `<div class="horse-shap">${tags}</div>`;
       }
 
+      // 3行サマリー: SHAP根拠 → 判定
+      let summaryHTML = '';
+      if (p.shap_top && p.shap_top.length) {
+        const pros = p.shap_top.filter(s => s.value > 0).map(s => s.label).slice(0, 2);
+        const cons = p.shap_top.filter(s => s.value < 0).map(s => s.label).slice(0, 1);
+        const parts = [];
+        if (pros.length) parts.push(pros.join('・'));
+        if (cons.length) parts.push('⚠' + cons[0]);
+        let verdict = '';
+        if (ev && ev >= 1.5) verdict = '妙味あり';
+        else if (prob >= 50) verdict = '安定軸';
+        else if (prob >= 30) verdict = '展開次第';
+        summaryHTML = `<div class="horse-summary">→ ${parts.join(' / ')}${verdict ? '。' + verdict : ''}</div>`;
+      }
+
       return `
         <div class="horse-item">
           <span class="horse-mark ${cls}">${mark}</span>
@@ -881,6 +900,7 @@ function renderPredictions(cache) {
           <div>
             <div class="horse-name">${esc(p.horse_name)}</div>
             ${shapHTML}
+            ${summaryHTML}
             ${comment ? `<div class="horse-comment">${esc(comment)}</div>` : ''}
           </div>
           <div class="horse-stats">
