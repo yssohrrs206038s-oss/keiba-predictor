@@ -36,41 +36,50 @@ jobs:
           pip install -r requirements.txt
           echo "✅ pip install 完了"
 
-      # ── データ収集 ──────────────────────────────────────────
-      - name: スクレイピング（直近2週間）
+      # ── データ収集（先週土日分） ─────────────────────────────
+      - name: スクレイピング（先週土日の結果）
         run: |
-          TWO_WEEKS_AGO=$(date -d "14 days ago" +%Y-%m 2>/dev/null || \
-            python3 -c "from datetime import date,timedelta;print((date.today()-timedelta(days=14)).strftime('%Y-%m'))")
+          # 先週分 + 今月分を取得（YYYY-MM形式）
+          PREV_MONTH=$(python3 -c "from datetime import date,timedelta;print((date.today()-timedelta(days=14)).strftime('%Y-%m'))")
           END=$(date +%Y-%m)
-          echo "📅 スクレイピング期間: $TWO_WEEKS_AGO ～ $END"
-          python -m keiba_predictor.main scrape --start "$TWO_WEEKS_AGO" --end "$END"
+          echo "📅 スクレイピング期間: $PREV_MONTH ～ $END"
+          python -m keiba_predictor.main scrape --start "$PREV_MONTH" --end "$END"
 
       - name: データクリーニング
         run: |
           python -m keiba_predictor.main clean
-          echo "✅ クリーニング完了"
+          if [ -f keiba_predictor/data/cleaned_races.csv ]; then
+            LINES=$(wc -l < keiba_predictor/data/cleaned_races.csv)
+            echo "✅ クリーニング完了 (${LINES} 行)"
+          else
+            echo "::error::cleaned_races.csv が生成されませんでした"
+            exit 1
+          fi
 
       # ── 今週末重賞をキャッシュに保存 ─────────────────────────
       - name: 今週末重賞をキャッシュに保存
         continue-on-error: true
         run: python -m keiba_predictor.main update-featured --save-cache
 
-      # ── 成果物をリポジトリにコミット ─────────────────────────
+      # ── 成果物をリポジトリにコミット（LFS対応） ──────────────
       - name: データをコミット
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config pull.rebase true
           git config rebase.autoStash true
-          git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
+          git lfs install
+          git add .gitattributes 2>/dev/null || true
+          git add keiba_predictor/data/cleaned_races.csv 2>/dev/null || true
           git add keiba_predictor/data/featured_races.csv 2>/dev/null || true
+          git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "ℹ️ 変更なし（コミットスキップ）"
           else
-            git commit -m "chore: 水曜データ更新 [skip ci]"
+            git commit -m "chore: 水曜データ更新 — cleaned_races.csv 更新 [skip ci]"
             git pull --rebase -X theirs origin ${{ github.ref_name }} || true
             git push
-            echo "✅ コミット・プッシュ完了"
+            echo "✅ コミット・プッシュ完了（cleaned_races.csv含む）"
           fi
 
       # ── Discord に完了通知 ────────────────────────────────────
