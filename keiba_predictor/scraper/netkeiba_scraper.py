@@ -141,12 +141,23 @@ def _get(url: str, session: requests.Session, encoding: str = "EUC-JP") -> Optio
     try:
         resp = session.get(url, headers=HEADERS, timeout=20)
         resp.raise_for_status()
-        # Content-Type ヘッダーから charset を取得（あればそちらを優先）
+        # エンコーディング検出
         ct = resp.headers.get("Content-Type", "")
         m = re.search(r"charset=([^\s;,]+)", ct, re.I)
-        detected = m.group(1).strip() if m else encoding
-        # bytes + from_encoding: BS4 が <meta charset> も考慮して正しく解析する
-        return BeautifulSoup(resp.content, "html.parser", from_encoding=detected)
+        ct_charset = m.group(1).strip().lower() if m else ""
+        # 明示的にエンコーディングが指定されている場合はそれを優先
+        if encoding.lower() not in ("utf-8",):
+            detected = encoding
+        elif ct_charset and not ct_charset.startswith("iso-8859"):
+            detected = ct_charset
+        else:
+            detected = encoding
+        # bytesを明示的にデコードしてからBS4に渡す（from_encodingが無視されるケースの対策）
+        try:
+            html_text = resp.content.decode(detected, errors="replace")
+        except (UnicodeDecodeError, LookupError):
+            html_text = resp.content.decode("utf-8", errors="replace")
+        return BeautifulSoup(html_text, "html.parser")
     except requests.RequestException as e:
         logger.warning(f"Request failed: {url} -> {e}")
         return None
