@@ -92,19 +92,20 @@ jobs:
           echo "✅ モデルファイル確認OK"
 
       # ── 予想生成（11時JST） ──────────────────────────────────
-      - name: 過去成績データを準備（直近3日分のみ・高速化）
+      - name: 過去成績データを準備（直近2ヶ月分）
         if: steps.mode.outputs.mode == 'predict' || steps.mode.outputs.mode == 'both'
         continue-on-error: true
+        timeout-minutes: 30
         run: |
-          # 水曜にフルスクレイピング済み。土日は直近3日分だけ差分取得して高速化
-          THREE_DAYS_AGO=$(date -d "3 days ago" +%Y-%m 2>/dev/null || \
-            python3 -c "from datetime import date,timedelta;print((date.today()-timedelta(days=3)).strftime('%Y-%m'))")
+          # YYYY-MM形式のため、直近2ヶ月分を取得（前月+今月）
+          PREV_MONTH=$(python3 -c "from datetime import date,timedelta;print((date.today()-timedelta(days=45)).strftime('%Y-%m'))")
           END=$(date +%Y-%m)
-          echo "📅 スクレイピング期間: $THREE_DAYS_AGO ～ $END（直近3日分のみ）"
-          python -m keiba_predictor.main scrape --start "$THREE_DAYS_AGO" --end "$END" || true
+          echo "📅 スクレイピング期間: $PREV_MONTH ～ $END（直近2ヶ月分）"
+          python -m keiba_predictor.main scrape --start "$PREV_MONTH" --end "$END" || true
           python -m keiba_predictor.main clean || true
           if [ -f keiba_predictor/data/cleaned_races.csv ]; then
-            echo "✅ cleaned_races.csv 準備OK ($(wc -l < keiba_predictor/data/cleaned_races.csv) 行)"
+            LINES=$(wc -l < keiba_predictor/data/cleaned_races.csv)
+            echo "✅ cleaned_races.csv 準備OK (${LINES} 行)"
           else
             echo "⚠️ cleaned_races.csv が生成されませんでした（過去成績なしで予想を実行）"
           fi
