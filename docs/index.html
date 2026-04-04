@@ -859,13 +859,18 @@ function renderPredictions(cache) {
     (r.ev_top3 || []).forEach(e => { if (e.horse_number != null) evMap[+e.horse_number] = e.ev_score; });
     const aiComments = r.ai_comments || {};
 
+    // MC確率マップ
+    const sim = r.simulation || {};
+
     const horseHTML = roles.map(({ key, mark, cls }) => {
       const p = r[key];
       if (!p || !p.horse_name) return '';
-      const prob = ((p.prob || 0) * 100).toFixed(1);
+      // MC確率を優先、なければXGBoost prob
+      const mcData = sim[String(p.horse_number)] || {};
+      const mcRate = mcData.top3_rate;
+      const prob = mcRate != null ? (mcRate * 100).toFixed(1) : ((p.prob || 0) * 100).toFixed(1);
       const ev   = evMap[+p.horse_number];
       const evStr = ev ? `EV${ev.toFixed(2)}` : '';
-      const comment = aiComments[String(p.horse_number)] || '';
 
       // SHAP値タグ
       let shapHTML = '';
@@ -878,7 +883,7 @@ function renderPredictions(cache) {
         shapHTML = `<div class="horse-shap">${tags}</div>`;
       }
 
-      // 3行サマリー: SHAP根拠 → 判定
+      // 1行サマリー: SHAP根拠 → 判定（AI長文解説は非表示）
       let summaryHTML = '';
       if (p.shap_top && p.shap_top.length) {
         const pros = p.shap_top.filter(s => s.value > 0).map(s => s.label).slice(0, 2);
@@ -901,7 +906,6 @@ function renderPredictions(cache) {
             <div class="horse-name">${esc(p.horse_name)}</div>
             ${shapHTML}
             ${summaryHTML}
-            ${comment ? `<div class="horse-comment">${esc(comment)}</div>` : ''}
           </div>
           <div class="horse-stats">
             <div class="horse-prob">${prob}%</div>
