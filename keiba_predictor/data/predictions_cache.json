@@ -883,22 +883,22 @@
     "honmei": {
       "horse_number": 2,
       "horse_name": "スライビングロード",
-      "prob": 0.7951004505157471,
+      "prob": 0.7961462736129761,
       "odds": 3.7,
       "shap_top": [
         {
           "feature": "odds",
-          "value": 1.3307,
+          "value": 1.3306,
           "label": "オッズ有利"
         },
         {
           "feature": "course_type_enc",
-          "value": 0.6165,
+          "value": 0.6186,
           "label": "コース適性"
         },
         {
           "feature": "age",
-          "value": -0.304,
+          "value": -0.3034,
           "label": "年齢やや悪"
         }
       ]
@@ -906,22 +906,22 @@
     "taikou": {
       "horse_number": 6,
       "horse_name": "ミトノオルフェ",
-      "prob": 0.7718511819839478,
+      "prob": 0.7736788392066956,
       "odds": 4.3,
       "shap_top": [
         {
           "feature": "odds",
-          "value": 1.1511,
+          "value": 1.151,
           "label": "オッズ有利"
         },
         {
           "feature": "course_type_enc",
-          "value": 0.6046,
+          "value": 0.6068,
           "label": "コース適性"
         },
         {
           "feature": "age",
-          "value": -0.2828,
+          "value": -0.2823,
           "label": "年齢やや悪"
         }
       ]
@@ -929,7 +929,7 @@
     "ana": {
       "horse_number": 8,
       "horse_name": "エマヌエーレ",
-      "prob": 0.4781591594219208,
+      "prob": 0.47756385803222656,
       "odds": 15.4,
       "shap_top": [
         {
@@ -944,7 +944,7 @@
         },
         {
           "feature": "age",
-          "value": -0.3328,
+          "value": -0.3367,
           "label": "年齢やや悪"
         }
       ]
@@ -965,38 +965,38 @@
     "ana_horse_info": {
       "horse_number": 8,
       "horse_name": "エマヌエーレ",
-      "prob": 0.4782,
+      "prob": 0.4776,
       "popularity": 6
     },
     "predicted_top5": [
       {
         "horse_number": 2,
         "horse_name": "スライビングロード",
-        "prob": 0.7951,
+        "prob": 0.7961,
         "odds": 3.7
       },
       {
         "horse_number": 6,
         "horse_name": "ミトノオルフェ",
-        "prob": 0.7719,
+        "prob": 0.7737,
         "odds": 4.3
       },
       {
         "horse_number": 13,
         "horse_name": "スカイハイ",
-        "prob": 0.7561,
+        "prob": 0.757,
         "odds": 4.7
       },
       {
         "horse_number": 18,
         "horse_name": "ミルテンベルク",
-        "prob": 0.5618,
+        "prob": 0.563,
         "odds": 12.4
       },
       {
         "horse_number": 14,
         "horse_name": "メイショウツヨキ",
-        "prob": 0.5389,
+        "prob": 0.5415,
         "odds": 14.6
       }
     ],
@@ -1004,22 +1004,22 @@
       {
         "horse_number": 17,
         "horse_name": "サムハンター",
-        "ev_score": 14.016,
-        "prob": 0.1282,
+        "ev_score": 13.986,
+        "prob": 0.128,
         "odds": 109.3
       },
       {
         "horse_number": 11,
         "horse_name": "エアミアーニ",
-        "ev_score": 12.481,
-        "prob": 0.1016,
+        "ev_score": 12.455,
+        "prob": 0.1014,
         "odds": 122.8
       },
       {
         "horse_number": 10,
         "horse_name": "スーサンアッシャー",
-        "ev_score": 11.998,
-        "prob": 0.1345,
+        "ev_score": 11.973,
+        "prob": 0.1342,
         "odds": 89.2
       }
     ],
@@ -1070,15 +1070,15 @@
     "simulation": {
       "2": {
         "horse_name": "スライビングロード",
-        "top3_rate": 0.902,
-        "top3_std": 0.013,
+        "top3_rate": 0.901,
+        "top3_std": 0.012,
         "is_stable": true,
         "out_of_board_rate": 0.015,
-        "variance": 1.175,
+        "variance": 1.174,
         "scenario": {
           "high_pace": 0.91,
           "slow_pace": 0.9,
-          "normal": 0.9
+          "normal": 0.89
         }
       },
       "6": {
@@ -1086,8 +1086,8 @@
         "top3_rate": 0.868,
         "top3_std": 0.014,
         "is_stable": true,
-        "out_of_board_rate": 0.02,
-        "variance": 1.239,
+        "out_of_board_rate": 0.019,
+        "variance": 1.235,
         "scenario": {
           "high_pace": 0.86,
           "slow_pace": 0.87,
@@ -1096,24 +1096,24 @@
       },
       "13": {
         "horse_name": "スカイハイ",
-        "top3_rate": 0.838,
+        "top3_rate": 0.837,
         "top3_std": 0.017,
         "is_stable": true,
         "out_of_board_rate": 0.025,
-        "variance": 1.291,
+        "variance": 1.293,
         "scenario": {
-          "high_pace": 0.84,
+          "high_pace": 0.83,
           "slow_pace": 0.84,
           "normal": 0.84
         }
       },
       "18": {
         "horse_name": "ミルテンベルク",
-        "top3_rate": 0.174,
-        "top3_std": 0.015,
+        "top3_rate": 0.173,
+        "top3_std": 0.014,
         "is_stable": true,
-        "out_of_board_rate": 0.352,
-        "variance": 2.076,
+        "out_of_board_rate": 0.353,
+        "variance": 2.073,
         "scenario": {
           "high_pace": 0.17,
           "slow_pace": 0.18,
@@ -1122,18 +1122,18 @@
       },
       "14": {
         "horse_name": "メイショウツヨキ",
-        "top3_rate": 0.125,
+        "top3_rate": 0.127,
         "top3_std": 0.011,
         "is_stable": true,
-        "out_of_board_rate": 0.429,
-        "variance": 2.173,
+        "out_of_board_rate": 0.424,
+        "variance": 2.163,
         "scenario": {
           "high_pace": 0.13,
           "slow_pace": 0.12,
           "normal": 0.13
         }
       },
-      "race_volatility": 2.345,
+      "race_volatility": 2.339,
       "is_volatile_race": true
     }
   }
