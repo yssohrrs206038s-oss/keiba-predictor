@@ -827,7 +827,7 @@ def scrape_nar_kaisai_dates(year: int, month: int, session: requests.Session) ->
 
     # ── Step1: カレンダーページを試みる ──────────────────────
     url = f"{NAR_CALENDAR_URL}?year={year}&month={month}"
-    soup = _get(url, session, encoding="UTF-8")
+    soup = _get(url, session, encoding="euc-jp")
 
     dates: list[str] = []
     if soup is not None:
@@ -856,7 +856,7 @@ def scrape_nar_kaisai_dates(year: int, month: int, session: requests.Session) ->
     for day in range(1, days_in_month + 1):
         d = f"{ym_prefix}{day:02d}"
         list_url = f"{NAR_RACE_LIST_URL}?kaisai_date={d}"
-        list_soup = _get(list_url, session, encoding="UTF-8")
+        list_soup = _get(list_url, session, encoding="euc-jp")
         if list_soup and list_soup.select("a[href*='race_id=']"):
             logger.info(f"    [NAR] 開催あり: {d}")
             if d not in dates:
@@ -870,7 +870,7 @@ def scrape_nar_kaisai_dates(year: int, month: int, session: requests.Session) ->
 def scrape_nar_race_ids_for_date(kaisai_date: str, session: requests.Session) -> list[str]:
     """NAR の1開催日のレースID一覧を取得する。"""
     url = f"{NAR_RACE_LIST_URL}?kaisai_date={kaisai_date}"
-    soup = _get(url, session, encoding="UTF-8")
+    soup = _get(url, session, encoding="euc-jp")
     if soup is None:
         return []
 
@@ -912,7 +912,7 @@ def scrape_nar_race_result(
     kaisai_date（カレンダーから取得した YYYYMMDD 文字列）を受け取って race_date に使用する。
     """
     url = f"{NAR_RESULT_URL}?race_id={race_id}"
-    soup = _get(url, session, encoding="UTF-8")
+    soup = _get(url, session, encoding="euc-jp")
     if soup is None:
         return None
 

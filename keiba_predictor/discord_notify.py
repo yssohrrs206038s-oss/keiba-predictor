@@ -976,22 +976,35 @@ def scrape_payouts(race_id: str, session: requests.Session) -> dict:
             if not current_type or len(tds) < 2:
                 continue
 
-            # brタグを改行に変換して分割（JRA: <br>区切り / NAR: span区切り）
+            # brタグを改行に変換して分割（JRA: <br>区切り / NAR: span/div区切り）
             combo_parts = [p.strip() for p in tds[0].get_text("\n").split("\n") if p.strip()]
             amt_parts   = [p.strip() for p in tds[1].get_text("\n").split("\n") if p.strip()]
-            # 金額パース
             amt_list = [_parse_yen(a) for a in amt_parts]
 
-            if len(combo_parts) == len(amt_list):
+            n_amt = len(amt_list)
+            n_combo = len(combo_parts)
+
+            if n_combo == n_amt and n_amt > 0:
+                # 1対1マッチ（複勝: 3馬番 vs 3金額）
                 for combo, amt in zip(combo_parts, amt_list):
                     payouts.setdefault(current_type, []).append({
                         "combo": combo, "amount": amt,
                     })
-            elif amt_list:
-                combo_all = tds[0].get_text(strip=True)
-                payouts.setdefault(current_type, []).append({
-                    "combo": combo_all, "amount": amt_list[0],
-                })
+            elif n_amt > 0 and n_combo > n_amt and n_combo % n_amt == 0:
+                # combo を n_amt 個のグループに等分割（ワイド: 6馬番 → 3組×2馬番）
+                group_size = n_combo // n_amt
+                for i, amt in enumerate(amt_list):
+                    group = combo_parts[i * group_size:(i + 1) * group_size]
+                    combo_str = "-".join(group)
+                    payouts.setdefault(current_type, []).append({
+                        "combo": combo_str, "amount": amt,
+                    })
+            elif n_amt > 0:
+                combo_all = "-".join(combo_parts)
+                for amt in amt_list:
+                    payouts.setdefault(current_type, []).append({
+                        "combo": combo_all, "amount": amt,
+                    })
 
     return payouts
 
