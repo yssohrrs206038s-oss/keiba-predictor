@@ -1311,9 +1311,13 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
             lines1.append(f"★穴 {ana_num}番{name}（3着以内{prob:.1f}% {pop}番人気）")
             lines1.append(f"　→ AIが高評価も市場は低評価！")
 
-    # ⚠危険馬
+    # ⚠危険馬（MC確率15%以���の馬は表示しない）
     for d in entry.get("dangerous_horses", []):
         num = d.get("horse_number", 0)
+        mc_d = sim.get(str(num), {})
+        mc_rate = mc_d.get("top3_rate")
+        if mc_rate is not None and mc_rate >= 0.15:
+            continue  # MC確率で安全と判断 → 非表示
         name = d.get("horse_name", "")
         reasons = d.get("reasons", [])
         reason = reasons[0] if reasons else "要注意"
