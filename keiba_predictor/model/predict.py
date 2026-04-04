@@ -141,10 +141,12 @@ def calc_ev_and_flags(result_df: pd.DataFrame) -> pd.DataFrame:
     def _reasons(row: pd.Series) -> list[str]:
         pop   = pd.to_numeric(row.get("popularity"),      errors="coerce")
         pfp   = pd.to_numeric(row.get("prev_finish_pos"), errors="coerce")
-        prob  = float(row["prob_top3"])
+        # MC確率があればそちらを使用（15%未満で危険判定）
+        mc_rate = row.get("mc_top3_rate")
+        prob = float(mc_rate) if pd.notna(mc_rate) else float(row["prob_top3"])
         out: list[str] = []
-        if pd.notna(pop) and pop <= 3 and prob < 0.40:
-            out.append(f"AI確率{prob*100:.0f}%（3番人気以内なのに低い）")
+        if pd.notna(pop) and pop <= 3 and prob < 0.15:
+            out.append(f"3着以内確率{prob*100:.0f}%（3番人気以内なのに低い）")
         if pd.notna(pop) and pop <= 2 and pd.notna(pfp) and pfp >= 5:
             out.append(f"1〜2番人気だが前走{int(pfp)}着")
         # モンテカルロ掲示板外し確率

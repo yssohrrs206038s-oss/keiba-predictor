@@ -899,6 +899,28 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         top5_mc["race_volatility"] = mc_result.get("race_volatility", 0)
         top5_mc["is_volatile_race"] = mc_result.get("is_volatile_race", False)
         cache[race_id]["simulation"] = top5_mc
+        # MC確率でキャッシュ内のprobを上書き（Discord・ダッシュボード表示用）
+        for role in ("honmei", "taikou", "ana"):
+            p = cache[race_id].get(role, {})
+            if p and p.get("horse_number") is not None:
+                mc = mc_result.get(str(p["horse_number"]), {})
+                if "top3_rate" in mc:
+                    p["prob"] = mc["top3_rate"]
+        for h in cache[race_id].get("predicted_top5", []):
+            if h.get("horse_number") is not None:
+                mc = mc_result.get(str(h["horse_number"]), {})
+                if "top3_rate" in mc:
+                    h["prob"] = mc["top3_rate"]
+        # MC確率15%未満の上位人気馬は危険解除/追加
+        new_danger = []
+        for d in cache[race_id].get("dangerous_horses", []):
+            num = d.get("horse_number")
+            mc = mc_result.get(str(num), {})
+            mc_prob = mc.get("top3_rate")
+            if mc_prob is not None and mc_prob >= 0.15:
+                continue  # MC15%以上なら危険解除
+            new_danger.append(d)
+        cache[race_id]["dangerous_horses"] = new_danger
     except Exception as e:
         logger.warning(f"モンテカルロシミュレーション失敗: {e}")
 
@@ -1244,18 +1266,23 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
         if num is not None:
             ev_map[int(num)] = e
 
+    # モンテカルロ3着以内率マップ（あればXGBoostのprobより優先）
+    sim = entry.get("simulation", {})
+
     for rank, num in enumerate(top5_nums):
         mark = MARKS[rank] if rank < len(MARKS) else "　"
         info = top5_detail.get(num, ev_map.get(num, {}))
         name = info.get("horse_name", "")
         if not name:
             name = f"{num}番"
-        prob = info.get("prob", 0) * 100
+        # MC確率を優先、なければXGBoost prob
+        mc_data = sim.get(str(num), {})
+        mc_rate = mc_data.get("top3_rate")
+        prob = (mc_rate * 100) if mc_rate is not None else (info.get("prob", 0) * 100)
         ev_entry = ev_map.get(num, {})
         ev_val = ev_entry.get("ev_score")
         has_real_odds = ev_entry.get("odds") is not None
         ev_str = f" EV{ev_val:.2f}" if ev_val and has_real_odds else ""
-        # predicted_top5にデータがない馬は確率非表示（馬番のみ）
         if prob > 0.01:
             lines1.append(f"{mark} {num}番 {name}　{prob:.1f}%{ev_str}")
         else:
@@ -1268,17 +1295,20 @@ def _format_prediction_from_cache(race_name: str, entry: dict) -> tuple[str, str
     ana_info = entry.get("ana_horse_info", {})
     if ana_num and ana_num not in top5_nums[:5]:
         name = ana_info.get("horse_name", "")
-        prob = ana_info.get("prob", 0) * 100
+        # MC確率を優先
+        mc_ana = sim.get(str(ana_num), {})
+        mc_ana_rate = mc_ana.get("top3_rate")
+        prob = (mc_ana_rate * 100) if mc_ana_rate is not None else (ana_info.get("prob", 0) * 100)
         pop = ana_info.get("popularity", "?")
         if not name:
-            # フォールバック: ev_top3 から取得
             for e in entry.get("ev_top3", []):
                 if e.get("horse_number") == ana_num:
                     name = e.get("horse_name", "")
-                    prob = e.get("prob", 0) * 100
+                    if mc_ana_rate is None:
+                        prob = e.get("prob", 0) * 100
                     break
         if name:
-            lines1.append(f"★穴 {ana_num}番{name}（AI確率{prob:.1f}% {pop}番人気）")
+            lines1.append(f"★穴 {ana_num}番{name}（3着以内{prob:.1f}% {pop}番人気）")
             lines1.append(f"　→ AIが高評価も市場は低評価！")
 
     # ⚠危険馬
