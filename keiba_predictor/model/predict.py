@@ -109,7 +109,7 @@ def _build_course_info(race_id: str, race_df: pd.DataFrame) -> str:
     """race_id と DataFrame からコース情報文字列（例: 小倉 芝1800m）を組み立てる。"""
     venue = VENUE_MAP.get(str(race_id)[4:6], "")
     ct_str = ""
-    if "course_type" in race_df.columns and "distance" in race_df.columns:
+    if len(race_df) > 0 and "course_type" in race_df.columns and "distance" in race_df.columns:
         ct  = race_df["course_type"].iloc[0]
         dst = race_df["distance"].iloc[0]
         if pd.notna(ct) and pd.notna(dst):

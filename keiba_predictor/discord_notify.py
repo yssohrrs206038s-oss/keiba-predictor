@@ -673,13 +673,19 @@ def _load_cache() -> dict:
     snapshot_13 = DATA_DIR / "predictions_snapshot_13.json"
     if snapshot_13.exists():
         logger.info(f"13時スナップショットを使用: {snapshot_13.name}")
-        with open(snapshot_13, encoding="utf-8") as f:
-            data = json.load(f)
-        data.pop("_snapshot_time", None)
-        return data
+        try:
+            with open(snapshot_13, encoding="utf-8") as f:
+                data = json.load(f)
+            data.pop("_snapshot_time", None)
+            return data
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(f"スナップショットの読み込みに失敗: {e}")
     if PRED_CACHE.exists():
-        with open(PRED_CACHE, encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(PRED_CACHE, encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(f"キャッシュの読み込みに失敗: {e}")
     return {}
 
 
