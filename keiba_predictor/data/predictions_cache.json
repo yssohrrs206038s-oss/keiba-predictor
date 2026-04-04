@@ -14,7 +14,7 @@
       "horse_number": 8,
       "horse_name": "ファーヴェント",
       "prob": 0.0008348854025825858,
-      "odds": 8.5,
+      "odds": 6.9,
       "shap_top": [
         {
           "feature": "odds",
@@ -37,7 +37,7 @@
       "horse_number": 2,
       "horse_name": "ミニトランザット",
       "prob": 0.0008283999632112682,
-      "odds": 7.9,
+      "odds": 6.8,
       "shap_top": [
         {
           "feature": "odds",
@@ -60,7 +60,7 @@
       "horse_number": 6,
       "horse_name": "マテンロウオリオン",
       "prob": 0.0008092506905086339,
-      "odds": 7.6,
+      "odds": 9.7,
       "shap_top": [
         {
           "feature": "odds",
@@ -129,23 +129,26 @@
       {
         "horse_number": 12,
         "horse_name": "ダディーズビビッド",
-        "ev_score": 0.03,
+        "ev_score": 0.029,
         "prob": 0.0003,
-        "odds": 88.3
+        "odds": 96.9,
+        "popularity": 16
       },
       {
         "horse_number": 9,
         "horse_name": "エエヤン",
-        "ev_score": 0.02,
+        "ev_score": 0.028,
         "prob": 0.0004,
-        "odds": 54.8
+        "odds": 69.4,
+        "popularity": 15
       },
       {
         "horse_number": 15,
         "horse_name": "シリウスコルト",
-        "ev_score": 0.009,
+        "ev_score": 0.006,
         "prob": 0.0006,
-        "odds": 16.4
+        "odds": 10.3,
+        "popularity": 6
       }
     ],
     "dangerous_horses": [
@@ -304,7 +307,7 @@
       "horse_number": 8,
       "horse_name": "アンドゥーリル",
       "prob": 0.0027939514257013798,
-      "odds": 3.8,
+      "odds": 3.0,
       "shap_top": [
         {
           "feature": "odds",
@@ -327,7 +330,7 @@
       "horse_number": 6,
       "horse_name": "サンダーストラック",
       "prob": 0.0025481500197201967,
-      "odds": 3.5,
+      "odds": 3.3,
       "shap_top": [
         {
           "feature": "odds",
@@ -350,7 +353,7 @@
       "horse_number": 14,
       "horse_name": "アスクイキゴミ",
       "prob": 0.002276499755680561,
-      "odds": 5.1,
+      "odds": 7.4,
       "shap_top": [
         {
           "feature": "odds",
@@ -419,23 +422,26 @@
       {
         "horse_number": 11,
         "horse_name": "ユウファラオ",
-        "ev_score": 0.094,
+        "ev_score": 0.071,
         "prob": 0.0005,
-        "odds": 171.6
+        "odds": 141.4,
+        "popularity": 14
       },
       {
         "horse_number": 9,
         "horse_name": "クールデイトナ",
-        "ev_score": 0.069,
+        "ev_score": 0.042,
         "prob": 0.0006,
-        "odds": 111.7
+        "odds": 70.7,
+        "popularity": 12
       },
       {
         "horse_number": 1,
         "horse_name": "ストームサンダー",
-        "ev_score": 0.066,
+        "ev_score": 0.036,
         "prob": 0.0006,
-        "odds": 110.8
+        "odds": 59.9,
+        "popularity": 11
       }
     ],
     "dangerous_horses": [
