@@ -533,27 +533,32 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
     _data_rows = [tr for tr in result_table.select("tr") if tr.select("td")] if result_table else []
     if result_table is None or len(_data_rows) == 0:
         alt_url = f"{RACE_RESULT_SITE_URL}?race_id={race_id}"
-        logger.info(f"db.netkeiba でテーブル未検出 → race.netkeiba を試行: {alt_url}")
-        alt_html = _get_result_html_with_playwright(alt_url)
-        if alt_html:
-            alt_soup = BeautifulSoup(alt_html, "html.parser")
+        logger.info(f"db.netkeiba でテーブル未検出/空 → race.netkeiba を試行: {alt_url}")
+        alt_soup = None
+        # まず requests で取得（EUC-JP明示デコード）
+        alt_soup = _get(alt_url, session, encoding="euc-jp")
+        if alt_soup is None:
+            # requests失敗時はPlaywrightでフォールバック
+            alt_html = _get_result_html_with_playwright(alt_url)
+            if alt_html:
+                alt_soup = BeautifulSoup(alt_html, "html.parser")
+        if alt_soup:
             result_table = (
                 alt_soup.select_one("table.ResultMain")
+                or alt_soup.select_one("table.RaceTable01")
                 or alt_soup.select_one("table.race_table_01")
                 or alt_soup.select_one("div.ResultTableWrap table")
-                or alt_soup.select_one("table.Shutuba_Table")
                 or alt_soup.select_one("table[summary*='結果']")
                 or alt_soup.select_one("table.nk_tb_common")
             )
             if result_table:
-                soup = alt_soup  # 以降の解析もこちらのsoupを使う
-                logger.info("race.netkeiba から結果テーブル取得成功")
-                # デバッグ保存
-                try:
-                    _debug_path = DATA_DIR / "debug" / f"result_race_{race_id}.html"
-                    _debug_path.write_text(alt_soup.prettify(), encoding="utf-8")
-                except Exception:
-                    pass
+                _alt_data = [tr for tr in result_table.select("tr") if tr.select("td")]
+                if _alt_data:
+                    soup = alt_soup
+                    logger.info(f"race.netkeiba から結果テーブル取得成功 ({len(_alt_data)} rows)")
+                else:
+                    logger.warning("race.netkeiba テーブルもデータ行0")
+                    result_table = None
 
     if result_table is None:
         logger.warning(f"Result table not found (both sites): {race_id}")

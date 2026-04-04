@@ -958,8 +958,14 @@ def scrape_payouts(race_id: str, session: requests.Session) -> dict:
     Returns:
         {"馬連": [{"combo": "3-5", "amount": 1450}], "ワイド": [...], ...}
     """
-    url  = RACE_RESULT_URL.format(race_id=race_id)
-    soup = _get(url, session)
+    # まず race.netkeiba.com（静的HTML・EUC-JP）を試す
+    from keiba_predictor.scraper.netkeiba_scraper import RACE_RESULT_SITE_URL
+    alt_url = f"{RACE_RESULT_SITE_URL}?race_id={race_id}"
+    soup = _get(alt_url, session, encoding="euc-jp")
+    # フォールバック: db.netkeiba.com
+    if soup is None:
+        url = RACE_RESULT_URL.format(race_id=race_id)
+        soup = _get(url, session)
     if soup is None:
         return {}
 
