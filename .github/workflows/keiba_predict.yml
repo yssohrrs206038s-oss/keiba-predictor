@@ -92,6 +92,22 @@ jobs:
           echo "✅ モデルファイル確認OK"
 
       # ── 予想生成（11時JST） ──────────────────────────────────
+      - name: 過去成績データを準備（スクレイピング＋クリーニング）
+        if: steps.mode.outputs.mode == 'predict' || steps.mode.outputs.mode == 'both'
+        continue-on-error: true
+        run: |
+          TWO_WEEKS_AGO=$(date -d "14 days ago" +%Y-%m 2>/dev/null || \
+            python3 -c "from datetime import date,timedelta;print((date.today()-timedelta(days=14)).strftime('%Y-%m'))")
+          END=$(date +%Y-%m)
+          echo "📅 スクレイピング期間: $TWO_WEEKS_AGO ～ $END"
+          python -m keiba_predictor.main scrape --start "$TWO_WEEKS_AGO" --end "$END" || true
+          python -m keiba_predictor.main clean || true
+          if [ -f keiba_predictor/data/cleaned_races.csv ]; then
+            echo "✅ cleaned_races.csv 準備OK ($(wc -l < keiba_predictor/data/cleaned_races.csv) 行)"
+          else
+            echo "⚠️ cleaned_races.csv が生成されませんでした（過去成績なしで予想を実行）"
+          fi
+
       - name: 今週末重賞CSVを更新
         if: steps.mode.outputs.mode == 'predict' || steps.mode.outputs.mode == 'both'
         continue-on-error: true
