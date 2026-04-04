@@ -959,7 +959,14 @@ def scrape_payouts(race_id: str, session: requests.Session) -> dict:
 
     payouts: dict[str, list] = {}
 
-    for table in soup.select("table.pay_table_01"):
+    def _parse_yen(s: str) -> Optional[int]:
+        s = re.sub(r"[¥￥,円\s]", "", s)
+        try:
+            return int(s)
+        except ValueError:
+            return None
+
+    for table in soup.select("table.pay_table_01, table.Payout_Detail_Table"):
         current_type = None
         for tr in table.select("tr"):
             th = tr.select_one("th")
@@ -969,22 +976,22 @@ def scrape_payouts(race_id: str, session: requests.Session) -> dict:
             if not current_type or len(tds) < 2:
                 continue
 
-            combos  = tds[0].get_text(" ", strip=True)
-            amounts = tds[1].get_text(" ", strip=True)
+            # brタグを改行に変換して分割（JRA: <br>区切り / NAR: span区切り）
+            combo_parts = [p.strip() for p in tds[0].get_text("\n").split("\n") if p.strip()]
+            amt_parts   = [p.strip() for p in tds[1].get_text("\n").split("\n") if p.strip()]
+            # 金額パース
+            amt_list = [_parse_yen(a) for a in amt_parts]
 
-            # 金額を数値に（"¥1,450" → 1450）
-            def _parse_yen(s: str) -> Optional[int]:
-                s = re.sub(r"[¥,\s]", "", s)
-                try:
-                    return int(s)
-                except ValueError:
-                    return None
-
-            amt = _parse_yen(amounts)
-            payouts.setdefault(current_type, []).append({
-                "combo":  combos,
-                "amount": amt,
-            })
+            if len(combo_parts) == len(amt_list):
+                for combo, amt in zip(combo_parts, amt_list):
+                    payouts.setdefault(current_type, []).append({
+                        "combo": combo, "amount": amt,
+                    })
+            elif amt_list:
+                combo_all = tds[0].get_text(strip=True)
+                payouts.setdefault(current_type, []).append({
+                    "combo": combo_all, "amount": amt_list[0],
+                })
 
     return payouts
 
