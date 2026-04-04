@@ -999,9 +999,8 @@ function renderPredictions(cache) {
       }
     }
 
-    // モンテカルロシミュレーション
+    // モンテカルロシミュレーション（simは上部で定義済み）
     let simHTML = '';
-    const sim = r.simulation;
     if (sim && Object.keys(sim).length > 0) {
       const simMarks = ['◎','○','▲','△','　'];
       const simNums = (r.predicted_top5_nums || []).filter(n => n != null);
