@@ -14,7 +14,7 @@
       "horse_number": 8,
       "horse_name": "ファーヴェント",
       "prob": 0.0008348854025825858,
-      "odds": 6.9,
+      "odds": 8.5,
       "shap_top": [
         {
           "feature": "odds",
@@ -37,7 +37,7 @@
       "horse_number": 2,
       "horse_name": "ミニトランザット",
       "prob": 0.0008283999632112682,
-      "odds": 6.8,
+      "odds": 7.9,
       "shap_top": [
         {
           "feature": "odds",
@@ -60,7 +60,7 @@
       "horse_number": 6,
       "horse_name": "マテンロウオリオン",
       "prob": 0.0008092506905086339,
-      "odds": 9.7,
+      "odds": 7.6,
       "shap_top": [
         {
           "feature": "odds",
@@ -129,29 +129,54 @@
       {
         "horse_number": 12,
         "horse_name": "ダディーズビビッド",
-        "ev_score": 0.029,
+        "ev_score": 0.03,
         "prob": 0.0003,
-        "odds": 96.9,
-        "popularity": 16
+        "odds": 88.3
       },
       {
         "horse_number": 9,
         "horse_name": "エエヤン",
-        "ev_score": 0.028,
+        "ev_score": 0.02,
         "prob": 0.0004,
-        "odds": 69.4,
-        "popularity": 15
+        "odds": 54.8
       },
       {
         "horse_number": 15,
         "horse_name": "シリウスコルト",
-        "ev_score": 0.006,
+        "ev_score": 0.009,
         "prob": 0.0006,
-        "odds": 10.3,
-        "popularity": 6
+        "odds": 16.4
       }
     ],
-    "dangerous_horses": [],
+    "dangerous_horses": [
+      {
+        "horse_number": 8,
+        "horse_name": "ファーヴェント",
+        "popularity": 3,
+        "prob": 0.0008,
+        "reasons": [
+          "AI確率0%（3番人気以内なのに低い）"
+        ]
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "ミニトランザット",
+        "popularity": 2,
+        "prob": 0.0008,
+        "reasons": [
+          "AI確率0%（3番人気以内なのに低い）"
+        ]
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "マテンロウオリオン",
+        "popularity": 1,
+        "prob": 0.0008,
+        "reasons": [
+          "AI確率0%（3番人気以内なのに低い）"
+        ]
+      }
+    ],
     "ai_comments": {
       "8": "◎🔥 本命候補として最高評価。AI3着以内確率0.1%、EVスコア0.01という数値は極めて限定的なデータセットを示唆していますが、3番人気という適正な評価を受けており、オッズ有利の状況が構築されています。前走展開では脚質・位置取りの詳細データが必要ですが、3番人気という市場評価から、安定した戦績を積み重ねている可能性が高い。芝1600mのダービー卿CTは高速馬場化が進む2026年現在、先行力と末脚の両立が求められるコース。同馬の人気評価から推察すると、中団～前目での位置取り確保能力に優れ、直線での競争力を保有していると考えられます。馬場適性は現在の高速馬場環境への適応性が評価されている点が、3番人気選定につながったと推定。懸念される上がり3Fやや悪という指摘はありますが、全体ペース設定によっては相対的に改善される余地があります。期待値評価は妙味ありで、堅実性と上昇可能性を兼ね備えた構成。展開想定として、前半適度なペースで中団確保→直線で上昇する流れが理想シナリオと予想されます。",
       "2": "○✨ 対抗馬として評価。AI3着以内確率0.1%、EVスコア0.01の数値は本命同様の限定的データですが、2番人気という市場評価が同馬の信頼度を示唆。オッズ有利という条件下で、長期回収率を意識した投資価値が存在します。前走展開分析では、脚質・位置取り詳細情報の補足が必要ですが、2番人気という評価水準から、安定した走破能力と一定の競争力を保有していることが推測されます。芝1600mというミドル距離での適性評価が堅牢であり、現在の高速馬場環境における対応力も備えていると考えられる。懸念される上がり3Fやや悪という点は、このコース条件下では複数馬が同様の課題を抱えている可能性があり、相対評価では大きな減点要因にならない見込み。期待値評価では妙味ありとし、本命とのセット購入で回収率改善が期待できます。展開想定として、ペース設定いかんによっては中団後方からの追込みシナリオも視野に入ります。",
@@ -279,7 +304,7 @@
       "horse_number": 8,
       "horse_name": "アンドゥーリル",
       "prob": 0.0027939514257013798,
-      "odds": 3.0,
+      "odds": 3.8,
       "shap_top": [
         {
           "feature": "odds",
@@ -302,7 +327,7 @@
       "horse_number": 6,
       "horse_name": "サンダーストラック",
       "prob": 0.0025481500197201967,
-      "odds": 3.3,
+      "odds": 3.5,
       "shap_top": [
         {
           "feature": "odds",
@@ -325,7 +350,7 @@
       "horse_number": 14,
       "horse_name": "アスクイキゴミ",
       "prob": 0.002276499755680561,
-      "odds": 7.4,
+      "odds": 5.1,
       "shap_top": [
         {
           "feature": "odds",
@@ -394,29 +419,54 @@
       {
         "horse_number": 11,
         "horse_name": "ユウファラオ",
-        "ev_score": 0.071,
+        "ev_score": 0.094,
         "prob": 0.0005,
-        "odds": 141.4,
-        "popularity": 14
+        "odds": 171.6
       },
       {
         "horse_number": 9,
         "horse_name": "クールデイトナ",
-        "ev_score": 0.042,
+        "ev_score": 0.069,
         "prob": 0.0006,
-        "odds": 70.7,
-        "popularity": 12
+        "odds": 111.7
       },
       {
         "horse_number": 1,
         "horse_name": "ストームサンダー",
-        "ev_score": 0.036,
+        "ev_score": 0.066,
         "prob": 0.0006,
-        "odds": 59.9,
-        "popularity": 11
+        "odds": 110.8
       }
     ],
-    "dangerous_horses": [],
+    "dangerous_horses": [
+      {
+        "horse_number": 8,
+        "horse_name": "アンドゥーリル",
+        "popularity": 2,
+        "prob": 0.0028,
+        "reasons": [
+          "AI確率0%（3番人気以内なのに低い）"
+        ]
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "サンダーストラック",
+        "popularity": 1,
+        "prob": 0.0025,
+        "reasons": [
+          "AI確率0%（3番人気以内なのに低い）"
+        ]
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "アスクイキゴミ",
+        "popularity": 3,
+        "prob": 0.0023,
+        "reasons": [
+          "AI確率0%（3番人気以内なのに低い）"
+        ]
+      }
+    ],
     "ai_comments": {
       "8": "◎🔥 本命の筆頭。AI3着以内確率0.3%、EVスコア0.01という数値は一見低く見えますが、2番人気という市場評価との乖離がこの馬の期待値源泉です。オッズ有利というAI判定の強みが、回収率を大きく左右します。芝1600mのコース適性は良好で、前走の脚質・位置取りから判断すると、今回のペース設定で中盤～後半の競馬展開が想定されます。差し・追込み適性を持つ馬であれば、上がり3Fやや悪という懸念も、相手関係次第で帳消しになる可能性が高い。重賞での信頼性も厚く、2番人気というポジションながら期待値評価は「妙味あり」です。騎手の複勝率も実績十分で、コース取りの巧さも評価対象。本レースの展開シナリオは、序盤から中程度のペースで進み、直線で全力を尽くす展開が最適。",
       "6": "○✨ 1番人気の本開帳。AI3着以内確率0.3%とAI印◎🔥と全く同じ数値ながら、人気という市場評価の差が評価を分けます。サンダーストラックの場合、既に充分な支持を集めているため、期待値的には◎より1段階下の評価が妥当。オッズ有利とコース適性という2大強みは揺るがず、芝1600mでの実績も申し分ありません。前走展開から脚質を分析すると、今回も同様のポジション取りが想定され、ペース予想に基づいた競馬運びが鍵を握ります。上がり3Fやや悪という懸念点は、スピード型よりスタミナ型の評価で相殺可能。1番人気であるがゆえに、単体での価値より相手選定が重要。複勝率は高期待値を維持しており、堅実な選択肢として機能します。",
@@ -678,7 +728,35 @@
         "odds": 122.6
       }
     ],
-    "dangerous_horses": [],
+    "dangerous_horses": [
+      {
+        "horse_number": 15,
+        "horse_name": "クロワデュノール",
+        "popularity": 1,
+        "prob": 0.0264,
+        "reasons": [
+          "AI確率3%（3番人気以内なのに低い）"
+        ]
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "メイショウタバル",
+        "popularity": 2,
+        "prob": 0.0257,
+        "reasons": [
+          "AI確率3%（3番人気以内なのに低い）"
+        ]
+      },
+      {
+        "horse_number": 5,
+        "horse_name": "ショウヘイ",
+        "popularity": 3,
+        "prob": 0.0111,
+        "reasons": [
+          "AI確率1%（3番人気以内なのに低い）"
+        ]
+      }
+    ],
     "ai_comments": {
       "15": "◎🔥 1番人気に支持される本命格。AI3着以内確率2.6%、EVスコア0.07と堅実な数値を記録しており、オッズ有利という最大の武器を保持している。馬体重の増減が好材料として機能しており、肉体面での準備が整っていることが窺える。今回の芝2000mは脚質適性を問わない万能なコース設定だが、前走の立ち回りと今回のペース想定の噛み合いが勝利への鍵となる。懸念点として上がり3Fがやや悪化傾向にあり、ラスト局面での加速力に若干の不安が残る。しかし1番人気という人気の厚さ、オッズ有利という期待値環境が揃った局面であり、高い複勝率を見込める。馬場状態による脚色の変化にも対応する経験値が評価でき、このレースでの地力を信頼できる一頭。本命として推奨できる出走馬であり、長期収支を改善するための軸馬としての価値は十分。",
       "6": "○✨ 2番人気に推奨される対抗馬。AI3着以内確率2.6%で本命と同等の確度を保持しながら、EVスコア0.09は3頭中最高値となっており、期待値評価において妙味ありと判断される。オッズ有利かつ人気薄くない立場にありながら、理論値を上回るリターンが期待できる配置である。上がり3Fの課題は本命と共通するが、人気という市場の評価が後ろ盾となっており、穴馬的ポジションとしての価値も併せ持つ。騎手の複勝率を含めた総合的な判断では、この馬の脚質とコース特性の相性が良好と判定される。馬体重増減の情報が直接的に開示されていない点が若干の注視対象だが、人気という投票行動の集約がポジティブシグナルとして機能している。期待値重視の戦略においては、本命との併用で収支改善を見込める有力候補。人気上位の安定感と理論値のギャップを活用する局面。",
@@ -805,22 +883,22 @@
     "honmei": {
       "horse_number": 2,
       "horse_name": "スライビングロード",
-      "prob": 0.909,
+      "prob": 0.683,
       "odds": 3.7,
       "shap_top": [
         {
           "feature": "odds",
-          "value": 1.3233,
+          "value": 1.3505,
           "label": "オッズ有利"
         },
         {
-          "feature": "course_type_enc",
-          "value": 0.5616,
-          "label": "コース適性"
+          "feature": "last_3f",
+          "value": 1.218,
+          "label": "上がり3F"
         },
         {
           "feature": "age",
-          "value": -0.3212,
+          "value": -0.2482,
           "label": "年齢やや悪"
         }
       ]
@@ -828,22 +906,22 @@
     "taikou": {
       "horse_number": 6,
       "horse_name": "ミトノオルフェ",
-      "prob": 0.872,
+      "prob": 0.656,
       "odds": 4.3,
       "shap_top": [
         {
+          "feature": "last_3f",
+          "value": 1.2253,
+          "label": "上がり3F"
+        },
+        {
           "feature": "odds",
-          "value": 1.1444,
+          "value": 1.1695,
           "label": "オッズ有利"
         },
         {
-          "feature": "course_type_enc",
-          "value": 0.5524,
-          "label": "コース適性"
-        },
-        {
           "feature": "age",
-          "value": -0.3016,
+          "value": -0.2366,
           "label": "年齢やや悪"
         }
       ]
@@ -851,22 +929,22 @@
     "ana": {
       "horse_number": 8,
       "horse_name": "エマヌエーレ",
-      "prob": 0.051,
+      "prob": 0.189,
       "odds": 15.4,
       "shap_top": [
         {
+          "feature": "last_3f",
+          "value": 1.2692,
+          "label": "上がり3F"
+        },
+        {
           "feature": "course_type_enc",
-          "value": 0.5494,
+          "value": 0.2973,
           "label": "コース適性"
         },
         {
-          "feature": "distance",
-          "value": 0.1611,
-          "label": "距離適性"
-        },
-        {
           "feature": "age",
-          "value": -0.3533,
+          "value": -0.2708,
           "label": "年齢やや悪"
         }
       ]
@@ -887,61 +965,61 @@
     "ana_horse_info": {
       "horse_number": 8,
       "horse_name": "エマヌエーレ",
-      "prob": 0.4611,
+      "prob": 0.7682,
       "popularity": 6
     },
     "predicted_top5": [
       {
         "horse_number": 2,
         "horse_name": "スライビングロード",
-        "prob": 0.909,
+        "prob": 0.683,
         "odds": 3.7
       },
       {
         "horse_number": 6,
         "horse_name": "ミトノオルフェ",
-        "prob": 0.872,
+        "prob": 0.656,
         "odds": 4.3
       },
       {
         "horse_number": 13,
         "horse_name": "スカイハイ",
-        "prob": 0.845,
+        "prob": 0.638,
         "odds": 4.7
       },
       {
         "horse_number": 18,
         "horse_name": "ミルテンベルク",
-        "prob": 0.157,
+        "prob": 0.306,
         "odds": 12.4
       },
       {
         "horse_number": 14,
         "horse_name": "メイショウツヨキ",
-        "prob": 0.114,
+        "prob": 0.228,
         "odds": 14.6
       }
     ],
     "ev_top3": [
       {
-        "horse_number": 17,
-        "horse_name": "サムハンター",
-        "ev_score": 14.197,
-        "prob": 0.1299,
-        "odds": 109.3
-      },
-      {
         "horse_number": 11,
         "horse_name": "エアミアーニ",
-        "ev_score": 12.664,
-        "prob": 0.1031,
+        "ev_score": 48.231,
+        "prob": 0.3928,
         "odds": 122.8
+      },
+      {
+        "horse_number": 17,
+        "horse_name": "サムハンター",
+        "ev_score": 48.164,
+        "prob": 0.4407,
+        "odds": 109.3
       },
       {
         "horse_number": 10,
         "horse_name": "スーサンアッシャー",
-        "ev_score": 12.044,
-        "prob": 0.135,
+        "ev_score": 37.577,
+        "prob": 0.4213,
         "odds": 89.2
       }
     ],
@@ -950,7 +1028,14 @@
     "is_grade": false,
     "bet_strategy": {
       "fukusho": [],
-      "umaren": [],
+      "umaren": [
+        {
+          "nums": [
+            2,
+            8
+          ]
+        }
+      ],
       "wide": [
         {
           "nums": [
@@ -982,8 +1067,8 @@
           14
         ]
       },
-      "total_points": 9,
-      "strategy_note": "ワイド（上位拮抗） + 3連複軸1×4",
+      "total_points": 10,
+      "strategy_note": "ワイド（上位拮抗） + 穴馬馬連追加 + 3連複軸1×4",
       "use_wide": true,
       "is_volatile_race": false
     },
@@ -992,70 +1077,70 @@
     "simulation": {
       "2": {
         "horse_name": "スライビングロード",
-        "top3_rate": 0.909,
-        "top3_std": 0.014,
+        "top3_rate": 0.683,
+        "top3_std": 0.017,
         "is_stable": true,
-        "out_of_board_rate": 0.014,
-        "variance": 1.158,
+        "out_of_board_rate": 0.128,
+        "variance": 2.155,
         "scenario": {
-          "high_pace": 0.92,
-          "slow_pace": 0.91,
-          "normal": 0.9
+          "high_pace": 0.62,
+          "slow_pace": 0.71,
+          "normal": 0.71
         }
       },
       "6": {
         "horse_name": "ミトノオルフェ",
-        "top3_rate": 0.872,
-        "top3_std": 0.014,
+        "top3_rate": 0.656,
+        "top3_std": 0.022,
         "is_stable": true,
-        "out_of_board_rate": 0.02,
-        "variance": 1.238,
+        "out_of_board_rate": 0.14,
+        "variance": 2.2,
         "scenario": {
-          "high_pace": 0.87,
-          "slow_pace": 0.87,
-          "normal": 0.88
+          "high_pace": 0.61,
+          "slow_pace": 0.68,
+          "normal": 0.68
         }
       },
       "13": {
         "horse_name": "スカイハイ",
-        "top3_rate": 0.845,
-        "top3_std": 0.015,
+        "top3_rate": 0.638,
+        "top3_std": 0.011,
         "is_stable": true,
-        "out_of_board_rate": 0.025,
-        "variance": 1.288,
+        "out_of_board_rate": 0.158,
+        "variance": 2.257,
         "scenario": {
-          "high_pace": 0.84,
-          "slow_pace": 0.85,
-          "normal": 0.85
+          "high_pace": 0.6,
+          "slow_pace": 0.67,
+          "normal": 0.64
         }
       },
       "18": {
         "horse_name": "ミルテンベルク",
-        "top3_rate": 0.157,
-        "top3_std": 0.011,
+        "top3_rate": 0.306,
+        "top3_std": 0.023,
         "is_stable": true,
-        "out_of_board_rate": 0.386,
-        "variance": 2.186,
+        "out_of_board_rate": 0.422,
+        "variance": 2.868,
         "scenario": {
-          "high_pace": 0.15,
-          "slow_pace": 0.16,
-          "normal": 0.15
+          "high_pace": 0.33,
+          "slow_pace": 0.29,
+          "normal": 0.29
         }
       },
       "14": {
         "horse_name": "メイショウツヨキ",
-        "top3_rate": 0.114,
+        "top3_rate": 0.228,
         "top3_std": 0.011,
         "is_stable": true,
-        "out_of_board_rate": 0.453,
-        "variance": 2.285,
+        "out_of_board_rate": 0.509,
+        "variance": 2.965,
         "scenario": {
-          "high_pace": 0.12,
-          "slow_pace": 0.11,
-          "normal": 0.12
+          "high_pace": 0.27,
+          "slow_pace": 0.2,
+          "normal": 0.22
         }
       },
-      "race_volatility": 2.41,
+      "race_volatility": 2.59,
       "is_volatile_race": true
     }
   }
