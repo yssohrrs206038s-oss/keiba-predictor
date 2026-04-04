@@ -873,5 +873,281 @@
       "race_volatility": 4.318,
       "is_volatile_race": true
     }
+  },
+  "202609020309": {
+    "race_name": "アザレア賞",
+    "race_date": "2026-04-04",
+    "start_time": "14:15",
+    "venue": "阪神",
+    "course_info": "芝2400m",
+    "honmei": {
+      "horse_number": 2,
+      "horse_name": "アーレムアレス",
+      "prob": 0.27773046493530273,
+      "odds": 2.2,
+      "shap_top": [
+        {
+          "feature": "odds",
+          "value": 1.743,
+          "label": "オッズ有利"
+        },
+        {
+          "feature": "course_type_enc",
+          "value": 0.454,
+          "label": "コース適性"
+        },
+        {
+          "feature": "last_3f",
+          "value": -3.0522,
+          "label": "上がり3Fやや悪"
+        }
+      ]
+    },
+    "taikou": {
+      "horse_number": 4,
+      "horse_name": "ブラックオリンピア",
+      "prob": 0.08092998713254929,
+      "odds": 4.0,
+      "shap_top": [
+        {
+          "feature": "odds",
+          "value": 0.7198,
+          "label": "オッズ有利"
+        },
+        {
+          "feature": "course_type_enc",
+          "value": 0.4236,
+          "label": "コース適性"
+        },
+        {
+          "feature": "last_3f",
+          "value": -3.3218,
+          "label": "上がり3Fやや悪"
+        }
+      ]
+    },
+    "ana": {
+      "horse_number": 6,
+      "horse_name": "ノンブルドール",
+      "prob": 0.06026332080364227,
+      "odds": 4.7,
+      "shap_top": [
+        {
+          "feature": "odds",
+          "value": 0.5902,
+          "label": "オッズ有利"
+        },
+        {
+          "feature": "course_type_enc",
+          "value": 0.3975,
+          "label": "コース適性"
+        },
+        {
+          "feature": "last_3f",
+          "value": -3.3109,
+          "label": "上がり3Fやや悪"
+        }
+      ]
+    },
+    "predicted_top3_nums": [
+      2,
+      4,
+      6
+    ],
+    "predicted_top5_nums": [
+      2,
+      4,
+      6,
+      7,
+      9
+    ],
+    "ana_horse_num": null,
+    "ana_horse_info": {},
+    "predicted_top5": [
+      {
+        "horse_number": 2,
+        "horse_name": "アーレムアレス",
+        "prob": 0.2777,
+        "odds": 2.2
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "ブラックオリンピア",
+        "prob": 0.0809,
+        "odds": 4.0
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "ノンブルドール",
+        "prob": 0.0603,
+        "odds": 4.7
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "ヴァロンブローサ",
+        "prob": 0.0487,
+        "odds": 19.8
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "タガノアルトゥーラ",
+        "prob": 0.0424,
+        "odds": 21.1
+      }
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 1,
+        "horse_name": "ヘルメスギャング",
+        "ev_score": 1.166,
+        "prob": 0.0205,
+        "odds": 56.9
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "ヴァロンブローサ",
+        "ev_score": 0.964,
+        "prob": 0.0487,
+        "odds": 19.8
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "タガノアルトゥーラ",
+        "ev_score": 0.894,
+        "prob": 0.0424,
+        "odds": 21.1
+      }
+    ],
+    "dangerous_horses": [
+      {
+        "horse_number": 2,
+        "horse_name": "アーレムアレス",
+        "popularity": 1,
+        "prob": 0.2777,
+        "reasons": [
+          "AI確率28%（3番人気以内なのに低い）"
+        ]
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "ブラックオリンピア",
+        "popularity": 2,
+        "prob": 0.0809,
+        "reasons": [
+          "AI確率8%（3番人気以内なのに低い）"
+        ]
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "ノンブルドール",
+        "popularity": 3,
+        "prob": 0.0603,
+        "reasons": [
+          "AI確率6%（3番人気以内なのに低い）"
+        ]
+      }
+    ],
+    "ai_comments": {},
+    "is_grade": false,
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [
+        {
+          "nums": [
+            2,
+            4
+          ]
+        },
+        {
+          "nums": [
+            2,
+            6
+          ]
+        },
+        {
+          "nums": [
+            4,
+            6
+          ]
+        }
+      ],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 3,
+      "strategy_note": "馬連",
+      "use_wide": false,
+      "is_volatile_race": false
+    },
+    "confidence": 1,
+    "confidence_stars": "★",
+    "simulation": {
+      "2": {
+        "horse_name": "アーレムアレス",
+        "top3_rate": 0.874,
+        "top3_std": 0.02,
+        "is_stable": true,
+        "out_of_board_rate": 0.049,
+        "variance": 1.568,
+        "scenario": {
+          "high_pace": 0.91,
+          "slow_pace": 0.82,
+          "normal": 0.91
+        }
+      },
+      "4": {
+        "horse_name": "ブラックオリンピア",
+        "top3_rate": 0.331,
+        "top3_std": 0.018,
+        "is_stable": true,
+        "out_of_board_rate": 0.413,
+        "variance": 2.406,
+        "scenario": {
+          "high_pace": 0.36,
+          "slow_pace": 0.29,
+          "normal": 0.36
+        }
+      },
+      "6": {
+        "horse_name": "ノンブルドール",
+        "top3_rate": 0.284,
+        "top3_std": 0.022,
+        "is_stable": true,
+        "out_of_board_rate": 0.47,
+        "variance": 2.427,
+        "scenario": {
+          "high_pace": 0.3,
+          "slow_pace": 0.27,
+          "normal": 0.29
+        }
+      },
+      "7": {
+        "horse_name": "ヴァロンブローサ",
+        "top3_rate": 0.271,
+        "top3_std": 0.021,
+        "is_stable": true,
+        "out_of_board_rate": 0.485,
+        "variance": 2.416,
+        "scenario": {
+          "high_pace": 0.28,
+          "slow_pace": 0.27,
+          "normal": 0.27
+        }
+      },
+      "9": {
+        "horse_name": "タガノアルトゥーラ",
+        "top3_rate": 0.253,
+        "top3_std": 0.018,
+        "is_stable": true,
+        "out_of_board_rate": 0.511,
+        "variance": 2.394,
+        "scenario": {
+          "high_pace": 0.24,
+          "slow_pace": 0.27,
+          "normal": 0.24
+        }
+      },
+      "race_volatility": 2.311,
+      "is_volatile_race": true
+    }
   }
 }
