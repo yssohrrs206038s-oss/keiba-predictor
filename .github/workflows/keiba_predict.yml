@@ -15,6 +15,9 @@ on:
         required: false
         default: 'both'
 
+permissions:
+  contents: write
+
 env:
   DISCORD_WEBHOOK_URL:        ${{ secrets.DISCORD_WEBHOOK_URL }}
   DISCORD_REPORT_WEBHOOK_URL: ${{ secrets.DISCORD_REPORT_WEBHOOK_URL }}

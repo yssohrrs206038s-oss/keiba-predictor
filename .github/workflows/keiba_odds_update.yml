@@ -8,6 +8,9 @@ on:
     - cron: '30 5 * * 0'   # 日曜 14:30 JST
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

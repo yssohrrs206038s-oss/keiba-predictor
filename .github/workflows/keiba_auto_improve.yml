@@ -5,6 +5,9 @@ on:
     - cron: '0 3 * * 3'   # 水曜 03:00 UTC = 水曜 12:00 JST（keiba_update完了後）
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_UPDATE }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
