@@ -455,7 +455,7 @@
       <div class="stat-card blue"><div class="stat-value" id="s-umaren">—</div><div class="stat-label">連対的中率</div></div>
       <div class="stat-card blue"><div class="stat-value" id="s-sanren">—</div><div class="stat-label">3連複的中率</div></div>
       <div class="stat-card"><div class="stat-value" id="s-roi">—</div><div class="stat-label">累計回収率</div></div>
-      <div class="stat-card green"><div class="stat-value" id="s-streak">—</div><div class="stat-label">連続複勝的中</div></div>
+      <div class="stat-card green"><div class="stat-value" id="s-streak">—</div><div class="stat-label">直近10戦 複勝</div></div>
     </div>
 
     <div class="section-title">📈 回収率推移</div>
@@ -614,19 +614,16 @@ function renderStats(rows) {
   const ret   = rows.reduce((s, r) => s + (+r.return_total || 0), 0);
   const roi   = bet > 0 ? ret / bet : 0;
 
-  // 連続複勝的中（最新から遡る）
-  let streak = 0;
-  for (let i = rows.length - 1; i >= 0; i--) {
-    if (rows[i].fukusho_hit === 'True') streak++;
-    else break;
-  }
+  // 直近10戦の複勝的中数
+  const recent10 = rows.slice(-10);
+  const recent10Hits = recent10.filter(r => r.fukusho_hit === 'True').length;
 
   document.getElementById('s-races').textContent   = n + ' 戦';
   document.getElementById('s-fukusho').textContent = pct(fHits / n);
   document.getElementById('s-umaren').textContent  = pct(uHits / n);
   document.getElementById('s-sanren').textContent  = pct(sHits / n);
   document.getElementById('s-roi').textContent     = pct(roi);
-  document.getElementById('s-streak').textContent  = streak + ' 連続';
+  document.getElementById('s-streak').textContent  = `${recent10Hits}/${recent10.length}`;
 }
 
 /* ════════════════════════════════════════════════════════════
