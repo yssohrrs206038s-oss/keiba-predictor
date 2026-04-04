@@ -32,9 +32,14 @@ DATA_DIR      = Path(__file__).parent / "data"
 HISTORY_PATH  = DATA_DIR / "results_history.csv"
 REPORTS_DIR   = DATA_DIR / "reports"
 
-# 1 口 100 円・1 レースあたりの買い目: 複勝1+馬連3+3連複10 = 14 口
-UNIT_BET  = 100
-BETS_PER_RACE = 14
+# 1レースあたりの投資額
+# 複勝: 1000円×1口 + 馬連: 100円×3口 + 3連複: 100円×10口 = 2300円
+UNIT_BET          = 100   # 馬連・ワイド・3連複の1口単価
+FUKUSHO_BET       = 1000  # 複勝の1口単価
+BETS_FUKUSHO      = 1     # 複勝の口数
+BETS_UMAREN       = 3     # 馬連の口数
+BETS_SANREN       = 10    # 3連複の口数
+BETS_PER_RACE_TOTAL = FUKUSHO_BET * BETS_FUKUSHO + UNIT_BET * (BETS_UMAREN + BETS_SANREN)  # 2300円
 
 HISTORY_COLS = [
     "date", "race_id", "race_name", "race_grade",
@@ -212,8 +217,18 @@ def record_result(
     umaren_payout   = _payout_str_to_int(umaren_pay_str)
     sanren_payout   = _payout_str_to_int(sanren_pay_str)
 
-    bet_total    = UNIT_BET * BETS_PER_RACE
-    return_total = umaren_payout + wide_payout + sanren_payout
+    bet_total    = BETS_PER_RACE_TOTAL  # 2300円（複勝1000+馬連300+3連複1000）
+    # 複勝配当は1000円購入なので10倍換算（100円ベースの配当×10）
+    fukusho_payout = 0
+    if fukusho_hit and predicted_nums:
+        honmei_num = predicted_nums[0]
+        for entry in payouts.get("複勝", []):
+            combo_nums = set(re.findall(r"\d+", str(entry.get("combo", ""))))
+            if str(honmei_num) in combo_nums:
+                fukusho_payout = entry.get("amount") or 0
+                break
+    fukusho_return = fukusho_payout * (FUKUSHO_BET // 100) if fukusho_payout else 0
+    return_total = fukusho_return + umaren_payout + wide_payout + sanren_payout
 
     row = {
         "date":       race_date,
