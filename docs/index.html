@@ -887,13 +887,16 @@ function renderPredictions(cache) {
       volHTML = `<div style="color:var(--red);font-size:11px;font-weight:700;padding:4px 8px;">🌀 波乱レース注意（波乱度${(sim.race_volatility||0).toFixed(2)}）</div>`;
     }
 
-    // 買い目: 複勝1 + 馬連2 + 3連複(◎軸×相手5頭)10 = 13点
+    // 買い目: 複勝1 + 馬連2 + 3連複(◎軸 × 相手4頭+穴1頭)10 = 13点
     const p5nums = (r.predicted_top5_nums || r.predicted_top3_nums || []).filter(n => n != null);
+    const anaNum = r.ana_horse_num;
     let betHTML = '';
     if (p5nums.length >= 2) {
       const h1 = p5nums[0], h2 = p5nums[1], h3 = p5nums[2] || p5nums[1];
-      const aite = p5nums.slice(1, 6);
+      const aite = p5nums.slice(1, 5);  // 2-5番手（4頭）
+      if (anaNum && !aite.includes(anaNum) && anaNum !== h1) aite.push(anaNum);
       const aiteStr = aite.join('/');
+      const anaLabel = (anaNum && aite.includes(anaNum)) ? `（穴${anaNum}）` : '';
       const sanrenPt = aite.length >= 2 ? aite.length * (aite.length - 1) / 2 : 1;
       const total = 1 + 2 + sanrenPt;
       betHTML = `
@@ -902,7 +905,7 @@ function renderPredictions(cache) {
           <div class="bet-rows">
             <div class="bet-row"><span class="bet-label">複勝</span>${h1}番</div>
             <div class="bet-row"><span class="bet-label">馬連</span>${h1}-${h2} / ${h1}-${h3}</div>
-            <div class="bet-row"><span class="bet-label">3連複</span>軸${h1} × ${aiteStr}</div>
+            <div class="bet-row"><span class="bet-label">3連複</span>軸${h1} × ${aiteStr}${anaLabel}</div>
           </div>
         </div>`;
     }
@@ -944,13 +947,15 @@ function _renderFlatCard(raceId, r) {
     if (!p || !p.horse_name) return '';
     return `<span style="margin-right:10px;">${mark}${p.horse_number}番 ${esc(p.horse_name)}</span>`;
   }).join('');
-  // 買い目: ◎軸×相手5頭
+  // 買い目: ◎軸 × 相手4���+穴1頭
   const fp5 = (r.predicted_top5_nums || r.predicted_top3_nums || []).filter(n => n != null);
+  const fAna = r.ana_horse_num;
   let betLine = '';
   if (fp5.length >= 2) {
     const h1 = fp5[0], h2 = fp5[1], h3 = fp5[2] || fp5[1];
-    const aite = fp5.slice(1, 6).join('/');
-    betLine = `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">複勝:${h1} / 馬連:${h1}-${h2},${h1}-${h3} / 3連複:軸${h1}×${aite}</div>`;
+    const fa = fp5.slice(1, 5);
+    if (fAna && !fa.includes(fAna) && fAna !== h1) fa.push(fAna);
+    betLine = `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">複勝:${h1} / 馬連:${h1}-${h2},${h1}-${h3} / 3連複:軸${h1}×${fa.join('/')}</div>`;
   }
   return `<div class="race-card" style="padding:12px 16px;">
     <div style="font-size:13px;font-weight:700;margin-bottom:4px;">

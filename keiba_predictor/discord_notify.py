@@ -754,7 +754,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         if pd.notna(v):
             top5_nums.append(int(v))
 
-    # EV・危険馬
+    # EV
     if "ev_score" not in result_df.columns:
         result_df = calc_ev_and_flags(result_df)
 
@@ -766,6 +766,20 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
             "ev_score":     round(float(r["ev_score"]), 3),
             "prob":         round(float(r["prob_top3"]), 4),
         })
+
+    # 穴馬: TOP5外 & AI確率高め & 6番人気以下 → EV最高の1頭
+    ana_horse_num: Optional[int] = None
+    top5_set = set(top5_nums[:5])
+    if len(result_df) > 5:
+        rest = result_df.iloc[5:]
+        rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
+        rest_ev = pd.to_numeric(rest.get("ev_score", pd.Series(dtype=float)), errors="coerce")
+        cands = rest[(rest_pop >= 6) & (rest_ev > 0)]
+        if not cands.empty:
+            best = cands.nlargest(1, "ev_score").iloc[0]
+            v = best.get("horse_number")
+            if pd.notna(v) and int(v) not in top5_set:
+                ana_horse_num = int(v)
 
     cache[race_id] = {
         "race_name":           race_name,
@@ -779,6 +793,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "predicted_top3_nums": top3_nums,
         "predicted_top5_nums": top5_nums,
         "ev_top3":             ev_top3,
+        "ana_horse_num":       ana_horse_num,
         "is_grade":            is_grade,
     }
 
@@ -1112,12 +1127,12 @@ def _check_sanrenpuku_raw(
     payouts: dict,
     ana_horse_num: Optional[int] = None,
 ) -> tuple[bool, str]:
-    """3連複的中判定。買い目は軸(top5[0])×相手(top5[1:6])。(hit, pay_str) を返す。"""
+    """3連���的中判定。買い���は軸(top[0])×相手(top[1:5]+穴馬)。(hit, pay_str) を返す。"""
     if len(predicted_nums) < 2 or len(actual_top3_nums) < 3:
         return False, ""
-    # 買い目: 軸 = predicted_nums[0], 相手 = predicted_nums[1:6]（2-6番手の5頭）
+    # 買い目: 軸 = predicted_nums[0], 相手 = 2-5番手（4頭）+ 穴馬
     axis = predicted_nums[0]
-    partners = list(predicted_nums[1:6])
+    partners = list(predicted_nums[1:5])
     if ana_horse_num and ana_horse_num not in partners:
         partners.append(ana_horse_num)
     # 軸が3着以内に含まれることが前提
@@ -1186,20 +1201,26 @@ def _format_simple_message(race_id: str, entry: dict) -> str:
     if sim.get("is_volatile_race"):
         lines.append(f"🌀 波乱注意（波乱度{sim.get('race_volatility', 0):.2f}）")
 
-    # 買い目: 複勝1 + 馬連2 + 3連複(◎軸×相手5頭)10 = 13点
+    # 買い目: 複勝1 + 馬連2 + 3連複(◎軸 × 相手4頭+穴1頭)10 = 13点
     top5 = entry.get("predicted_top5_nums", [])
     h1 = honmei.get("horse_number", "?")
     h2 = taikou.get("horse_number", "?")
     h3 = ana.get("horse_number", "?")
-    aite = [n for n in top5[1:6] if n != h1] if len(top5) >= 3 else [h2, h3]
+    # 相手: 2-5番手（4頭）
+    aite = [n for n in top5[1:5] if n != h1] if len(top5) >= 3 else [h2, h3]
+    # 穴馬を追加（TOP5外のEV高い人気薄）
+    ana_num = entry.get("ana_horse_num")
+    if ana_num and ana_num not in aite and ana_num != h1:
+        aite.append(ana_num)
     aite_str = "/".join(str(n) for n in aite)
+    ana_label = f"（穴{ana_num}）" if ana_num and ana_num in aite else ""
     from itertools import combinations
     sanren_count = len(list(combinations(aite, 2)))
     lines.append("")
     lines.append(f"【買い目 {1 + 2 + sanren_count}点】")
     lines.append(f"複勝: {h1}")
     lines.append(f"馬連: {h1}-{h2}, {h1}-{h3}")
-    lines.append(f"3連複: 軸{h1} × {aite_str}")
+    lines.append(f"3連複: 軸{h1} × {aite_str}{ana_label}")
 
     return "\n".join(lines)
 
