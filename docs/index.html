@@ -816,14 +816,10 @@ function renderPredictions(cache) {
 
   _predHtmlMap = {};
   entries.forEach(([raceId, r]) => {
-    if (r.is_grade === false) {
-      _predHtmlMap[raceId] = _renderFlatCard(raceId, r);
-      return;
-    }
-    // 重賞は既存の詳細カード生成（以下にcontinue）
+    // 重賞も平場も同じ詳細カードで表示
   });
 
-  grid.innerHTML = entries.filter(([,r]) => r.is_grade !== false).map(([raceId, r]) => {
+  grid.innerHTML = entries.map(([raceId, r]) => {
     const gLabel = gradeLabel(r.race_name);
     const gClass = gradeClass(r.race_name);
     const shortName = (r.race_name || raceId).replace(/[（(]G[^）)]*[）)]/g, '').trim();
