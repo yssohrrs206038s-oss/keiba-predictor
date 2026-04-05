@@ -35,13 +35,10 @@ HISTORY_PATH  = DATA_DIR / "results_history.csv"
 REPORTS_DIR   = DATA_DIR / "reports"
 
 # 1レースあたりの投資額
-# 複勝: 1000円×1口 + 馬連: 100円×3口 + 3連複: 100円×10口 = 2300円
+# 複勝1000円 + ワイド/馬連300円 + 3連複600円 = 1900円（最大）
 UNIT_BET          = 100   # 馬連・ワイド・3連複の1口単価
 FUKUSHO_BET       = 1000  # 複勝の1口単価
-BETS_FUKUSHO      = 1     # 複勝の口数
-BETS_UMAREN       = 3     # 馬連の口数
-BETS_SANREN       = 10    # 3連複の口数
-BETS_PER_RACE_TOTAL = FUKUSHO_BET * BETS_FUKUSHO + UNIT_BET * (BETS_UMAREN + BETS_SANREN)  # 2300円
+BETS_PER_RACE_TOTAL = 1900  # bet_strategy.total_cost がない場合のフォールバック
 
 HISTORY_COLS = [
     "date", "race_id", "race_name", "race_grade",
