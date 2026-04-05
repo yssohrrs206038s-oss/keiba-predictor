@@ -184,8 +184,12 @@
     },
     "is_grade": true,
     "bet_strategy": {
-      "fukusho": [],
-      "tansho": [],
+      "fukusho": [
+        {
+          "num": 8,
+          "name": "ファーヴェント"
+        }
+      ],
       "umaren": [],
       "wide": [
         {
@@ -209,21 +213,19 @@
       ],
       "sanrenpuku": {
         "jiku": [
-          8,
-          2
+          8
         ],
         "aite": [
+          2,
           6,
           11,
           14
         ]
       },
-      "sanrentan": {},
-      "total_points": 6,
-      "total_cost": 600,
-      "strategy_note": "ワイド(波乱) + 3連複2頭軸x3",
-      "use_wide": true,
-      "is_volatile_race": true
+      "total_points": 10,
+      "total_cost": 1900,
+      "strategy_note": "複勝 + ワイド(波乱) + 3連複◎軸x4",
+      "use_wide": true
     },
     "confidence": 1,
     "confidence_stars": "★",
@@ -477,8 +479,12 @@
     },
     "is_grade": true,
     "bet_strategy": {
-      "fukusho": [],
-      "tansho": [],
+      "fukusho": [
+        {
+          "num": 8,
+          "name": "アンドゥーリル"
+        }
+      ],
       "umaren": [],
       "wide": [
         {
@@ -502,21 +508,19 @@
       ],
       "sanrenpuku": {
         "jiku": [
-          8,
-          6
+          8
         ],
         "aite": [
+          6,
           14,
           10,
           3
         ]
       },
-      "sanrentan": {},
-      "total_points": 6,
-      "total_cost": 600,
-      "strategy_note": "ワイド(波乱) + 3連複2頭軸x3",
-      "use_wide": true,
-      "is_volatile_race": true
+      "total_points": 10,
+      "total_cost": 1900,
+      "strategy_note": "複勝 + ワイド(波乱) + 3連複◎軸x4",
+      "use_wide": true
     },
     "confidence": 1,
     "confidence_stars": "★",
@@ -770,8 +774,12 @@
     },
     "is_grade": true,
     "bet_strategy": {
-      "fukusho": [],
-      "tansho": [],
+      "fukusho": [
+        {
+          "num": 15,
+          "name": "クロワデュノール"
+        }
+      ],
       "umaren": [],
       "wide": [
         {
@@ -795,21 +803,19 @@
       ],
       "sanrenpuku": {
         "jiku": [
-          15,
-          6
+          15
         ],
         "aite": [
+          6,
           5,
           4,
           12
         ]
       },
-      "sanrentan": {},
-      "total_points": 6,
-      "total_cost": 600,
-      "strategy_note": "ワイド(波乱) + 3連複2頭軸x3",
-      "use_wide": true,
-      "is_volatile_race": true
+      "total_points": 10,
+      "total_cost": 1900,
+      "strategy_note": "複勝 + ワイド(波乱) + 3連複◎軸x4",
+      "use_wide": true
     },
     "confidence": 1,
     "confidence_stars": "★",
