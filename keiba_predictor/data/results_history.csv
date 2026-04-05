@@ -1,4 +1,4 @@
 date,race_id,race_name,race_grade,pred1_name,pred1_num,pred1_prob,pred2_name,pred2_num,pred2_prob,pred3_name,pred3_num,pred3_prob,actual1_name,actual1_num,actual2_name,actual2_num,actual3_name,actual3_num,tansho_hit,tansho_payout,fukusho_hit,umaren_hit,umaren_payout,wide_hit,wide_payout,sanrenpuku_hit,sanrenpuku_payout,sanrentan_hit,sanrentan_payout,bet_total,return_total
-2026-04-04,202606030311,ダービー卿CT,1勝以下,ファーヴェント,8,0.1,ミニトランザット,2,0.1,マテンロウオリオン,6,0.1,スズハローム,11,サイルーン,16,ファーヴェント,8,False,0,True,False,0,False,0,False,0,False,0,1900,2100
-2026-04-04,202609020311,チャーチルダウンズC,1勝以下,アンドゥーリル,8,0.3,サンダーストラック,6,0.3,アスクイキゴミ,14,0.2,アスクイキゴミ,14,ユウファラオ,11,バルセシート,10,False,0,False,False,0,False,0,False,0,False,0,1900,0
-2026-04-05,202609020411,大阪杯,1勝以下,クロワデュノール,15,2.6,メイショウタバル,6,2.6,ショウヘイ,5,1.1,クロワデュノール,15,メイショウタバル,6,ダノンデサイル,4,False,0,True,False,0,True,350,False,0,False,0,1900,1550
+2026-04-04,202606030311,ダービー卿CT,1勝以下,ファーヴェント,8,0.1,ミニトランザット,2,0.1,マテンロウオリオン,6,0.1,スズハローム,11,サイルーン,16,ファーヴェント,8,False,0,True,False,0,False,0,False,0,False,0,2500,1200
+2026-04-04,202609020311,チャーチルダウンズC,1勝以下,アンドゥーリル,8,0.3,サンダーストラック,6,0.3,アスクイキゴミ,14,0.2,アスクイキゴミ,14,ユウファラオ,11,バルセシート,10,False,0,False,False,0,False,0,False,0,False,0,2500,0
+2026-04-05,202609020411,大阪杯,1勝以下,クロワデュノール,15,2.6,メイショウタバル,6,2.6,ショウヘイ,5,1.1,クロワデュノール,15,メイショウタバル,6,ダノンデサイル,4,False,0,True,False,0,True,1050,True,1050,False,0,2500,3300
