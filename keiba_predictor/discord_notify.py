@@ -1787,7 +1787,9 @@ def run_result_notify(
     race_id: Optional[str] = None,
 ) -> None:
     """週末重賞の結果をスクレイピングし、予想との比較をDiscordに送信する。"""
-    webhook_url = _resolve_webhook(webhook_url)
+    # 結果は DISCORD_RESULT_WEBHOOK_URL 優先（未設定ならデフォルト）
+    result_url = os.environ.get("DISCORD_RESULT_WEBHOOK_URL", "")
+    webhook_url = result_url if result_url else _resolve_webhook(webhook_url)
 
     session = requests.Session()
     cache   = _load_cache()
