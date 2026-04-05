@@ -160,7 +160,7 @@ def _build_ev_rank_message(cache: dict) -> str:
 
     now = datetime.now()
     now_str = now.strftime("%H:%M")
-    SEP = "━" * 20
+    SEP = "─" * 16
 
     race_blocks: list[str] = []
 
@@ -336,7 +336,7 @@ def _check_bet_strategy_changes(cache: dict) -> list[str]:
         # 変更あり → 通知生成 & キャッシュ更新
         entry["bet_strategy"] = new_bs
 
-        SEP = "━" * 20
+        SEP = "─" * 16
         lines = [
             f"📊 【最終買い目更新】{race_name}",
             SEP,

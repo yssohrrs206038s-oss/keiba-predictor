@@ -371,23 +371,31 @@ def _calc_confidence(pred: dict) -> tuple[int, str]:
     return score, stars
 
 
-def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False) -> dict:
+def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False,
+                         confidence: int = 0) -> dict:
     """
-    予測結果DataFrameから最適な買い目を自動決定する。
+    予測結果DataFrameから予算3000円以内で最適な買い目を自動決定する。
 
-    判断ロジック:
-    【複勝】本命EV>1.0 & 1番人気でない → 買い
-    【馬連/ワイド】上位3頭の確率差5%以内 or 波乱レース → ワイド
-    【3連複】本命確率50%以上→軸1×相手4、40-50%→軸1×相手5、拮抗→2頭軸×3
-    【波乱レース】ワイド強制 + 3連複相手+1頭
-    【穴馬】穴馬EV≥10 → 穴馬軸の馬連1点追加
+    予算3000円以内で優先度順に配分（上から順に）:
+    1. 複勝 1000円（EV>1.0 & 1番人気でない）
+    2. 単勝 100円（自信度★4以上 & 確率50%以上）
+    3. 馬連 or ワイド 100円×N点
+    4. 3連単 or 3連複（排他:自信度★4以上→3連単、それ以外→3連複）
+    3連単を買う場合は3連複を買わない（上位互換のため）。
+    予算が足りなければ低優先の券種を削るか相手頭数を減らす。
     """
     from itertools import combinations as _comb
+    from itertools import permutations as _perm
+
+    BUDGET = 3000
+    UNIT = 100
+    FUKUSHO_UNIT = 1000
 
     if len(result_df) < 3:
         return {
-            "fukusho": [], "umaren": [], "wide": [],
-            "sanrenpuku": {}, "total_points": 0,
+            "fukusho": [], "tansho": [], "umaren": [], "wide": [],
+            "sanrenpuku": {}, "sanrentan": {},
+            "total_points": 0, "total_cost": 0,
             "strategy_note": "出走頭数不足", "use_wide": False,
         }
 
@@ -407,7 +415,7 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
 
     probs = [float(result_df.iloc[i]["prob_top3"]) for i in range(min(3, len(result_df)))]
     prob_spread = max(probs) - min(probs) if len(probs) >= 3 else 1.0
-    is_tight = prob_spread < 0.05  # 5%以内 = 拮抗
+    is_tight = prob_spread < 0.05
 
     # 穴馬
     ana_num = None
@@ -417,7 +425,7 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
         rest = result_df.iloc[5:]
         rest_prob = pd.to_numeric(rest.get("prob_top3", pd.Series(dtype=float)), errors="coerce")
         rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
-        cands = rest[(rest_prob >= 0.35) & (rest_pop >= 6)]
+        cands = rest[(rest_prob >= 0.30) & (rest_pop >= 6)]
         if not cands.empty:
             best = cands.nlargest(1, "prob_top3").iloc[0]
             v = best.get("horse_number")
@@ -425,69 +433,115 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
                 ana_num = int(v)
                 ana_ev = float(best.get("ev_score", 0)) if pd.notna(best.get("ev_score")) else 0
 
+    high_conf = confidence >= 4
+    use_wide = is_tight or is_volatile_race
+
     strategy = {
-        "fukusho": [],
-        "umaren": [],
-        "wide": [],
-        "sanrenpuku": {},
-        "total_points": 0,
-        "strategy_note": "",
-        "use_wide": is_tight or is_volatile_race,
+        "fukusho": [], "tansho": [], "umaren": [], "wide": [],
+        "sanrenpuku": {}, "sanrentan": {},
+        "total_points": 0, "total_cost": 0,
+        "strategy_note": "", "use_wide": use_wide,
         "is_volatile_race": is_volatile_race,
     }
     notes = []
+    remaining = BUDGET
 
-    # 【複勝】
-    if hon_ev > 1.0 and (pd.isna(hon_pop) or hon_pop > 1):
+    # ── 優先1: 複勝（1000円） ──
+    if hon_ev > 1.0 and (pd.isna(hon_pop) or hon_pop > 1) and remaining >= FUKUSHO_UNIT:
         strategy["fukusho"] = [{"num": hon, "name": names.get(hon, "")}]
+        remaining -= FUKUSHO_UNIT
         notes.append("複勝")
 
-    # 【馬連 or ワイド】
-    use_wide = is_tight or is_volatile_race
+    # ── 優先2: 単勝（100円、自信度★4以上） ──
+    if high_conf and hon_prob >= 0.50 and remaining >= UNIT:
+        strategy["tansho"] = [{"num": hon, "name": names.get(hon, "")}]
+        remaining -= UNIT
+        notes.append("単勝")
+
+    # ── 優先3: 馬連 or ワイド ──
     if use_wide:
         pairs = [{"nums": list(p)} for p in _comb(nums[:3], 2)]
-        strategy["wide"] = pairs
-        reason = "波乱レースのため広め買い" if is_volatile_race else "上位拮抗"
-        notes.append(f"ワイド（{reason}）")
+        cost = len(pairs) * UNIT
+        if remaining >= cost:
+            strategy["wide"] = pairs
+            remaining -= cost
+            reason = "波乱" if is_volatile_race else "拮抗"
+            notes.append(f"ワイド({reason})")
     else:
         pairs = [{"nums": list(p)} for p in _comb(nums[:3], 2)]
-        strategy["umaren"] = pairs
-        notes.append("馬連")
+        # 穴馬馬連追加
+        if ana_num and ana_ev >= 5:
+            pairs.append({"nums": [hon, ana_num]})
+        cost = len(pairs) * UNIT
+        if remaining >= cost:
+            strategy["umaren"] = pairs
+            remaining -= cost
+            notes.append("馬連" + ("+穴" if ana_num and ana_ev >= 5 else ""))
+        elif remaining >= 3 * UNIT:
+            # 予算不足なら基本3点のみ
+            strategy["umaren"] = pairs[:3]
+            remaining -= 3 * UNIT
+            notes.append("馬連")
 
-    # 【穴馬絡み馬連】
-    if ana_num and ana_ev >= 10:
-        strategy["umaren"].append({"nums": [hon, ana_num]})
-        notes.append("穴馬馬連追加")
+    # ── 優先4: 3連単 or 3連複（排他） ──
+    if high_conf and hon_prob >= 0.50 and remaining >= 6 * UNIT:
+        # 自信度★4以上 → 3連単1着固定（3連複は買わない）
+        max_aite = min(5, len(nums) - 1)
+        aite_pool = list(nums[1:max_aite + 1])
+        if ana_num and ana_num not in aite_pool:
+            aite_pool.append(ana_num)
+        while len(aite_pool) >= 3:
+            n_pts = len(list(_perm(aite_pool, 2)))
+            cost = n_pts * UNIT
+            if remaining >= cost:
+                strategy["sanrentan"] = {"first": hon, "aite": aite_pool}
+                remaining -= cost
+                notes.append(f"3連単1着固定x{n_pts}")
+                break
+            aite_pool = aite_pool[:-1]
+    elif remaining >= 3 * UNIT:
+        # 通常 → 3連複
+        extra = 1 if is_volatile_race else 0
+        if hon_prob >= 0.40:
+            aite_candidates = list(nums[1:5 + extra])
+            if hon_prob < 0.50 and ana_num and ana_num not in aite_candidates:
+                aite_candidates.append(ana_num)
+            while len(aite_candidates) >= 2:
+                n_pts = len(list(_comb(aite_candidates, 2)))
+                if n_pts * UNIT <= remaining:
+                    strategy["sanrenpuku"] = {"jiku": [hon], "aite": aite_candidates}
+                    remaining -= n_pts * UNIT
+                    notes.append(f"3連複軸1x{len(aite_candidates)}")
+                    break
+                aite_candidates = aite_candidates[:-1]
+        elif is_tight and len(nums) >= 4:
+            aite_candidates = list(nums[2:5 + extra])
+            while len(aite_candidates) >= 1:
+                n_pts = len(aite_candidates)
+                if n_pts * UNIT <= remaining:
+                    strategy["sanrenpuku"] = {"jiku": nums[:2], "aite": aite_candidates}
+                    remaining -= n_pts * UNIT
+                    notes.append(f"3連複2頭軸x{n_pts}")
+                    break
+                aite_candidates = aite_candidates[:-1]
 
-    # 【3連複】（波乱レース時は相手+1頭）
-    extra = 1 if is_volatile_race else 0
-    if hon_prob >= 0.50:
-        aite = nums[1:5 + extra]
-        strategy["sanrenpuku"] = {"jiku": [hon], "aite": aite}
-        notes.append(f"3連複軸1×{len(aite)}")
-    elif hon_prob >= 0.40:
-        aite = nums[1:5 + extra]
-        if ana_num and ana_num not in aite:
-            aite = aite + [ana_num]
-        strategy["sanrenpuku"] = {"jiku": [hon], "aite": aite}
-        notes.append(f"3連複軸1×{len(aite)}")
-    elif is_tight and len(nums) >= 5:
-        strategy["sanrenpuku"] = {"jiku": nums[:2], "aite": nums[2:5 + extra]}
-        notes.append(f"3連複2頭軸×{len(nums[2:5 + extra])}")
-
-    # 合計点数
-    total = len(strategy["fukusho"])
-    total += len(strategy["umaren"])
-    total += len(strategy["wide"])
+    # 合計
+    total_cost = BUDGET - remaining
+    total_points = len(strategy["fukusho"]) + len(strategy["tansho"])
+    total_points += len(strategy["umaren"]) + len(strategy["wide"])
     sr = strategy["sanrenpuku"]
     if sr:
         jiku = sr.get("jiku", [])
         aite = sr.get("aite", [])
         if len(jiku) == 1:
-            total += len(list(_comb(aite, 2)))
+            total_points += len(list(_comb(aite, 2)))
         elif len(jiku) == 2:
-            total += len(aite)
-    strategy["total_points"] = total
+            total_points += len(aite)
+    st = strategy["sanrentan"]
+    if st:
+        total_points += len(list(_perm(st.get("aite", []), 2)))
+    strategy["total_points"] = total_points
+    strategy["total_cost"] = total_cost
     strategy["strategy_note"] = " + ".join(notes) if notes else "見送り"
 
     return strategy

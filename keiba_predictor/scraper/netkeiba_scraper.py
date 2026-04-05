@@ -433,14 +433,8 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         "track_condition": None,
     }
 
-    # ── race_date: race_idの先頭8桁から確実に取得（YYYYMMDD形式）──
-    if len(race_id) >= 8:
-        try:
-            race_info["race_date"] = (
-                f"{race_id[:4]}-{race_id[4:6]}-{race_id[6:8]}"
-            )
-        except Exception:
-            pass
+    # ── race_date: HTMLから取得（JRA race_id は YYYY+VV+KK+DD+RR で日付ではない）──
+    race_info["race_date"] = None
 
     # ── レース名 ──────────────────────────────────────────────
     name_el = (
@@ -504,11 +498,20 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
     if race_info["distance"] is None:
         logger.warning(f"  [distance] NOT FOUND for {race_id}")
 
-    # ── race_date: 常に race_id の先頭8桁を使用（最終確定） ──────
-    # HTMLには "1970年01月01日"（Unix エポックのJSプレースホルダー）が
-    # 含まれることがある。ここで再設定することで確実に上書きを防ぐ。
-    # race_id = YYYYMMDDVVRRNN（12桁）の先頭8桁が日付。
-    race_info["race_date"] = _race_id_to_date(race_id)
+    # ── race_date: HTMLから取得（JRA race_id は YYYY+VV+KK+DD+RR 形式で日付非含有）──
+    # HTMLの日付情報を探す（"1970年01月01日" 等のプレースホルダーは除外）
+    if race_info["race_date"] is None:
+        for sel in ["div.RaceData02 span", "span.RaceData", "p.smalltxt", "div.data_intro p"]:
+            el = soup.select_one(sel)
+            if el:
+                dm = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", el.get_text())
+                if dm and dm.group(1) != "1970":
+                    race_info["race_date"] = (
+                        f"{dm.group(1)}-{int(dm.group(2)):02d}-{int(dm.group(3)):02d}"
+                    )
+                    break
+    if race_info["race_date"] is None:
+        logger.warning(f"  [race_date] HTMLから取得できず: {race_id}")
 
     # ── 競馬場名・リーグをrace_idから設定 ───────────────────────
     venue_code = race_id[8:10] if len(race_id) >= 10 else ""

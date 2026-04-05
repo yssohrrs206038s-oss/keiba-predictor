@@ -797,6 +797,26 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "is_grade":            is_grade,
     }
 
+    # 自信度計算（買い目決定の前に実行）
+    confidence_score = 0
+    try:
+        from keiba_predictor.model.predict import _calc_confidence
+        confidence_score, stars = _calc_confidence(cache[race_id])
+        cache[race_id]["confidence"] = confidence_score
+        cache[race_id]["confidence_stars"] = stars
+    except Exception as e:
+        logger.warning(f"自信度計算失敗: {e}")
+
+    # 買い目自動決定
+    try:
+        from keiba_predictor.model.predict import _decide_bet_strategy
+        _is_vol = cache[race_id].get("simulation", {}).get("is_volatile_race", False)
+        cache[race_id]["bet_strategy"] = _decide_bet_strategy(
+            result_df, is_volatile_race=_is_vol, confidence=confidence_score)
+    except Exception as e:
+        logger.warning(f"買い目自動決定失敗: {e}")
+
+
     # モンテカルロシミュレーション
     try:
         from keiba_predictor.simulation import run_monte_carlo
@@ -966,7 +986,7 @@ def _fmt_result(race_name: str, race_date: str,
                 manual: Optional[dict] = None,
                 race_id: str = "") -> str:
     """日曜結果メッセージを生成する。"""
-    RULE = "━" * 24
+    RULE = "─" * 16
     venue = pred.get("venue", "")
     race_num = ""
     if race_id and len(race_id) >= 12:
@@ -1033,41 +1053,74 @@ def _fmt_result(race_name: str, race_date: str,
 
     lines.append(RULE)
 
-    # honmei: manual > predicted_nums[0] > pred["honmei"]
-    if manual and manual.get("honmei") is not None:
-        honmei_num = int(manual["honmei"])
-    elif predicted_nums:
-        honmei_num = predicted_nums[0]
-    else:
-        honmei_num = pred.get("honmei", {}).get("horse_number")
-    honmei_name = num_to_name.get(honmei_num, "") if honmei_num else ""
-
     # manual_results.json のフラグがあればそちらを優先
     if manual and "fukusho_hit" in manual:
+        honmei_num = int(manual["honmei"]) if manual.get("honmei") is not None else (predicted_nums[0] if predicted_nums else None)
+        honmei_name = num_to_name.get(honmei_num, "") if honmei_num else ""
         fukusho_hit = manual["fukusho_hit"]
         umaren_hit  = manual.get("umaren_hit", False)
         sanren_hit  = manual.get("sanrenpuku_hit", False)
         manual_pay  = manual.get("payouts", {})
         umaren_pay  = f"¥{manual_pay['umaren']:,}" if manual_pay.get("umaren") else ""
         sanren_pay  = f"¥{manual_pay['sanrenpuku']:,}" if manual_pay.get("sanrenpuku") else ""
+        tansho_hit = False
+        tansho_pay = ""
+        use_wide = False
+        wide_hit = False
+        wide_pay = ""
+        sanrentan_hit = False
+        sanrentan_pay = ""
     else:
-        # 自動判定
-        fukusho_hit = (honmei_num is not None) and (int(honmei_num) in actual_top3_nums)
-        umaren_hit, umaren_pay = _check_umaren_raw(predicted_nums, actual_top3_nums, payouts)
-        ana_horse_num = pred.get("ana_horse_num")
-        sanren_hit, sanren_pay = _check_sanrenpuku_raw(predicted_nums, actual_top3_nums, payouts, ana_horse_num)
+        # bet_strategy に基づく自動判定
+        hits = check_hits_from_bet_strategy(pred, actual_top3_nums, payouts)
+        honmei_num = hits["fukusho_num"]
+        honmei_name = num_to_name.get(honmei_num, "") if honmei_num else ""
+        tansho_hit = hits["tansho_hit"]
+        tansho_pay = hits["tansho_pay"]
+        fukusho_hit = hits["fukusho_hit"]
+        umaren_hit = hits["umaren_hit"]
+        umaren_pay = hits["umaren_pay"]
+        sanren_hit = hits["sanren_hit"]
+        sanren_pay = hits["sanren_pay"]
+        sanrentan_hit = hits["sanrentan_hit"]
+        sanrentan_pay = hits["sanrentan_pay"]
+        use_wide = hits["use_wide"]
+        wide_hit = hits["wide_hit"]
+        wide_pay = hits["wide_pay"]
 
-    lines.append(f"複勝  {'✅ 的中' if fukusho_hit else '❌ ハズレ'}（◎{honmei_num}番{honmei_name}）")
+    # 単勝（買っていた場合のみ表示）
+    if hits.get("tansho_num") if not manual else False:
+        tansho_line = f"単勝 {'✅' if tansho_hit else '❌'}"
+        if tansho_hit and tansho_pay:
+            tansho_line += f"（{re.sub(r'[¥,]', '', str(tansho_pay))}円）"
+        lines.append(tansho_line)
 
-    umaren_line = f"馬連  {'✅ 的中' if umaren_hit else '❌ ハズレ'}"
-    if umaren_hit and umaren_pay:
-        umaren_line += f"（配当{re.sub(r'[¥,]', '', str(umaren_pay))}円）"
-    lines.append(umaren_line)
+    lines.append(f"複勝 {'✅' if fukusho_hit else '❌'}（◎{honmei_num}番 {honmei_name}）")
 
-    sanren_line = f"3連複 {'✅ 的中' if sanren_hit else '❌ ハズレ'}"
+    if use_wide:
+        wide_line = f"ワイド {'✅' if wide_hit else '❌'}"
+        if wide_hit and wide_pay:
+            wide_line += f"（{_payout_str_to_int(wide_pay) if isinstance(wide_pay, str) else wide_pay}円）"
+        lines.append(wide_line)
+    else:
+        umaren_line = f"馬連 {'✅' if umaren_hit else '❌'}"
+        if umaren_hit and umaren_pay:
+            umaren_line += f"（{re.sub(r'[¥,]', '', str(umaren_pay))}円）"
+        lines.append(umaren_line)
+
+    sanren_line = f"3連複 {'✅' if sanren_hit else '❌'}"
     if sanren_hit and sanren_pay:
-        sanren_line += f"（配当{re.sub(r'[¥,]', '', str(sanren_pay))}円）"
+        sanren_line += f"（{re.sub(r'[¥,]', '', str(sanren_pay))}円）"
     lines.append(sanren_line)
+
+    # 3連単（買っていた場合のみ表示）
+    if hits.get("sanrentan_pay") is not None if not manual else False:
+        bs = pred.get("bet_strategy", {})
+        if bs.get("sanrentan"):
+            sanrentan_line = f"3連単 {'✅' if sanrentan_hit else '❌'}"
+            if sanrentan_hit and sanrentan_pay:
+                sanrentan_line += f"（{re.sub(r'[¥,]', '', str(sanrentan_pay))}円）"
+            lines.append(sanrentan_line)
 
     return "\n".join(lines)
 
@@ -1225,9 +1278,153 @@ def _format_simple_message(race_id: str, entry: dict) -> str:
     return "\n".join(lines)
 
 
+def check_hits_from_bet_strategy(
+    pred: dict,
+    actual_top3_nums: list[int],
+    payouts: dict,
+) -> dict:
+    """bet_strategy の実際の買い目に基づいて的中判定を行��。
+
+    bet_strategy がなければ従来のフォールバックロジックを使用する。
+
+    Returns:
+        {
+            "fukusho_hit": bool,
+            "fukusho_num": int,
+            "umaren_hit": bool, "umaren_pay": str,
+            "wide_hit": bool, "wide_pay": int,
+            "sanren_hit": bool, "sanren_pay": str,
+            "use_wide": bool,
+            "bet_total": int,
+        }
+    """
+    bs = pred.get("bet_strategy")
+    predicted_nums = pred.get("predicted_top3_nums", [])
+    ana_horse_num = pred.get("ana_horse_num")
+
+    if not bs or not bs.get("total_points"):
+        # フォールバック: 従来ロジック
+        honmei_num = predicted_nums[0] if predicted_nums else None
+        fukusho_hit = honmei_num is not None and int(honmei_num) in actual_top3_nums
+        umaren_hit, umaren_pay = _check_umaren_raw(predicted_nums, actual_top3_nums, payouts)
+        sanren_hit, sanren_pay = _check_sanrenpuku_raw(
+            predicted_nums, actual_top3_nums, payouts, ana_horse_num)
+        wide_pairs = _check_wide_pairs_raw(predicted_nums, actual_top3_nums, payouts)
+        wide_hit = any(h for _, h, _ in wide_pairs)
+        wide_pay_total = sum(_payout_str_to_int(p) for _, h, p in wide_pairs if h)
+        return {
+            "tansho_hit": False, "tansho_num": None, "tansho_pay": "",
+            "fukusho_hit": fukusho_hit, "fukusho_num": honmei_num,
+            "umaren_hit": umaren_hit, "umaren_pay": umaren_pay,
+            "wide_hit": wide_hit, "wide_pay": wide_pay_total,
+            "sanren_hit": sanren_hit, "sanren_pay": sanren_pay,
+            "sanrentan_hit": False, "sanrentan_pay": "",
+            "use_wide": False, "bet_total": 2300,
+        }
+
+    # ── bet_strategy に基づく判定 ──
+
+    # 単勝
+    tansho_hit = False
+    tansho_pay = ""
+    tansho_list = bs.get("tansho", [])
+    tansho_num = tansho_list[0]["num"] if tansho_list else None
+    if tansho_num and len(actual_top3_nums) >= 1 and int(tansho_num) == actual_top3_nums[0]:
+        tansho_hit = True
+        tansho_pay = _get_payout(payouts, "単勝", str(tansho_num))
+
+    # 複勝
+    fukusho_list = bs.get("fukusho", [])
+    fukusho_num = fukusho_list[0]["num"] if fukusho_list else (predicted_nums[0] if predicted_nums else None)
+    fukusho_hit = fukusho_num is not None and int(fukusho_num) in actual_top3_nums
+
+    # 馬連
+    umaren_hit = False
+    umaren_pay = ""
+    if bs.get("umaren") and not bs.get("use_wide"):
+        actual_12 = set(actual_top3_nums[:2]) if len(actual_top3_nums) >= 2 else set()
+        for u in bs["umaren"]:
+            if set(u["nums"]) == actual_12:
+                combo = f"{u['nums'][0]}-{u['nums'][1]}"
+                umaren_pay = _get_payout(payouts, "馬連", combo)
+                umaren_hit = True
+                break
+
+    # ワイド
+    wide_hit = False
+    wide_pay_total = 0
+    use_wide = bs.get("use_wide", False)
+    if use_wide and bs.get("wide"):
+        actual_top3_set = set(actual_top3_nums[:3]) if len(actual_top3_nums) >= 3 else set()
+        for w in bs["wide"]:
+            a, b = w["nums"]
+            if a in actual_top3_set and b in actual_top3_set:
+                combo = f"{a}-{b}"
+                pay_str = _get_payout(payouts, "ワイド", combo)
+                wide_pay_total += _payout_str_to_int(pay_str)
+                wide_hit = True
+
+    # 3連複
+    sanren_hit = False
+    sanren_pay = ""
+    sr = bs.get("sanrenpuku", {})
+    if sr and sr.get("jiku") and sr.get("aite"):
+        jiku = sr["jiku"]
+        aite = sr["aite"]
+        actual_set = set(actual_top3_nums[:3]) if len(actual_top3_nums) >= 3 else set()
+        if len(jiku) == 1:
+            axis = jiku[0]
+            if axis in actual_set:
+                for pair in combinations(aite, 2):
+                    if {axis, pair[0], pair[1]} == actual_set:
+                        combo = "-".join(str(n) for n in sorted([axis, pair[0], pair[1]]))
+                        sanren_pay = _get_payout(payouts, "三連複", combo)
+                        sanren_hit = True
+                        break
+        elif len(jiku) == 2:
+            if jiku[0] in actual_set and jiku[1] in actual_set:
+                for a in aite:
+                    if {jiku[0], jiku[1], a} == actual_set:
+                        combo = "-".join(str(n) for n in sorted([jiku[0], jiku[1], a]))
+                        sanren_pay = _get_payout(payouts, "三連複", combo)
+                        sanren_hit = True
+                        break
+
+    # 3連単
+    sanrentan_hit = False
+    sanrentan_pay = ""
+    st = bs.get("sanrentan", {})
+    if st and st.get("first") and st.get("aite") and len(actual_top3_nums) >= 3:
+        first = st["first"]
+        st_aite = st["aite"]
+        a1, a2, a3 = actual_top3_nums[0], actual_top3_nums[1], actual_top3_nums[2]
+        # 1着固定: first が1着 & 2着・3着が aite に含まれる
+        if a1 == first and a2 in st_aite and a3 in st_aite:
+            combo = f"{a1}-{a2}-{a3}"
+            sanrentan_pay = _get_payout(payouts, "三連単", combo)
+            sanrentan_hit = True
+
+    return {
+        "tansho_hit": tansho_hit, "tansho_num": tansho_num, "tansho_pay": tansho_pay,
+        "fukusho_hit": fukusho_hit, "fukusho_num": fukusho_num,
+        "umaren_hit": umaren_hit, "umaren_pay": umaren_pay,
+        "wide_hit": wide_hit, "wide_pay": wide_pay_total,
+        "sanren_hit": sanren_hit, "sanren_pay": sanren_pay,
+        "sanrentan_hit": sanrentan_hit, "sanrentan_pay": sanrentan_pay,
+        "use_wide": use_wide, "bet_total": bs.get("total_cost", bs.get("total_points", 0) * 100),
+    }
+
+
+def _payout_str_to_int(s) -> int:
+    """'¥1,234' のような文字列を int に変換する。"""
+    if not s:
+        return 0
+    return int(re.sub(r"[¥,]", "", str(s))) if re.search(r"\d", str(s)) else 0
+
+
 def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = "") -> tuple[str, str]:
     """predictions_cache.json のエントリからDiscord用メッセージ(予想・買い目)を生成する。"""
-    sep = "━" * 20
+    sep = "─" * 16
     course_info = entry.get("course_info", "")
     ai_comments = entry.get("ai_comments", {})
 
@@ -1251,7 +1448,7 @@ def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = ""
         lines1.append(f"🎯 自信度: {conf_stars}")
     lines1.append(sep)
 
-    MARKS = ["◎", "○", "▲", "△", "　"]
+    MARKS = ["◎", "○", "▲", "△", " "]
     top5_nums = entry.get("predicted_top5_nums", [])
 
     # predicted_top5（上位5頭の詳細情報）を馬番→infoのマップに変換
@@ -1292,9 +1489,9 @@ def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = ""
         has_real_odds = ev_entry.get("odds") is not None
         ev_str = f" EV{ev_val:.2f}" if ev_val and has_real_odds else ""
         if prob > 0.01:
-            lines1.append(f"{mark} {num}番 {name}　{prob:.1f}%{ev_str}")
+            lines1.append(f"{mark}{num}番 {name} {prob:.1f}%{ev_str}")
         else:
-            lines1.append(f"{mark} {num}番 {name}")
+            lines1.append(f"{mark}{num}番 {name}")
 
     lines1.append(sep)
 
@@ -1316,68 +1513,48 @@ def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = ""
                         prob = e.get("prob", 0) * 100
                     break
         if name:
-            lines1.append(f"★穴 {ana_num}番{name}（3着以内{prob:.1f}% {pop}番人気）")
-            lines1.append(f"　→ AIが高評価も市場は低評価！")
+            lines1.append(f"★穴 {ana_num}番 {name}（{prob:.1f}% {pop}番人気）")
 
-    # ⚠危険馬（MC確率15%以���の馬は表示しない）
+    # ⚠危険馬（MC確率15%以上の馬は表示しない）
     for d in entry.get("dangerous_horses", []):
         num = d.get("horse_number", 0)
         mc_d = sim.get(str(num), {})
         mc_rate = mc_d.get("top3_rate")
         if mc_rate is not None and mc_rate >= 0.15:
-            continue  # MC確率で安全と判断 → 非表示
+            continue
         name = d.get("horse_name", "")
         reasons = d.get("reasons", [])
         reason = reasons[0] if reasons else "要注意"
-        lines1.append(f"⚠危険 {num}番{name}（{reason}）")
-
-    # 📊 モンテカルロ分析
-    sim = entry.get("simulation", {})
-    if sim:
-        MARKS_MC = ["◎", "○", "▲", "△", "　"]
-        lines1.append(sep)
-        lines1.append("📊 モンテカルロ分析（1万回）")
-        lines1.append(sep)
-        for rank, num in enumerate(top5_nums[:5]):
-            mc = sim.get(str(num))
-            if not mc:
-                continue
-            mark = MARKS_MC[rank] if rank < len(MARKS_MC) else "　"
-            rate = mc.get("top3_rate", 0) * 100
-            is_stable = mc.get("is_stable", False)
-            tag = "🔒安定軸" if is_stable else "⚡展開依存"
-            sc = mc.get("scenario", {})
-            hi = sc.get("high_pace", 0) * 100
-            sl = sc.get("slow_pace", 0) * 100
-            lines1.append(f"{mark}{num}番 3着以内{rate:.1f}% {tag}")
-            lines1.append(f"　ハイペース{hi:.0f}% / スロー{sl:.0f}%")
+        lines1.append(f"⚠ {num}番 {name}（{reason}）")
 
     lines1.append(sep)
     msg1 = "\n".join(lines1)
 
     # ── Message 2: 買い目（bet_strategy があれば使用）──────────
-    _SEP = "━" * 20
+    _SEP = "─" * 16
     bs = entry.get("bet_strategy")
 
     if bs and bs.get("total_points", 0) > 0:
-        header = f"💰 {race_name}  買い目（AI自動決定）" if race_name else "💰 買い目（AI自動決定）"
+        header = f"💰 {race_name} 買い目"
         lines2 = [_SEP, header, _SEP]
+
+        # 単勝
+        if bs.get("tansho"):
+            t = bs["tansho"][0]
+            lines2.append(f"■ 単勝: {t['num']}番 {t.get('name', '')}")
 
         # 複勝
         if bs.get("fukusho"):
             f = bs["fukusho"][0]
-            lines2 += [
-                f"■ 複勝（{len(bs['fukusho'])}点）",
-                f"　{f['num']}番 {f.get('name', '')}",
-            ]
+            lines2.append(f"■ 複勝: {f['num']}番 {f.get('name', '')}")
 
         # 馬連 or ワイド
         if bs.get("use_wide") and bs.get("wide"):
             wide_str = " / ".join(f"{w['nums'][0]}-{w['nums'][1]}" for w in bs["wide"])
-            lines2 += [f"■ ワイド（{len(bs['wide'])}点）", f"　{wide_str}"]
+            lines2.append(f"■ ワイド({len(bs['wide'])}点): {wide_str}")
         if bs.get("umaren"):
             umaren_str = " / ".join(f"{u['nums'][0]}-{u['nums'][1]}" for u in bs["umaren"])
-            lines2 += [f"■ 馬連（{len(bs['umaren'])}点）", f"　{umaren_str}"]
+            lines2.append(f"■ 馬連({len(bs['umaren'])}点): {umaren_str}")
 
         # 3連複
         sr = bs.get("sanrenpuku", {})
@@ -1386,20 +1563,20 @@ def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = ""
             aite = sr.get("aite", [])
             if len(jiku) == 1:
                 sr_pt = len(list(combinations(aite, 2)))
-                lines2 += [
-                    f"■ 3連複（{sr_pt}点）",
-                    f"　軸 {jiku[0]}番",
-                    f"　× {'/'.join(str(n) for n in aite)}",
-                ]
+                lines2.append(f"■ 3連複({sr_pt}点): 軸{jiku[0]}番 x {'/'.join(str(n) for n in aite)}")
             elif len(jiku) == 2:
                 sr_pt = len(aite)
-                lines2 += [
-                    f"■ 3連複（{sr_pt}点）",
-                    f"　軸 {jiku[0]}-{jiku[1]}番",
-                    f"　× {'/'.join(str(n) for n in aite)}",
-                ]
+                lines2.append(f"■ 3連複({sr_pt}点): 軸{jiku[0]}-{jiku[1]}番 x {'/'.join(str(n) for n in aite)}")
 
-        lines2 += [_SEP, f"合計 {bs['total_points']}点", _SEP]
+        # 3連単
+        st = bs.get("sanrentan", {})
+        if st and st.get("first") and st.get("aite"):
+            from itertools import permutations as _perm
+            st_pt = len(list(_perm(st["aite"], 2)))
+            lines2.append(f"■ 3連単({st_pt}点): 1着{st['first']}番 x {'/'.join(str(n) for n in st['aite'])}")
+
+        total_cost = bs.get('total_cost', bs['total_points'] * 100)
+        lines2 += [_SEP, f"合計 {bs['total_points']}点 / {total_cost:,}円"]
         if bs.get("strategy_note"):
             lines2.append(f"💡 {bs['strategy_note']}")
     else:
@@ -1421,10 +1598,10 @@ def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = ""
         header = f"💰 {race_name}  買い目" if race_name else "💰 買い目"
         lines2 = [
             _SEP, header, _SEP,
-            "■ 複勝（1点）", f"　{hon}番 {hon_name}",
-            f"■ 馬連（{len(umaren_pairs)}点）", f"　{umaren_str}",
-            f"■ 3連複（{sanren_pt}点）", f"　軸 {hon}番", f"　× {partners_str}",
-            _SEP, f"合計 {total}点", _SEP,
+            "■ 複勝（1点）", f"  {hon}番 {hon_name}",
+            f"■ 馬連（{len(umaren_pairs)}点）", f"  {umaren_str}",
+            f"■ 3連複（{sanren_pt}点）", f"  軸{hon}番 x {partners_str}",
+            _SEP, f"合計 {total}点",
         ]
 
     msg2 = "\n".join(lines2)

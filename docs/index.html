@@ -472,10 +472,10 @@
     <div style="overflow-x:auto;">
       <table class="history-table">
         <thead>
-          <tr><th>日付</th><th>レース名</th><th>複勝</th><th>連対</th><th>3連複</th><th>回収率</th></tr>
+          <tr><th>日付</th><th>レース名</th><th>単勝</th><th>複勝</th><th>連対</th><th>3連複</th><th>3連単</th><th>回収率</th></tr>
         </thead>
         <tbody id="history-tbody">
-          <tr><td colspan="6" class="no-data">履歴データを読み込んでいます…</td></tr>
+          <tr><td colspan="8" class="no-data">履歴データを読み込んでいます…</td></tr>
         </tbody>
       </table>
     </div>
@@ -887,26 +887,55 @@ function renderPredictions(cache) {
       volHTML = `<div style="color:var(--red);font-size:11px;font-weight:700;padding:4px 8px;">🌀 波乱レース注意（波乱度${(sim.race_volatility||0).toFixed(2)}）</div>`;
     }
 
-    // 買い目: 複勝1 + 馬連2 + 3連複(◎軸 × 相手4頭+穴1頭)10 = 13点
-    const p5nums = (r.predicted_top5_nums || r.predicted_top3_nums || []).filter(n => n != null);
-    const anaNum = r.ana_horse_num;
+    // 買い目: bet_strategy ベース
+    const bs = r.bet_strategy || {};
     let betHTML = '';
-    if (p5nums.length >= 2) {
-      const h1 = p5nums[0], h2 = p5nums[1], h3 = p5nums[2] || p5nums[1];
-      const aite = p5nums.slice(1, 5);  // 2-5番手（4頭）
-      if (anaNum && !aite.includes(anaNum) && anaNum !== h1) aite.push(anaNum);
-      const aiteStr = aite.join('/');
-      const anaLabel = (anaNum && aite.includes(anaNum)) ? `（穴${anaNum}）` : '';
-      const sanrenPt = aite.length >= 2 ? aite.length * (aite.length - 1) / 2 : 1;
-      const total = 1 + 2 + sanrenPt;
+    if (bs && bs.total_points > 0) {
+      const rows = [];
+
+      // 複勝
+      if (bs.fukusho && bs.fukusho.length) {
+        rows.push(`<div class="bet-row"><span class="bet-label">複勝</span>${bs.fukusho[0].num}番 ${esc(bs.fukusho[0].name || '')}</div>`);
+      }
+
+      // 単勝
+      if (bs.tansho && bs.tansho.length) {
+        rows.push(`<div class="bet-row"><span class="bet-label">単勝</span>${bs.tansho[0].num}番 ${esc(bs.tansho[0].name || '')}</div>`);
+      }
+
+      // ワイド or 馬連
+      if (bs.use_wide && bs.wide && bs.wide.length) {
+        const wideStr = bs.wide.map(w => `${w.nums[0]}-${w.nums[1]}`).join(' / ');
+        rows.push(`<div class="bet-row"><span class="bet-label">ワイド</span>${wideStr}</div>`);
+      }
+      if (bs.umaren && bs.umaren.length) {
+        const umarenStr = bs.umaren.map(u => `${u.nums[0]}-${u.nums[1]}`).join(' / ');
+        rows.push(`<div class="bet-row"><span class="bet-label">馬連</span>${umarenStr}</div>`);
+      }
+
+      // 3連複
+      const sr = bs.sanrenpuku;
+      if (sr && sr.jiku && sr.aite) {
+        const jikuStr = sr.jiku.length === 1 ? `軸${sr.jiku[0]}` : `軸${sr.jiku[0]}-${sr.jiku[1]}`;
+        const aiteStr = sr.aite.join('/');
+        rows.push(`<div class="bet-row"><span class="bet-label">3連複</span>${jikuStr} × ${aiteStr}</div>`);
+      }
+
+      // 3連単
+      const st = bs.sanrentan;
+      if (st && st.first && st.aite) {
+        const aiteStr = st.aite.join('/');
+        rows.push(`<div class="bet-row"><span class="bet-label">3連単</span>1着${st.first} × ${aiteStr}</div>`);
+      }
+
+      const noteHTML = bs.strategy_note ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">💡 ${esc(bs.strategy_note)}</div>` : '';
       betHTML = `
         <div class="bet-box">
-          <div class="bet-box-title">💰 買い目（${total}点）</div>
+          <div class="bet-box-title">💰 買い目（${bs.total_points}点）</div>
           <div class="bet-rows">
-            <div class="bet-row"><span class="bet-label">複勝</span>${h1}番</div>
-            <div class="bet-row"><span class="bet-label">馬連</span>${h1}-${h2} / ${h1}-${h3}</div>
-            <div class="bet-row"><span class="bet-label">3連複</span>軸${h1} × ${aiteStr}${anaLabel}</div>
+            ${rows.join('\n            ')}
           </div>
+          ${noteHTML}
         </div>`;
     }
 
@@ -947,15 +976,18 @@ function _renderFlatCard(raceId, r) {
     if (!p || !p.horse_name) return '';
     return `<span style="margin-right:10px;">${mark}${p.horse_number}番 ${esc(p.horse_name)}</span>`;
   }).join('');
-  // 買い目: ◎軸 × 相手4���+穴1頭
-  const fp5 = (r.predicted_top5_nums || r.predicted_top3_nums || []).filter(n => n != null);
-  const fAna = r.ana_horse_num;
+  // 買い目: bet_strategy ベース
+  const bs = r.bet_strategy || {};
   let betLine = '';
-  if (fp5.length >= 2) {
-    const h1 = fp5[0], h2 = fp5[1], h3 = fp5[2] || fp5[1];
-    const fa = fp5.slice(1, 5);
-    if (fAna && !fa.includes(fAna) && fAna !== h1) fa.push(fAna);
-    betLine = `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">複勝:${h1} / 馬連:${h1}-${h2},${h1}-${h3} / 3連複:軸${h1}×${fa.join('/')}</div>`;
+  if (bs.total_points) {
+    const parts = [];
+    if (bs.fukusho && bs.fukusho.length) parts.push(`複勝:${bs.fukusho[0].num}番`);
+    if (bs.tansho && bs.tansho.length) parts.push(`単勝:${bs.tansho[0].num}番`);
+    if (bs.umaren && bs.umaren.length) parts.push(`馬連:${bs.umaren.map(u=>u.nums.join('-')).join('/')}`);
+    if (bs.use_wide && bs.wide && bs.wide.length) parts.push(`ワイド:${bs.wide.map(w=>w.nums.join('-')).join('/')}`);
+    if (bs.sanrenpuku && bs.sanrenpuku.jiku) parts.push(`3連複`);
+    if (bs.sanrentan && bs.sanrentan.first) parts.push(`3連単`);
+    betLine = `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${parts.join(' / ')} 計${bs.total_points}点</div>`;
   }
   return `<div class="race-card" style="padding:12px 16px;">
     <div style="font-size:13px;font-weight:700;margin-bottom:4px;">
@@ -986,14 +1018,16 @@ function renderHistory(rows) {
   const tbody = document.getElementById('history-tbody');
   const recent = rows.slice(-10).reverse();
   if (!recent.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="no-data">履歴データがありません</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="no-data">履歴データがありません</td></tr>';
     return;
   }
 
   tbody.innerHTML = recent.map(r => {
+    const tHit = r.tansho_hit === 'True';
     const fHit = r.fukusho_hit === 'True';
     const uHit = r.umaren_hit === 'True' || r.wide_hit === 'True';
     const sHit = r.sanrenpuku_hit === 'True';
+    const stHit = r.sanrentan_hit === 'True';
     const bet  = +r.bet_total    || 0;
     const ret  = +r.return_total || 0;
     const roi  = bet > 0 ? (ret / bet * 100).toFixed(0) + '%' : '—';
@@ -1002,6 +1036,9 @@ function renderHistory(rows) {
     const gClass = gLabel === 'G1' ? 'grade-gi' : gLabel === 'G2' ? 'grade-gii' : gLabel === 'G3' ? 'grade-giii' : '';
     const date  = (r.date || '').slice(0, 10);
     const shortName = (r.race_name || '').replace(/[（(]G[^）)]*[）)]/g, '').trim();
+    // 単勝・3連単は買っていない場合「-」表示
+    const tIcon = r.tansho_hit == null && !r.tansho_payout ? '—' : (tHit ? '✅' : '❌');
+    const stIcon = r.sanrentan_hit == null && !r.sanrentan_payout ? '—' : (stHit ? '✅' : '❌');
     return `
       <tr>
         <td style="color:var(--text-muted);white-space:nowrap">${esc(date)}</td>
@@ -1009,9 +1046,11 @@ function renderHistory(rows) {
           ${esc(shortName)}
           ${gClass ? `<span class="grade-tag ${gClass}" style="margin-left:6px;">${esc(gLabel)}</span>` : ''}
         </td>
+        <td class="hit-icon">${tIcon}</td>
         <td class="hit-icon">${fHit ? '✅' : '❌'}</td>
         <td class="hit-icon">${uHit ? '✅' : '❌'}</td>
         <td class="hit-icon">${sHit ? '✅' : '❌'}</td>
+        <td class="hit-icon">${stIcon}</td>
         <td style="${roiColor};font-weight:700;">${esc(roi)}</td>
       </tr>`;
   }).join('');

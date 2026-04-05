@@ -59,9 +59,7 @@ python -m keiba_predictor.main notify --mode result
 ## 未実装リスト
 - 血統特徴量
 - LINE公式アカウント連携
-- note自動投稿
 - 天気予報連携
 - 競馬新聞本命集計
 - WIN5予想
 - 独自サイト構築
-- pip-audit定期チェック

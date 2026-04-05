@@ -162,24 +162,23 @@ def cmd_snapshot(args: argparse.Namespace) -> None:
     from datetime import datetime as _dt
     from pathlib import Path as _Path
 
-    src = _Path("keiba_predictor/data/predictions_cache.json")
+    _data_dir = _Path(__file__).parent / "data"
+    src = _data_dir / "predictions_cache.json"
     if not src.exists():
         logger.error(f"キャッシュファイルが見つかりません: {src}")
         sys.exit(1)
 
-    now = _dt.now()
+    from datetime import timezone as _tz, timedelta as _td
+    _JST = _tz(_td(hours=9))
+    now = _dt.now(tz=_JST)
     hour = now.hour
-    # JST判定: UTC実行の場合は+9する
-    import time as _time
-    if _time.timezone >= 0:  # UTC環境（GitHub Actions等）
-        hour = (hour + 9) % 24
 
     if hour < 14:
         tag = "13"
     else:
         tag = "14"
 
-    dst = _Path(f"keiba_predictor/data/predictions_snapshot_{tag}.json")
+    dst = _data_dir / f"predictions_snapshot_{tag}.json"
 
     # 13時のスナップショットは上書きしない（後出し防止）
     if tag == "13" and dst.exists():

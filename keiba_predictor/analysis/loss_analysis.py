@@ -112,11 +112,21 @@ def generate_loss_comment(race_name: str, pred: dict, actual_result: list) -> st
 
 def analyze_week() -> str:
     """今週のレース結果を分析してレポート文字列を返す。"""
+    from datetime import date, timedelta
+
     cache = _load_json(CACHE_PATH)
     manual = _load_json(MANUAL_PATH)
 
     if not cache and not manual:
         return ""
+
+    # 今週の範囲（月曜〜日曜）を算出
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())  # 月曜
+    week_end = week_start + timedelta(days=6)  # 日曜
+    ws_str = week_start.isoformat()
+    we_str = week_end.isoformat()
+    logger.info(f"週次分析対象期間: {ws_str} 〜 {we_str}")
 
     sep = "━" * 18
     danger_hits: list[str] = []    # パターン1
@@ -125,15 +135,26 @@ def analyze_week() -> str:
     wins: list[str] = []           # パターン4
     fukusho_miss_races: list[tuple[str, dict, list]] = []  # (race_name, pred, result)
 
-    # manual_results.json をベースに分析（結果データがある）
-    sources = manual if manual else {}
-    # manual がない場合は cache + history から組み立て
+    # manual_results.json をベースに分析（結果データがある）— 今週分のみ
+    sources: dict = {}
+    if manual:
+        for rid, m in manual.items():
+            rd = m.get("race_date", "")
+            if rd and ws_str <= rd <= we_str:
+                sources[rid] = m
+
+    # manual がない場合は cache + history から組み立て — 今週分のみ
     if not sources and HISTORY_PATH.exists():
         try:
             hist = pd.read_csv(HISTORY_PATH, encoding="utf-8-sig", dtype=str)
             for _, row in hist.iterrows():
                 rid = str(row.get("race_id", ""))
-                if rid and rid not in sources:
+                rd = str(row.get("date", ""))
+                if not rid or not rd:
+                    continue
+                if rd < ws_str or rd > we_str:
+                    continue
+                if rid not in sources:
                     sources[rid] = {
                         "race_name": row.get("race_name", rid),
                         "result": [

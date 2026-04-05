@@ -116,7 +116,8 @@ jobs:
         continue-on-error: true
         run: |
           pip install pip-audit
-          pip-audit --ignore-vuln GHSA-r9hx-vwmv-q579 || true
+          pip install --upgrade setuptools
+          pip-audit || true
 
       # ── エラー時の Discord 通知 ──────────────────────────────
       - name: ❌ エラーを Discord に通知

@@ -37,3 +37,5 @@ Thumbs.db
 keiba_notify.bat
 logs/
 keiba_predictor/data/debug/
+outputs/
+.claude/

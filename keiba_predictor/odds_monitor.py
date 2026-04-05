@@ -112,7 +112,7 @@ def format_large_bet_alert(race_name: str, flags: list[dict]) -> str:
     if not flags:
         return ""
 
-    SEP = "━" * 20
+    SEP = "─" * 16
     lines = [
         f"🚨 【大口投票検知】{race_name}",
         SEP,

@@ -9,10 +9,12 @@ results_history.csv スキーマ:
   actual1_name, actual1_num,
   actual2_name, actual2_num,
   actual3_name, actual3_num,
+  tansho_hit, tansho_payout,
   fukusho_hit,
   umaren_hit, umaren_payout,
   wide_hit, wide_payout,
   sanrenpuku_hit, sanrenpuku_payout,
+  sanrentan_hit, sanrentan_payout,
   bet_total, return_total
 """
 
@@ -49,10 +51,12 @@ HISTORY_COLS = [
     "actual1_name", "actual1_num",
     "actual2_name", "actual2_num",
     "actual3_name", "actual3_num",
+    "tansho_hit",     "tansho_payout",
     "fukusho_hit",
     "umaren_hit",     "umaren_payout",
     "wide_hit",       "wide_payout",
     "sanrenpuku_hit", "sanrenpuku_payout",
+    "sanrentan_hit",  "sanrentan_payout",
     "bet_total",      "return_total",
 ]
 
@@ -142,10 +146,12 @@ def load_history() -> pd.DataFrame:
         "actual1_name": "", "actual1_num": "0",
         "actual2_name": "", "actual2_num": "0",
         "actual3_name": "", "actual3_num": "0",
+        "tansho_hit": "False",   "tansho_payout": "0",
         "fukusho_hit": "False",
         "umaren_hit": "False",   "umaren_payout": "0",
         "wide_hit": "False",     "wide_payout": "0",
         "sanrenpuku_hit": "False", "sanrenpuku_payout": "0",
+        "sanrentan_hit": "False",  "sanrentan_payout": "0",
         "bet_total": "0",        "return_total": "0",
     }
     for col, default in _defaults.items():
@@ -155,9 +161,11 @@ def load_history() -> pd.DataFrame:
     # ── 型変換 ───────────────────────────────────────────────
     for col in ("pred1_prob", "pred2_prob", "pred3_prob"):
         df[col] = pd.to_numeric(df[col], errors="coerce")
-    for col in ("fukusho_hit", "umaren_hit", "wide_hit", "sanrenpuku_hit"):
+    for col in ("tansho_hit", "fukusho_hit", "umaren_hit", "wide_hit",
+                "sanrenpuku_hit", "sanrentan_hit"):
         df[col] = df[col].map({"True": True, "False": False, True: True, False: False})
-    for col in ("umaren_payout", "wide_payout", "sanrenpuku_payout",
+    for col in ("tansho_payout", "umaren_payout", "wide_payout",
+                "sanrenpuku_payout", "sanrentan_payout",
                 "bet_total", "return_total"):
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
@@ -183,9 +191,7 @@ def record_result(
     Returns:
         記録した 1 行分の dict
     """
-    from keiba_predictor.discord_notify import (
-        _check_umaren_raw, _check_wide_pairs_raw, _check_sanrenpuku_raw,
-    )
+    from keiba_predictor.discord_notify import check_hits_from_bet_strategy
 
     grade = _grade_label(race_name)
 
@@ -193,7 +199,6 @@ def record_result(
     p1 = _pred_row(pred, "honmei")
     p2 = _pred_row(pred, "taikou")
     p3 = _pred_row(pred, "ana")
-    predicted_nums = pred.get("predicted_top3_nums", [])
 
     # 実際の着順
     actuals = _top3_actual(actual_df)
@@ -202,33 +207,35 @@ def record_result(
     def _a(i: int) -> dict:
         return actuals[i] if i < len(actuals) else {"name": "", "num": 0}
 
-    # 複勝的中: ◎（honmei = predicted_nums[0]）が 3 着以内に入ったか
-    fukusho_hit = bool(predicted_nums) and (predicted_nums[0] in actual_nums)
+    # bet_strategy に基づく的中判定
+    hits = check_hits_from_bet_strategy(pred, actual_nums, payouts)
+    tansho_hit  = hits["tansho_hit"]
+    fukusho_hit = hits["fukusho_hit"]
+    umaren_hit  = hits["umaren_hit"]
+    wide_hit    = hits["wide_hit"]
+    sanren_hit  = hits["sanren_hit"]
+    sanrentan_hit = hits["sanrentan_hit"]
 
-    # 馬連・ワイド・3連複
-    umaren_hit, umaren_pay_str  = _check_umaren_raw(predicted_nums, actual_nums, payouts)
-    wide_pairs                  = _check_wide_pairs_raw(predicted_nums, actual_nums, payouts)
-    ana_horse_num = pred.get("ana_horse_num")
-    sanren_hit, sanren_pay_str  = _check_sanrenpuku_raw(predicted_nums, actual_nums, payouts, ana_horse_num)
+    tansho_payout   = _payout_str_to_int(hits.get("tansho_pay", ""))
+    umaren_payout   = _payout_str_to_int(hits["umaren_pay"])
+    wide_payout     = hits["wide_pay"] if isinstance(hits["wide_pay"], int) else _payout_str_to_int(hits["wide_pay"])
+    sanren_payout   = _payout_str_to_int(hits["sanren_pay"])
+    sanrentan_payout = _payout_str_to_int(hits.get("sanrentan_pay", ""))
 
-    wide_hit    = any(h for _, h, _ in wide_pairs)
-    wide_payout = sum(_payout_str_to_int(p) for _, h, p in wide_pairs if h)
-
-    umaren_payout   = _payout_str_to_int(umaren_pay_str)
-    sanren_payout   = _payout_str_to_int(sanren_pay_str)
-
-    bet_total    = BETS_PER_RACE_TOTAL  # 2300円（複勝1000+馬連300+3連複1000）
+    bet_total    = hits["bet_total"] if hits["bet_total"] > 0 else BETS_PER_RACE_TOTAL
     # 複勝配当は1000円購入なので10倍換算（100円ベースの配当×10）
     fukusho_payout = 0
-    if fukusho_hit and predicted_nums:
-        honmei_num = predicted_nums[0]
+    honmei_num = hits["fukusho_num"]
+    if fukusho_hit and honmei_num:
         for entry in payouts.get("複勝", []):
             combo_nums = set(re.findall(r"\d+", str(entry.get("combo", ""))))
             if str(honmei_num) in combo_nums:
                 fukusho_payout = entry.get("amount") or 0
                 break
     fukusho_return = fukusho_payout * (FUKUSHO_BET // 100) if fukusho_payout else 0
-    return_total = fukusho_return + umaren_payout + wide_payout + sanren_payout
+    # 単勝は100円単位
+    tansho_return = tansho_payout if tansho_hit else 0
+    return_total = tansho_return + fukusho_return + umaren_payout + wide_payout + sanren_payout + sanrentan_payout
 
     row = {
         "date":       race_date,
@@ -241,10 +248,12 @@ def record_result(
         "actual1_name": _a(0)["name"], "actual1_num": _a(0)["num"],
         "actual2_name": _a(1)["name"], "actual2_num": _a(1)["num"],
         "actual3_name": _a(2)["name"], "actual3_num": _a(2)["num"],
+        "tansho_hit":      tansho_hit,     "tansho_payout":   tansho_payout,
         "fukusho_hit":     fukusho_hit,
         "umaren_hit":      umaren_hit,     "umaren_payout":   umaren_payout,
         "wide_hit":        wide_hit,       "wide_payout":     wide_payout,
         "sanrenpuku_hit":  sanren_hit,     "sanrenpuku_payout": sanren_payout,
+        "sanrentan_hit":   sanrentan_hit,  "sanrentan_payout": sanrentan_payout,
         "bet_total":       bet_total,
         "return_total":    return_total,
     }
@@ -354,7 +363,7 @@ def format_summary_message(
     streak: int,
 ) -> str:
     """Discord 用サマリーメッセージを生成する。"""
-    RULE = "━" * 24
+    RULE = "─" * 16
     w = week_stats
     c = cum_stats
 
