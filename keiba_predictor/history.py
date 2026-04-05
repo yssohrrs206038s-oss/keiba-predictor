@@ -38,7 +38,7 @@ REPORTS_DIR   = DATA_DIR / "reports"
 # 複勝1000円 + ワイド/馬連300円 + 3連複600円 = 1900円（最大）
 UNIT_BET          = 100   # 馬連・ワイド・3連複の1口単価
 FUKUSHO_BET       = 1000  # 複勝の1口単価
-BETS_PER_RACE_TOTAL = 1900  # bet_strategy.total_cost がない場合のフォールバック
+BETS_PER_RACE_TOTAL = 2500  # bet_strategy.total_cost がない場合のフォールバック
 
 HISTORY_COLS = [
     "date", "race_id", "race_name", "race_grade",

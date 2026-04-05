@@ -385,6 +385,7 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
 
     BUDGET = 3000
     UNIT = 100
+    WIDE_UNIT = 300
     FUKUSHO_UNIT = 1000
 
     if len(result_df) < 3:
@@ -442,16 +443,19 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
 
     # ── 優先2: 馬連 or ワイド（上位3頭の組合せ 3点） ──
     pairs = [{"nums": list(p)} for p in _comb(nums[:3], 2)]
-    cost = len(pairs) * UNIT
-    if remaining >= cost:
-        if use_wide:
+    if use_wide:
+        cost = len(pairs) * WIDE_UNIT
+        if remaining >= cost:
             strategy["wide"] = pairs
             reason = "波乱" if is_volatile_race else "拮抗"
             notes.append(f"ワイド({reason})")
-        else:
+            remaining -= cost
+    else:
+        cost = len(pairs) * UNIT
+        if remaining >= cost:
             strategy["umaren"] = pairs
             notes.append("馬連")
-        remaining -= cost
+            remaining -= cost
 
     # ── 優先3: 3連複 ◎1頭軸 × 相手4頭(+穴馬) ──
     if remaining >= 3 * UNIT:

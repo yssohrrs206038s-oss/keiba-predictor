@@ -901,7 +901,7 @@ function renderPredictions(cache) {
       // ワイド or 馬連
       if (bs.use_wide && bs.wide && bs.wide.length) {
         const wideStr = bs.wide.map(w => `${w.nums[0]}-${w.nums[1]}`).join(' / ');
-        rows.push(`<div class="bet-row"><span class="bet-label">ワイド</span>${wideStr}<span style="color:var(--text-muted);margin-left:auto;font-size:11px;">各100円</span></div>`);
+        rows.push(`<div class="bet-row"><span class="bet-label">ワイド</span>${wideStr}<span style="color:var(--text-muted);margin-left:auto;font-size:11px;">各300円</span></div>`);
       }
       if (bs.umaren && bs.umaren.length) {
         const umarenStr = bs.umaren.map(u => `${u.nums[0]}-${u.nums[1]}`).join(' / ');
