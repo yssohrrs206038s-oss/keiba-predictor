@@ -1278,26 +1278,28 @@ def _format_simple_message(race_id: str, entry: dict) -> str:
     if sim.get("is_volatile_race"):
         lines.append(f"🌀 波乱注意（波乱度{sim.get('race_volatility', 0):.2f}）")
 
-    # 買い目: 複勝1 + 馬連2 + 3連複(◎軸 × 相手4頭+穴1頭)10 = 13点
-    top5 = entry.get("predicted_top5_nums", [])
-    h1 = honmei.get("horse_number", "?")
-    h2 = taikou.get("horse_number", "?")
-    h3 = ana.get("horse_number", "?")
-    # 相手: 2-5番手（4頭）
-    aite = [n for n in top5[1:5] if n != h1] if len(top5) >= 3 else [h2, h3]
-    # 穴馬を追加（TOP5外のEV高い人気薄）
-    ana_num = entry.get("ana_horse_num")
-    if ana_num and ana_num not in aite and ana_num != h1:
-        aite.append(ana_num)
-    aite_str = "/".join(str(n) for n in aite)
-    ana_label = f"（穴{ana_num}）" if ana_num and ana_num in aite else ""
-    from itertools import combinations
-    sanren_count = len(list(combinations(aite, 2)))
-    lines.append("")
-    lines.append(f"【買い目 {1 + 2 + sanren_count}点】")
-    lines.append(f"複勝: {h1}")
-    lines.append(f"馬連: {h1}-{h2}, {h1}-{h3}")
-    lines.append(f"3連複: 軸{h1} × {aite_str}{ana_label}")
+    # 買い目（bet_strategy ベース）
+    bs = entry.get("bet_strategy", {})
+    if bs and bs.get("total_points", 0) > 0:
+        lines.append("")
+        lines.append("💰 買い目")
+        if bs.get("fukusho"):
+            f = bs["fukusho"][0]
+            lines.append(f"複勝 {f['num']}番 {f.get('name', '')}  1,000円")
+        if bs.get("use_wide") and bs.get("wide"):
+            wide_str = " / ".join(f"{w['nums'][0]}-{w['nums'][1]}" for w in bs["wide"])
+            lines.append(f"ワイド {wide_str}  各300円")
+        if bs.get("umaren"):
+            umaren_str = " / ".join(f"{u['nums'][0]}-{u['nums'][1]}" for u in bs["umaren"])
+            lines.append(f"馬連 {umaren_str}  各100円")
+        sr = bs.get("sanrenpuku", {})
+        if sr and sr.get("jiku") and sr.get("aite"):
+            from itertools import combinations
+            sr_pt = len(list(combinations(sr["aite"], 2)))
+            lines.append(f"3連複 軸{sr['jiku'][0]} × {'/'.join(str(n) for n in sr['aite'])}  各100円")
+        total_cost = bs.get("total_cost", bs["total_points"] * 100)
+        lines.append(f"────────────────")
+        lines.append(f"合計投資額: {total_cost:,}円")
 
     return "\n".join(lines)
 
