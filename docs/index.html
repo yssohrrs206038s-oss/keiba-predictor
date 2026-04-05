@@ -895,22 +895,17 @@ function renderPredictions(cache) {
 
       // 複勝
       if (bs.fukusho && bs.fukusho.length) {
-        rows.push(`<div class="bet-row"><span class="bet-label">複勝</span>${bs.fukusho[0].num}番 ${esc(bs.fukusho[0].name || '')}</div>`);
-      }
-
-      // 単勝
-      if (bs.tansho && bs.tansho.length) {
-        rows.push(`<div class="bet-row"><span class="bet-label">単勝</span>${bs.tansho[0].num}番 ${esc(bs.tansho[0].name || '')}</div>`);
+        rows.push(`<div class="bet-row"><span class="bet-label">複勝</span>${bs.fukusho[0].num}番 ${esc(bs.fukusho[0].name || '')}<span style="color:var(--text-muted);margin-left:auto;font-size:11px;">1,000円</span></div>`);
       }
 
       // ワイド or 馬連
       if (bs.use_wide && bs.wide && bs.wide.length) {
         const wideStr = bs.wide.map(w => `${w.nums[0]}-${w.nums[1]}`).join(' / ');
-        rows.push(`<div class="bet-row"><span class="bet-label">ワイド</span>${wideStr}</div>`);
+        rows.push(`<div class="bet-row"><span class="bet-label">ワイド</span>${wideStr}<span style="color:var(--text-muted);margin-left:auto;font-size:11px;">各100円</span></div>`);
       }
       if (bs.umaren && bs.umaren.length) {
         const umarenStr = bs.umaren.map(u => `${u.nums[0]}-${u.nums[1]}`).join(' / ');
-        rows.push(`<div class="bet-row"><span class="bet-label">馬連</span>${umarenStr}</div>`);
+        rows.push(`<div class="bet-row"><span class="bet-label">馬連</span>${umarenStr}<span style="color:var(--text-muted);margin-left:auto;font-size:11px;">各100円</span></div>`);
       }
 
       // 3連複
@@ -918,24 +913,17 @@ function renderPredictions(cache) {
       if (sr && sr.jiku && sr.aite) {
         const jikuStr = sr.jiku.length === 1 ? `軸${sr.jiku[0]}` : `軸${sr.jiku[0]}-${sr.jiku[1]}`;
         const aiteStr = sr.aite.join('/');
-        rows.push(`<div class="bet-row"><span class="bet-label">3連複</span>${jikuStr} × ${aiteStr}</div>`);
+        rows.push(`<div class="bet-row"><span class="bet-label">3連複</span>${jikuStr} × ${aiteStr}<span style="color:var(--text-muted);margin-left:auto;font-size:11px;">各100円</span></div>`);
       }
 
-      // 3連単
-      const st = bs.sanrentan;
-      if (st && st.first && st.aite) {
-        const aiteStr = st.aite.join('/');
-        rows.push(`<div class="bet-row"><span class="bet-label">3連単</span>1着${st.first} × ${aiteStr}</div>`);
-      }
-
-      const noteHTML = bs.strategy_note ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">💡 ${esc(bs.strategy_note)}</div>` : '';
+      const totalCost = bs.total_cost || (bs.total_points * 100);
       betHTML = `
         <div class="bet-box">
           <div class="bet-box-title">💰 買い目（${bs.total_points}点）</div>
-          <div class="bet-rows">
+          <div class="bet-rows" style="display:flex;flex-direction:column;gap:4px;">
             ${rows.join('\n            ')}
           </div>
-          ${noteHTML}
+          <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:6px;font-size:12px;font-weight:700;">合計投資額: ${totalCost.toLocaleString()}円</div>
         </div>`;
     }
 
