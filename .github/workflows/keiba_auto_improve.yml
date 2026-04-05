@@ -1,8 +1,8 @@
 name: AUC自動改善ループ（火曜深夜）
 
 on:
-  schedule:
-    - cron: '0 3 * * 3'   # 水曜 03:00 UTC = 水曜 12:00 JST（keiba_update完了後）
+  # schedule:  # 簡素化のため無効化（モデル学習はローカルで実行）
+  #   - cron: '0 3 * * 3'
   workflow_dispatch:
 
 permissions:
@@ -34,8 +34,8 @@ jobs:
 
       - name: データ準備（スクレイピング・クリーニング・特徴量生成）
         run: |
-          # cleaned_races.csv がなければスクレイピングから実行
-          if [ ! -f keiba_predictor/data/cleaned_races.csv ]; then
+          # cleaned_races.csv.gz または cleaned_races.csv がなければスクレイピングから実行
+          if [ ! -f keiba_predictor/data/cleaned_races.csv.gz ] && [ ! -f keiba_predictor/data/cleaned_races.csv ]; then
             echo "📥 cleaned_races.csv なし → スクレイピング実行"
             TWO_WEEKS_AGO=$(date -d "14 days ago" +%Y-%m 2>/dev/null || \
               python3 -c "from datetime import date,timedelta;print((date.today()-timedelta(days=14)).strftime('%Y-%m'))")

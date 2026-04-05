@@ -70,6 +70,26 @@ def _venue_from_race_id(race_id: str) -> str:
     return JRA_VENUES.get(race_id[4:6], "")
 
 
+def _effective_prob(role_entry: dict, race_entry: dict) -> float:
+    """XGBoostの prob が異常に低い場合、モンテカルロ top3_rate で補正する。
+
+    Actions環境で cleaned_races.csv がLFSポインタのまま読み込まれると
+    過去成績なしで予測が実行され prob が異常に低くなる。
+    モンテカルロシミュレーションはオッズ基準で安定するため代替値として使う。
+    """
+    prob = role_entry.get("prob", 0)
+    if prob >= 0.05:
+        return prob
+    # モンテカルロの top3_rate を参照
+    sim = race_entry.get("simulation", {})
+    horse_num = str(role_entry.get("horse_number", ""))
+    mc_data = sim.get(horse_num, {})
+    mc_rate = mc_data.get("top3_rate")
+    if mc_rate and mc_rate > prob:
+        return mc_rate
+    return prob
+
+
 def _weekend_label(race_dates: list[str]) -> str:
     """レース日付リストから '2026/03/28-29' 形式を返す。"""
     parsed = []
@@ -193,7 +213,7 @@ def _generate_race_analysis(race_data: dict, race_name: str, course_info: str, a
             "印": mark,
             "馬番": p.get("horse_number"),
             "馬名": p.get("horse_name"),
-            "AI3着以内確率": f"{p.get('prob', 0) * 100:.1f}%",
+            "AI3着以内確率": f"{_effective_prob(p, race_data) * 100:.1f}%",
             "EVスコア": f"{ev_val:.2f}",
         })
 
@@ -206,7 +226,7 @@ def _generate_race_analysis(race_data: dict, race_name: str, course_info: str, a
                 "印": "穴🚀",
                 "馬番": enum,
                 "馬名": e.get("horse_name", ""),
-                "AI3着以内確率": f"{e.get('prob', 0) * 100:.1f}%",
+                "AI3着以内確率": f"{_effective_prob(e, race_data) * 100:.1f}%",
                 "EVスコア": f"{e.get('ev_score', 0):.2f}",
                 "オッズ": f"{e.get('odds', 0):.0f}倍",
             })
@@ -324,7 +344,7 @@ def _build_note_race_markdown(race_id: str, r: dict, analysis: dict) -> str:
             continue
         num  = p.get("horse_number", "?")
         name = p.get("horse_name", "")
-        prob = p.get("prob", 0) * 100
+        prob = _effective_prob(p, r) * 100
         ev   = ev_map.get(int(num), 0) if num is not None else 0
         ev_str = f"{ev:.2f}" if ev else "—"
 
@@ -413,25 +433,35 @@ def _build_note_race_markdown(race_id: str, r: dict, analysis: dict) -> str:
     # ── 危険馬分析 ───────────────────────────────────────────
     dangerous = r.get("dangerous_horses", [])
     if dangerous:
-        lines += ["## ⚠️ 危険馬分析", ""]
+        # MC確率15%以上の馬は危険馬から除外（XGBoost低確率の誤判定を防ぐ）
+        filtered_dangerous = []
         for d in dangerous:
-            dnum    = d.get("horse_number", "?")
-            dname   = d.get("horse_name", "")
-            dpop    = d.get("popularity", "?")
-            dprob   = d.get("prob", 0) * 100
-            reasons = d.get("reasons", [])
-            lines.append(f"### {dnum}番 {dname}（{dpop}番人気）")
-            for rsn in reasons:
-                lines.append(f"- 理由：{rsn}")
-            lines.append(f"- AI確率：{dprob:.1f}%（人気に対して低い）")
-            lines.append("")
+            dnum = d.get("horse_number", "?")
+            mc_d = sim.get(str(dnum), {})
+            mc_rate = mc_d.get("top3_rate")
+            if mc_rate is not None and mc_rate >= 0.15:
+                continue
+            filtered_dangerous.append(d)
+        if filtered_dangerous:
+            lines += ["## ⚠️ 危険馬分析", ""]
+            for d in filtered_dangerous:
+                dnum    = d.get("horse_number", "?")
+                dname   = d.get("horse_name", "")
+                dpop    = d.get("popularity", "?")
+                dprob   = _effective_prob(d, r) * 100
+                reasons = d.get("reasons", [])
+                lines.append(f"### {dnum}番 {dname}（{dpop}番人気）")
+                for rsn in reasons:
+                    lines.append(f"- 理由：{rsn}")
+                lines.append(f"- AI確率：{dprob:.1f}%（人気に対して低い）")
+                lines.append("")
 
     # ── 穴馬候補 ─────────────────────────────────────────────
     ana_info = r.get("ana_horse_info", {})
     ana_num = r.get("ana_horse_num")
     if ana_num and ana_info.get("horse_name"):
         a_name = ana_info["horse_name"]
-        a_prob = ana_info.get("prob", 0) * 100
+        a_prob = _effective_prob(ana_info, r) * 100
         a_pop  = ana_info.get("popularity", "?")
         a_ev   = ev_map.get(ana_num, 0)
         lines += [
@@ -519,7 +549,7 @@ def _build_note_race_markdown(race_id: str, r: dict, analysis: dict) -> str:
     else:
         for e in r.get("ev_top3", []):
             ev   = e.get("ev_score", 0)
-            prob = e.get("prob", 0) * 100
+            prob = _effective_prob(e, r) * 100
             name = e.get("horse_name", "")
             num  = e.get("horse_number", "?")
             tag  = "★妙味あり" if ev >= 3.0 else ""
@@ -620,7 +650,7 @@ def _build_race_discord_message(race_id: str, r: dict) -> str:
             continue
         num  = p.get("horse_number", "?")
         name = p.get("horse_name", "")
-        prob = p.get("prob", 0) * 100
+        prob = _effective_prob(p, r) * 100
         ev   = ev_map.get(int(num), 0) if num is not None else 0
         ev_str = f"{ev:.2f}" if ev else "—"
         lines.append(f"| {mark} | {num}番 | {name} | {prob:.1f}% | {ev_str} |")
@@ -643,11 +673,20 @@ def _build_race_discord_message(race_id: str, r: dict) -> str:
                 lines.append(comment)
             lines.append("")
 
-    # 危険馬
+    # 危険馬（MC確率15%以上なら除外 — XGBoost低確率の誤判定防止）
     dangerous = r.get("dangerous_horses", [])
-    if dangerous:
+    sim_d = r.get("simulation", {})
+    filtered_dangerous = []
+    for d in dangerous:
+        dnum = d.get("horse_number", "?")
+        mc_d = sim_d.get(str(dnum), {})
+        mc_rate = mc_d.get("top3_rate")
+        if mc_rate is not None and mc_rate >= 0.15:
+            continue
+        filtered_dangerous.append(d)
+    if filtered_dangerous:
         lines += ["## ⚠️ 危険馬", ""]
-        for d in dangerous:
+        for d in filtered_dangerous:
             dnum    = d.get("horse_number", "?")
             dname   = d.get("horse_name", "")
             dpop    = d.get("popularity", "?")
@@ -685,7 +724,7 @@ def _build_race_discord_message(race_id: str, r: dict) -> str:
     # 期待値分析
     best_ev = r.get("ev_top3", [{}])[0] if r.get("ev_top3") else {}
     ev_val  = best_ev.get("ev_score", 0)
-    prob    = best_ev.get("prob", 0) * 100
+    prob    = _effective_prob(best_ev, r) * 100
     if ev_val:
         lines += [
             "## 📈 期待値分析",

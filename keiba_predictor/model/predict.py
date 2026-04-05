@@ -690,26 +690,12 @@ def predict_from_csv(
     race_name   = race_df["race_name"].iloc[0] if "race_name" in race_df.columns else race_id
     course_info = _build_course_info(race_id, race_df)
 
-    from keiba_predictor.ai_comment import generate_comments, generate_report_text, save_report
-    try:
-        ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
-    except Exception as e:
-        logger.warning(f"AI解説生成でエラー（続行）: {e}")
-        ai_comments = {}
-
-    msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments=ai_comments,
+    msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments={},
                                    course_info=course_info)
     print(msg1)
     print(msg2)
 
-    # note / BOOKERS 投稿用レポートをファイルに保存（Discord通知とは独立）
-    if ai_comments:
-        report = generate_report_text(ai_comments, race_name=race_name,
-                                      course_info=course_info, result_df=result,
-                                      buy_lines=_build_buy_lines(result, race_name=race_name))
-        save_report(report, race_name)
-
-    # 予想キャッシュに保存（note_report・結果照合で使用）
+    # 予想キャッシュに保存（結果照合で使用）
     race_date = ""
     if "race_date" in race_df.columns:
         try:
@@ -718,7 +704,7 @@ def predict_from_csv(
             race_date = str(race_df["race_date"].iloc[0])
     from keiba_predictor.discord_notify import _store_prediction
     _store_prediction(race_id, race_name, race_date, result,
-                      ai_comments=ai_comments, course_info=course_info)
+                      course_info=course_info)
 
     if notify:
         import os
@@ -729,9 +715,6 @@ def predict_from_csv(
         else:
             ok = send_discord(url, msg1) and send_discord(url, msg2)
             logger.info(f"Discord 送信{'完了' if ok else '失敗'}")
-
-    from keiba_predictor.ai_comment import flush_reports
-    flush_reports()
 
     return result
 
@@ -819,34 +802,17 @@ def predict_live(
     race_name   = shutuba_info.get("race_name", "")
     course_info = shutuba_info.get("course_info", "")
 
-    from keiba_predictor.ai_comment import generate_comments, generate_report_text, save_report
-    if is_grade:
-        try:
-            ai_comments = generate_comments(result, race_name=race_name, course_info=course_info)
-        except Exception as e:
-            logger.warning(f"AI解説生成でエラー（続行）: {e}")
-            ai_comments = {}
-    else:
-        ai_comments = {}  # 平場はAI解説を生成しない
-
-    msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments=ai_comments, course_info=course_info)
+    msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments={}, course_info=course_info)
     print(msg1)
     print(msg2)
 
-    # note / BOOKERS 投稿用レポートをファイルに保存（Discord通知とは独立）
-    if ai_comments:
-        report = generate_report_text(ai_comments, race_name=race_name,
-                                      course_info=course_info, result_df=result,
-                                      buy_lines=_build_buy_lines(result, race_name=race_name))
-        save_report(report, race_name)
-
-    # 予想キャッシュに保存（note_report・結果照合で使用）
+    # 予想キャッシュに保存（結果照合で使用）
     race_date  = shutuba_info.get("race_date", "")
     start_time = shutuba_info.get("start_time", "")
     venue      = shutuba_info.get("venue", "")
     from keiba_predictor.discord_notify import _store_prediction
     _store_prediction(race_id, race_name, race_date, result,
-                      ai_comments=ai_comments, course_info=course_info,
+                      course_info=course_info,
                       start_time=start_time, venue=venue, is_grade=is_grade)
 
     if notify:
@@ -858,9 +824,6 @@ def predict_live(
         else:
             ok = send_discord(url, msg1) and send_discord(url, msg2)
             logger.info(f"Discord 送信{'完了' if ok else '失敗'}")
-
-    from keiba_predictor.ai_comment import flush_reports
-    flush_reports()
 
     return result
 
