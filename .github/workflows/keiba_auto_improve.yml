@@ -1,8 +1,8 @@
 name: AUC自動改善ループ（火曜深夜）
 
 on:
-  schedule:
-    - cron: '0 3 * * 3'   # 水曜 03:00 UTC = 水曜 12:00 JST（keiba_update完了後）
+  # schedule:  # 簡素化のため無効化（モデル学習はローカルで実行）
+  #   - cron: '0 3 * * 3'
   workflow_dispatch:
 
 permissions:

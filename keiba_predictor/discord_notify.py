@@ -33,7 +33,8 @@ from keiba_predictor.scraper.netkeiba_scraper import (
     _get, _sleep, RACE_RESULT_URL,
 )
 from keiba_predictor.model.predict import load_model, predict_race, calc_ev_and_flags, format_prediction, _build_course_info
-from keiba_predictor.ai_comment import generate_comments
+# ai_comment は簡素化のため無効化（将来の復活用にファイルは残す）
+# from keiba_predictor.ai_comment import generate_comments
 
 logger = logging.getLogger(__name__)
 
@@ -724,64 +725,22 @@ def _ana_horse_info(result_df: pd.DataFrame, ana_horse_num: "Optional[int]") -> 
 
 def _store_prediction(race_id: str, race_name: str, race_date: str,
                       result_df: pd.DataFrame,
-                      ai_comments: Optional[dict] = None,
                       course_info: str = "",
                       start_time: str = "",
                       venue: str = "",
                       is_grade: bool = True) -> None:
-    """予想結果をキャッシュに保存する（日曜結果比較・note レポート生成に使用）。"""
+    """予想結果をキャッシュに保存する（Discord通知・結果照合に使用）。"""
     cache = _load_cache()
 
-    # オッズが全馬同一（仮オッズ）かチェック
-    _odds_ser = pd.to_numeric(result_df["odds"], errors="coerce").dropna()
-    _all_same = len(_odds_ser) > 1 and _odds_ser.nunique() == 1
-
-    def _row(df: pd.DataFrame, idx: int) -> dict:
+    def _horse(df: pd.DataFrame, idx: int) -> dict:
         if len(df) <= idx:
             return {}
         r = df.iloc[idx]
-        raw_o = pd.to_numeric(r.get("odds"), errors="coerce")
-        o_val = None if (not pd.notna(raw_o) or _all_same) else round(float(raw_o), 1)
-        entry = {
+        return {
             "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
             "horse_name":   str(r.get("horse_name", "")),
-            "prob":         float(r["prob_top3"]),
-            "odds":         o_val,
+            "prob":         round(float(r["prob_top3"]), 4),
         }
-        # SHAP値の上位要因を追加
-        shap_top = r.get("shap_top")
-        if isinstance(shap_top, list) and shap_top:
-            entry["shap_top"] = shap_top
-        # 前走展開データ
-        for col, key in [
-            ("prev_passing", "prev_passing"), ("prev_last_3f", "prev_last_3f"),
-            ("prev2_passing", "prev2_passing"), ("prev2_last_3f", "prev2_last_3f"),
-        ]:
-            val = r.get(col)
-            if val is not None and pd.notna(val) and str(val).strip():
-                entry[key] = str(val).strip()
-        return entry
-
-    # 穴馬: AI確率35%以上 & 6番人気以下 & TOP3外 → AI確率最高の1頭
-    ana: dict = {}
-    try:
-        top3_set = set()
-        for _, r in result_df.head(3).iterrows():
-            v = r.get("horse_number")
-            if pd.notna(v):
-                top3_set.add(int(v))
-        rest = result_df.iloc[3:] if len(result_df) > 3 else pd.DataFrame()
-        if not rest.empty:
-            rest_prob = pd.to_numeric(rest["prob_top3"], errors="coerce")
-            rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
-            cands = rest[(rest_prob >= 0.35) & (rest_pop >= 6)]
-            if not cands.empty:
-                best_idx = cands["prob_top3"].idxmax()
-                ana = _row(result_df, result_df.index.get_loc(best_idx))
-    except Exception as e:
-        logger.warning(f"穴馬検出失敗: {e}")
-    if not ana:
-        ana = _row(result_df, 2)
 
     top3_nums = []
     for _, row in result_df.head(3).iterrows():
@@ -795,162 +754,19 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         if pd.notna(v):
             top5_nums.append(int(v))
 
-    # 穴馬（3連複用）: AI確率35%以上 & 6番人気以下 & TOP5外 → AI確率最高
-    ana_horse_num: Optional[int] = None
-    if len(result_df) > 5:
-        rest = result_df.iloc[5:]
-        rest_prob = pd.to_numeric(rest["prob_top3"], errors="coerce")
-        rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
-        cands = rest[(rest_prob >= 0.35) & (rest_pop >= 6)]
-        if not cands.empty:
-            best = cands.nlargest(1, "prob_top3").iloc[0]
-            v = best.get("horse_number")
-            if pd.notna(v):
-                ana_horse_num = int(v)
-
-    # EV・危険馬データ（_calc_ev_and_flags 済みならそのまま使う）
-    if "ev_score" not in result_df.columns:
-        result_df = calc_ev_and_flags(result_df)
-
-    # オッズが全馬同一（仮オッズ）かチェック
-    odds_vals = pd.to_numeric(result_df["odds"], errors="coerce").dropna()
-    all_same_odds = len(odds_vals) > 1 and odds_vals.nunique() == 1
-    if all_same_odds:
-        logger.warning(f"全馬同一オッズ({odds_vals.iloc[0]}) → 仮オッズのため odds=None として保存")
-
-    ev_top3: list[dict] = []
-    for _, r in result_df[result_df["ev_score"].notna()].nlargest(3, "ev_score").iterrows():
-        raw_odds = pd.to_numeric(r.get("odds"), errors="coerce")
-        odds_val = None if (not pd.notna(raw_odds) or all_same_odds) else round(float(raw_odds), 1)
-        ev_top3.append({
-            "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
-            "horse_name":   str(r.get("horse_name", "")),
-            "ev_score":     round(float(r["ev_score"]), 3),
-            "prob":         round(float(r["prob_top3"]), 4),
-            "odds":         odds_val,
-        })
-
-    dangerous: list[dict] = []
-    for _, r in result_df[result_df["is_dangerous"]].iterrows():
-        dangerous.append({
-            "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
-            "horse_name":   str(r.get("horse_name", "")),
-            "popularity":   int(pd.to_numeric(r.get("popularity"), errors="coerce") or 0),
-            "prob":         round(float(r["prob_top3"]), 4),
-            "reasons":      list(r.get("danger_reasons", [])),
-        })
-
-    # 上位5頭の詳細情報（Discord通知用）
-    predicted_top5: list[dict] = []
-    for i in range(min(5, len(result_df))):
-        r = result_df.iloc[i]
-        raw_o = pd.to_numeric(r.get("odds"), errors="coerce")
-        o_val = None if (not pd.notna(raw_o) or _all_same) else round(float(raw_o), 1)
-        predicted_top5.append({
-            "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
-            "horse_name":   str(r.get("horse_name", "")),
-            "prob":         round(float(r["prob_top3"]), 4),
-            "odds":         o_val,
-        })
-
     cache[race_id] = {
         "race_name":           race_name,
         "race_date":           race_date,
         "start_time":          start_time,
         "venue":               venue,
         "course_info":         course_info,
-        "honmei":              _row(result_df, 0),
-        "taikou":              _row(result_df, 1),
-        "ana":                 ana,
+        "honmei":              _horse(result_df, 0),
+        "taikou":              _horse(result_df, 1),
+        "ana":                 _horse(result_df, 2),
         "predicted_top3_nums": top3_nums,
         "predicted_top5_nums": top5_nums,
-        "ana_horse_num":       ana_horse_num,
-        "ana_horse_info":      _ana_horse_info(result_df, ana_horse_num),
-        "predicted_top5":      predicted_top5,
-        "ev_top3":             ev_top3,
-        "dangerous_horses":    dangerous,
-        "ai_comments":         ai_comments or {},
         "is_grade":            is_grade,
     }
-
-    # 買い目自動決定
-    try:
-        from keiba_predictor.model.predict import _decide_bet_strategy
-        _is_vol = cache[race_id].get("simulation", {}).get("is_volatile_race", False)
-        cache[race_id]["bet_strategy"] = _decide_bet_strategy(result_df, is_volatile_race=_is_vol)
-    except Exception as e:
-        logger.warning(f"買い目自動決定失敗: {e}")
-
-    # 自信度計算
-    try:
-        from keiba_predictor.model.predict import _calc_confidence
-        score, stars = _calc_confidence(cache[race_id])
-        cache[race_id]["confidence"] = score
-        cache[race_id]["confidence_stars"] = stars
-    except Exception as e:
-        logger.warning(f"自信度計算失敗: {e}")
-
-    # モンテカルロシミュレーション
-    try:
-        from keiba_predictor.simulation import run_monte_carlo
-        mc_horses = []
-        for i in range(min(len(result_df), 18)):
-            r = result_df.iloc[i]
-            mc_horses.append({
-                "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else i + 1,
-                "horse_name": str(r.get("horse_name", "")),
-                "prob": float(r["prob_top3"]),
-                "running_style_enc": int(r.get("running_style_enc", 2)) if pd.notna(r.get("running_style_enc")) else 2,
-            })
-        mc_result = run_monte_carlo(mc_horses)
-        # 上位5頭のみ保存 + レース全体の波乱度
-        top5_mc = {}
-        for num in top5_nums[:5]:
-            k = str(num)
-            if k in mc_result:
-                top5_mc[k] = mc_result[k]
-        top5_mc["race_volatility"] = mc_result.get("race_volatility", 0)
-        top5_mc["is_volatile_race"] = mc_result.get("is_volatile_race", False)
-        cache[race_id]["simulation"] = top5_mc
-        # MC確率でキャッシュ内のprobを上書き（Discord・ダッシュボード表示用）
-        for role in ("honmei", "taikou", "ana"):
-            p = cache[race_id].get(role, {})
-            if p and p.get("horse_number") is not None:
-                mc = mc_result.get(str(p["horse_number"]), {})
-                if "top3_rate" in mc:
-                    p["prob"] = mc["top3_rate"]
-        for h in cache[race_id].get("predicted_top5", []):
-            if h.get("horse_number") is not None:
-                mc = mc_result.get(str(h["horse_number"]), {})
-                if "top3_rate" in mc:
-                    h["prob"] = mc["top3_rate"]
-        # MC確率15%未満の上位人気馬は危険解除/追加
-        new_danger = []
-        for d in cache[race_id].get("dangerous_horses", []):
-            num = d.get("horse_number")
-            mc = mc_result.get(str(num), {})
-            mc_prob = mc.get("top3_rate")
-            if mc_prob is not None and mc_prob >= 0.15:
-                continue  # MC15%以上なら危険解除
-            new_danger.append(d)
-        cache[race_id]["dangerous_horses"] = new_danger
-    except Exception as e:
-        logger.warning(f"モンテカルロシミュレーション失敗: {e}")
-
-    # モデルメトリクスをキャッシュのトップレベルに保存（ダッシュボード表示用）
-    try:
-        import pickle
-        _model_path = Path(__file__).parent / "model" / "xgb_model.pkl"
-        if _model_path.exists():
-            with open(_model_path, "rb") as _f:
-                _bundle = pickle.load(_f)
-            cache["_model_metrics"] = {
-                "auc": round(_bundle.get("cv_auc_mean", 0), 4),
-                "fukusho_rate": round(_bundle.get("cv_fukusho_mean", 0) * 100, 1),
-                "n_features": len(_bundle.get("feature_cols", [])),
-            }
-    except Exception:
-        pass
 
     _save_cache(cache)
 
@@ -1278,6 +1094,52 @@ def _check_sanrenpuku_raw(
     return False, ""
 
 
+def _format_simple_message(race_id: str, entry: dict) -> str:
+    """予想キャッシュから シンプルなDiscord通知メッセージを生成する。"""
+    venue = entry.get("venue", "")
+    if not venue and race_id and len(race_id) >= 10:
+        venue = VENUE_MAP.get(race_id[4:6], "")
+    race_num = ""
+    if race_id and len(race_id) >= 12:
+        try:
+            race_num = f"{int(race_id[10:12])}R"
+        except ValueError:
+            pass
+    race_name = entry.get("race_name", "")
+    course_info = entry.get("course_info", "")
+
+    honmei = entry.get("honmei", {})
+    taikou = entry.get("taikou", {})
+    ana = entry.get("ana", {})
+
+    def _horse_line(mark: str, h: dict) -> str:
+        num = h.get("horse_number", "?")
+        name = h.get("horse_name", "")
+        return f"{mark} {num}番 {name}"
+
+    lines = [
+        f"🏇 {venue} {race_num} {race_name}".strip(),
+    ]
+    if course_info:
+        lines.append(course_info)
+    lines.append("")
+    lines.append(_horse_line("◎", honmei))
+    lines.append(_horse_line("○", taikou))
+    lines.append(_horse_line("△", ana))
+
+    # 買い目（上位3頭から固定パターン: 複勝1 + 馬連2 + 3連複1 = 4点）
+    h1 = honmei.get("horse_number", "?")
+    h2 = taikou.get("horse_number", "?")
+    h3 = ana.get("horse_number", "?")
+    lines.append("")
+    lines.append("【買い目】")
+    lines.append(f"複勝: {h1}")
+    lines.append(f"馬連: {h1}-{h2}, {h1}-{h3}")
+    lines.append(f"3連複: {h1}-{h2}-{h3}")
+
+    return "\n".join(lines)
+
+
 def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = "") -> tuple[str, str]:
     """predictions_cache.json のエントリからDiscord用メッセージ(予想・買い目)を生成する。"""
     sep = "━" * 20
@@ -1538,200 +1400,85 @@ def run_predict_notify(
     test_race_id: Optional[str] = None,
     use_live: bool = False,
 ) -> None:
-    """週末重賞を予想して Discord に送信し、結果をキャッシュに保存する。
-
-    Args:
-        test_race_id: 指定時は週末重賞検索をスキップして該当race_idのみテスト送信する。
-        use_live:     True のとき出馬表をリアルタイム取得して予測する。
-                      出馬表未確定・取得失敗の場合は featured_races.csv にフォールバック。
-    """
+    """週末重賞を予想して Discord に送信する。"""
     webhook_url = _resolve_webhook(webhook_url)
 
     if model_path is None:
         model_path = MODEL_PATH
-
-    # 前提ファイル確認（モデルのみ必須、featured_races.csvはキャッシュ優先のため任意）
     if not model_path.exists():
-        send_discord(webhook_url,
-            "⚠️ モデルファイルが見つかりません。\n"
-            "```\npython -m keiba_predictor.main train\n```")
+        send_discord(webhook_url, "⚠️ モデルファイルが見つかりません。")
         return
 
-    model_bundle = load_model(model_path)
-
-    # --test-race-id が指定された場合は重賞検索をスキップ
-    from_featured = False
+    # 重賞レース一覧を取得
     if test_race_id:
-        race_name = str(test_race_id)
-        grade_races = [{"race_id": test_race_id, "race_name": race_name, "race_date": "（テスト）"}]
-        logger.info(f"テストモード: race_id={test_race_id} race_name={race_name}")
-        send_discord(webhook_url, f"🧪 **テスト送信** race_id={test_race_id}  {race_name}")
+        grade_races = [{"race_id": test_race_id, "race_name": str(test_race_id), "race_date": ""}]
     else:
         session = requests.Session()
         logger.info("週末重賞を検索中...")
         grade_races = scrape_grade_race_ids(session)
         if not grade_races:
-            dates = _weekend_dates()
-            sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
-            sun = f"{dates[1][:4]}-{dates[1][4:6]}-{dates[1][6:]}"
-            logger.warning(f"スクレイピングで重賞0件 ({sat}/{sun}) → featured_races.csv にフォールバック")
             grade_races = _load_featured_race_ids_for_weekend(featured_path)
-            if not grade_races:
-                msg = (
-                    f"🏇 今週末（{sat} / {sun}）の重賞レース情報が取得できませんでした。\n"
-                    "以下のいずれかが原因の可能性があります:\n"
-                    "• netkeibaへのアクセス失敗（ネットワーク/レート制限）\n"
-                    "• 今週末に重賞レースがない\n"
-                    "• HTMLの構造変更によりレース名が取得できていない\n\n"
-                    "💡 featured_races.csv に今週のレースIDを手動登録することで\n"
-                    "スクレイピング失敗時でも予想を実行できます。\n\n"
-                    "デバッグ用ログ確認:\n"
-                    "```\n"
-                    "python -m keiba_predictor.main notify --mode predict --debug\n"
-                    "```"
-                )
-                send_discord(webhook_url, msg)
-                return
-            from_featured = True
-            send_discord(webhook_url,
-                f"⚠️ スクレイピング失敗 → featured_races.csv から {len(grade_races)} レースを使用")
-        dates_str = " / ".join(sorted({r["race_date"] for r in grade_races}))
-        send_discord(webhook_url,
-            f"🏇 **今週末の重賞予想** ({dates_str})  全{len(grade_races)}レース")
+        if not grade_races:
+            send_discord(webhook_url, "🏇 今週末の重賞レース情報が取得できませんでした。")
+            return
 
-    notified = 0
+    today_str = date.today().isoformat()
     cache = _load_cache()
 
-    # 当週土日以外のレースをキャッシュから除外
+    # 先週のキャッシュを除外
     dates = _weekend_dates()
-    weekend_set = {
-        f"{d[:4]}-{d[4:6]}-{d[6:]}" for d in dates
-    }
+    weekend_set = {f"{d[:4]}-{d[4:6]}-{d[6:]}" for d in dates}
     stale_ids = [
         rid for rid, entry in cache.items()
-        if entry.get("race_date") and entry["race_date"] not in weekend_set
+        if isinstance(entry, dict) and entry.get("race_date") and entry["race_date"] not in weekend_set
     ]
     if stale_ids:
         for rid in stale_ids:
-            name = cache[rid].get("race_name", rid)
-            logger.info(f"  先週レース除外: {name} ({cache[rid].get('race_date')})")
             del cache[rid]
         _save_cache(cache)
-        logger.info(f"  {len(stale_ids)} 件の先週レースをキャッシュから削除")
 
-    # 当日のレースのみ通知（土曜実行→土曜レース、日曜実行→日曜レース）
-    today_str = date.today().isoformat()  # "YYYY-MM-DD"
-    logger.info(f"本日: {today_str}")
-
-    # キャッシュに当日の重賞予想があるが grade_races に含まれていない場合は補完
-    # （スクレイピング失敗やフォールバック日付ずれで通知漏れを防ぐ）
+    # キャッシュから当日の重賞を補完
     scraped_ids = {r["race_id"] for r in grade_races}
     for rid, entry in cache.items():
-        if rid in scraped_ids:
+        if not isinstance(entry, dict) or rid in scraped_ids:
             continue
-        if entry.get("race_date") != today_str:
-            continue
-        if not entry.get("predicted_top3_nums"):
-            continue
-        if entry.get("is_grade") is False:
-            continue
-        grade_races.append({
-            "race_id": rid,
-            "race_name": entry.get("race_name", rid),
-            "race_date": today_str,
-        })
-        logger.info(f"  キャッシュから補完: {entry.get('race_name', rid)} ({rid})")
+        if entry.get("race_date") == today_str and entry.get("predicted_top3_nums") and entry.get("is_grade") is not False:
+            grade_races.append({"race_id": rid, "race_name": entry.get("race_name", rid), "race_date": today_str})
 
-    # 発走時刻順にソート（キャッシュの start_time を使用）
-    grade_races = sorted(
-        grade_races,
-        key=lambda r: cache.get(r["race_id"], {}).get("start_time", "99:99"),
-    )
+    # 発走時刻順にソート
+    grade_races = sorted(grade_races, key=lambda r: cache.get(r["race_id"], {}).get("start_time", "99:99"))
 
+    notified = 0
     for race in grade_races:
-        race_id   = race["race_id"]
+        race_id = race["race_id"]
         race_name = race.get("race_name", race_id)
         race_date = race.get("race_date", "")
 
-        # キャッシュの race_date も確認
         cached_date = cache.get(race_id, {}).get("race_date", race_date)
-        effective_date = cached_date or race_date
-
-        if effective_date and effective_date != today_str:
-            logger.info(f"  スキップ（{effective_date} ≠ {today_str}）: {race_name}")
+        if cached_date and cached_date != today_str and not test_race_id:
+            logger.info(f"  スキップ（{cached_date} ≠ {today_str}）: {race_name}")
             continue
 
-        # ── キャッシュ優先: predictions_cache.json にデータがあればそれを使う ──
-        # predict_live() を再実行するとcleaned_races.csvが無い環境で確率が壊れるため、
-        # キャッシュに予想データがあれば常にそちらを使う
         cached_entry = cache.get(race_id, {})
-        has_cache = bool(cached_entry and cached_entry.get("predicted_top3_nums"))
-
-        if has_cache:
-            race_name = cached_entry.get("race_name", race_name)
-            logger.info(f"  キャッシュから予想を読み込み: {race_name} ({race_id})")
-
-            # AI解説が空の場合は再生成を試みる
-            if not cached_entry.get("ai_comments"):
-                logger.info(f"  AI解説が空 → 再生成を試みます: {race_name}")
-                try:
-                    # キャッシュのpredicted_top5から簡易DataFrameを構築してAI解説生成
-                    top5_data = cached_entry.get("predicted_top5", [])
-                    if top5_data:
-                        import pandas as _pd
-                        ai_df = _pd.DataFrame(top5_data)
-                        ai_df["prob_top3"] = ai_df["prob"]
-                        if "ev_score" not in ai_df.columns:
-                            ai_df["ev_score"] = ai_df.get("odds", _pd.Series(dtype=float)) * ai_df["prob"]
-                        course_info = cached_entry.get("course_info", "")
-                        ai_comments = generate_comments(
-                            ai_df, race_name=race_name, course_info=course_info)
-                        if ai_comments:
-                            cached_entry["ai_comments"] = ai_comments
-                            cache[race_id] = cached_entry
-                            _save_cache(cache)
-                            logger.info(f"  AI解説再生成成功: {len(ai_comments)} 頭分")
-                except Exception as e:
-                    logger.warning(f"  AI解説再生成失敗（続行）: {e}")
-
-            msg1, msg2 = _format_prediction_from_cache(race_name, cached_entry, race_id=race_id)
-        else:
+        if not (cached_entry and cached_entry.get("predicted_top3_nums")):
             # キャッシュになければ predict_live() で生成
-            logger.info(f"  キャッシュなし → predict_live 実行: {race_name} ({race_id})")
+            logger.info(f"  predict_live 実行: {race_name} ({race_id})")
             try:
                 from keiba_predictor.model.predict import predict_live
-                result = predict_live(race_id, notify=False, model_path=model_path)
-                cached_entry = _load_cache().get(race_id, {})
-                ai_comments = cached_entry.get("ai_comments", {})
-                course_info = cached_entry.get("course_info", "")
-                race_name   = cached_entry.get("race_name", race_name)
-                logger.info(f"  predict_live 成功: {race_name} ({race_id})")
-                msg1, msg2 = format_prediction(result, race_name=race_name,
-                                               ai_comments=ai_comments, course_info=course_info)
+                predict_live(race_id, notify=False, model_path=model_path)
+                cache = _load_cache()
+                cached_entry = cache.get(race_id, {})
             except Exception as e:
-                import traceback
-                logger.warning(f"  predict_live 失敗: {traceback.format_exc()}")
-                send_discord(webhook_url,
-                    f"⚠️ **{race_name}** の予想生成に失敗しました: {e}")
+                logger.warning(f"  predict_live 失敗: {e}")
+                send_discord(webhook_url, f"⚠️ {race_name} の予想生成に失敗: {e}")
                 continue
 
-        print(msg1, flush=True)
-        print(msg2, flush=True)
+        msg = _format_simple_message(race_id, cached_entry)
+        print(msg, flush=True)
 
-        # Discord に送信
-        ok = send_discord(webhook_url, msg1)
-        if ok:
-            send_discord(webhook_url, msg2)
+        if send_discord(webhook_url, msg):
             notified += 1
             logger.info(f"  送信完了: {race_name}")
-
-        # X（Twitter）に予想を投稿
-        if os.environ.get("ENABLE_X_POST", "false").lower() == "true":
-            try:
-                from keiba_predictor.x_post import post_predict_tweet
-                post_predict_tweet(race_name, cached_entry)
-            except Exception as e:
-                logger.warning(f"  [X] 予想投稿エラー: {e}")
 
     send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース送信完了")
 
