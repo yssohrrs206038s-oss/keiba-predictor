@@ -827,6 +827,9 @@ function renderPredictions(cache) {
     const gLabel = gradeLabel(r.race_name);
     const gClass = gradeClass(r.race_name);
     const shortName = (r.race_name || raceId).replace(/[（(]G[^）)]*[）)]/g, '').trim();
+    const raceNum = raceId.length >= 12 ? parseInt(raceId.slice(10, 12), 10) + 'R' : '';
+    const venue = r.venue || '';
+    const raceTitle = (venue && raceNum ? venue + raceNum + ' ' : '') + shortName;
     const course = r.course_info ? `<span style="color:var(--text-muted);font-size:11px;margin-left:6px;">${esc(r.course_info)}</span>` : '';
 
     // upcoming（予想未生成）の場合はレース情報のみ表示
@@ -835,8 +838,8 @@ function renderPredictions(cache) {
         <div class="race-card">
           <div class="race-card-header">
             <div>
-              <div class="race-name">📅 ${esc(shortName)}${course}</div>
-              <div class="race-meta">${esc(r.race_date || '')}${r.venue ? '　' + esc(r.venue) : ''}${r.start_time ? '　' + esc(r.start_time) + '発走' : ''}</div>
+              <div class="race-name">📅 ${esc(raceTitle)}${course}</div>
+              <div class="race-meta">${esc(r.race_date || '')}${r.start_time ? '　' + esc(r.start_time) + '発走' : ''}</div>
             </div>
             ${gLabel ? `<span class="grade-badge ${gClass}">${gLabel}</span>` : ''}
           </div>
@@ -943,8 +946,8 @@ function renderPredictions(cache) {
       <div class="race-card">
         <div class="race-card-header">
           <div>
-            <div class="race-name">${esc(shortName)}${course}</div>
-            <div class="race-meta">${esc(r.race_date || '')}${r.venue ? '\u3000' + esc(r.venue) : ''}${r.start_time ? '\u3000' + esc(r.start_time) + '発走' : ''}</div>
+            <div class="race-name">${esc(raceTitle)}${course}</div>
+            <div class="race-meta">${esc(r.race_date || '')}${r.start_time ? '　' + esc(r.start_time) + '発走' : ''}</div>
           </div>
           ${gLabel ? `<span class="grade-badge ${gClass}">${gLabel}</span>` : ''}
         </div>
@@ -964,6 +967,9 @@ function renderPredictions(cache) {
 
 function _renderFlatCard(raceId, r) {
   const shortName = (r.race_name || raceId).replace(/[（(]G[^）)]*[）)]/g, '').trim();
+  const raceNum = raceId.length >= 12 ? parseInt(raceId.slice(10, 12), 10) + 'R' : '';
+  const venue = r.venue || '';
+  const raceTitle = (venue && raceNum ? venue + raceNum + ' ' : '') + shortName;
   const course = r.course_info || '';
   // 簡素化キャッシュ: honmei/taikou/ana から取得
   const roles = [
@@ -991,7 +997,7 @@ function _renderFlatCard(raceId, r) {
   }
   return `<div class="race-card" style="padding:12px 16px;">
     <div style="font-size:13px;font-weight:700;margin-bottom:4px;">
-      ${esc(shortName)} <span style="font-size:11px;color:var(--text-muted);">${esc(course)} ${r.start_time ? r.start_time+'発走' : ''}</span>
+      ${esc(raceTitle)} <span style="font-size:11px;color:var(--text-muted);">${esc(course)} ${r.start_time ? r.start_time+'発走' : ''}</span>
     </div>
     <div style="font-size:12px;">${horseLine}</div>
     ${betLine}
@@ -1036,6 +1042,10 @@ function renderHistory(rows) {
     const gClass = gLabel === 'G1' ? 'grade-gi' : gLabel === 'G2' ? 'grade-gii' : gLabel === 'G3' ? 'grade-giii' : '';
     const date  = (r.date || '').slice(0, 10);
     const shortName = (r.race_name || '').replace(/[（(]G[^）)]*[）)]/g, '').trim();
+    const rid = (r.race_id || '').trim();
+    const hVenue = rid.length >= 12 ? (VENUE_MAP[rid.slice(8, 10)] || '') : '';
+    const hRaceNum = rid.length >= 12 ? parseInt(rid.slice(10, 12), 10) + 'R' : '';
+    const hPrefix = hVenue && hRaceNum ? hVenue + hRaceNum + ' ' : '';
     // 単勝・3連単は買っていない場合「-」表示
     const tIcon = r.tansho_hit == null && !r.tansho_payout ? '—' : (tHit ? '✅' : '❌');
     const stIcon = r.sanrentan_hit == null && !r.sanrentan_payout ? '—' : (stHit ? '✅' : '❌');
@@ -1043,7 +1053,7 @@ function renderHistory(rows) {
       <tr>
         <td style="color:var(--text-muted);white-space:nowrap">${esc(date)}</td>
         <td>
-          ${esc(shortName)}
+          ${esc(hPrefix + shortName)}
           ${gClass ? `<span class="grade-tag ${gClass}" style="margin-left:6px;">${esc(gLabel)}</span>` : ''}
         </td>
         <td class="hit-icon">${tIcon}</td>
