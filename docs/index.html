@@ -846,29 +846,46 @@ function renderPredictions(cache) {
         </div>`;
     }
 
-    // 予想馬（シンプル表示）
+    // 予想馬 + EV + MC確率
     const roles = [
       { key: 'honmei', mark: '◎', cls: 'mark-honmei' },
       { key: 'taikou', mark: '○', cls: 'mark-taikou' },
       { key: 'ana',    mark: '△', cls: 'mark-ana'    },
     ];
+    const evMap = {};
+    (r.ev_top3 || []).forEach(e => { if (e.horse_number != null) evMap[+e.horse_number] = e.ev_score; });
+    const sim = r.simulation || {};
 
     const horseHTML = roles.map(({ key, mark, cls }) => {
       const p = r[key];
       if (!p || !p.horse_name) return '';
-      const prob = ((p.prob || 0) * 100).toFixed(1);
+      const mcData = sim[String(p.horse_number)] || {};
+      const mcRate = mcData.top3_rate;
+      const prob = mcRate != null ? (mcRate * 100).toFixed(1) : ((p.prob || 0) * 100).toFixed(1);
+      const ev = evMap[+p.horse_number];
+      const evStr = ev ? `EV${ev.toFixed(2)}` : '';
+      const stableTag = mcData.is_stable != null
+        ? (mcData.is_stable ? '<span style="color:#2ecc71;font-size:10px;">🔒安定</span>' : '<span style="color:#e67e22;font-size:10px;">⚡展開依存</span>')
+        : '';
       return `
         <div class="horse-item">
           <span class="horse-mark ${cls}">${mark}</span>
           <span class="horse-num">${esc(p.horse_number)}番</span>
           <div>
-            <div class="horse-name">${esc(p.horse_name)}</div>
+            <div class="horse-name">${esc(p.horse_name)} ${stableTag}</div>
           </div>
           <div class="horse-stats">
             <div class="horse-prob">${prob}%</div>
+            ${evStr ? `<div class="horse-ev">${evStr}</div>` : ''}
           </div>
         </div>`;
     }).join('');
+
+    // 波乱度バナー
+    let volHTML = '';
+    if (sim.is_volatile_race) {
+      volHTML = `<div style="color:var(--red);font-size:11px;font-weight:700;padding:4px 8px;">🌀 波乱レース注意（波乱度${(sim.race_volatility||0).toFixed(2)}）</div>`;
+    }
 
     // 買い目（上位3頭から固定パターン）
     const pnums = (r.predicted_top3_nums || []).filter(n => n != null);
@@ -897,6 +914,7 @@ function renderPredictions(cache) {
         </div>
         <div class="race-card-body">
           <div class="horse-list">${horseHTML}</div>
+          ${volHTML}
           ${betHTML}
         </div>
       </div>`;

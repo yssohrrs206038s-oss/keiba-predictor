@@ -754,6 +754,19 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         if pd.notna(v):
             top5_nums.append(int(v))
 
+    # EV・危険馬
+    if "ev_score" not in result_df.columns:
+        result_df = calc_ev_and_flags(result_df)
+
+    ev_top3: list[dict] = []
+    for _, r in result_df[result_df["ev_score"].notna()].nlargest(3, "ev_score").iterrows():
+        ev_top3.append({
+            "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else None,
+            "horse_name":   str(r.get("horse_name", "")),
+            "ev_score":     round(float(r["ev_score"]), 3),
+            "prob":         round(float(r["prob_top3"]), 4),
+        })
+
     cache[race_id] = {
         "race_name":           race_name,
         "race_date":           race_date,
@@ -765,8 +778,34 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         "ana":                 _horse(result_df, 2),
         "predicted_top3_nums": top3_nums,
         "predicted_top5_nums": top5_nums,
+        "ev_top3":             ev_top3,
         "is_grade":            is_grade,
     }
+
+    # モンテカルロシミュレーション
+    try:
+        from keiba_predictor.simulation import run_monte_carlo
+        mc_horses = []
+        for i in range(min(len(result_df), 18)):
+            r = result_df.iloc[i]
+            mc_horses.append({
+                "horse_number": int(r["horse_number"]) if pd.notna(r.get("horse_number")) else i + 1,
+                "horse_name": str(r.get("horse_name", "")),
+                "prob": float(r["prob_top3"]),
+                "running_style_enc": int(r.get("running_style_enc", 2)) if pd.notna(r.get("running_style_enc")) else 2,
+            })
+        mc_result = run_monte_carlo(mc_horses)
+        # 上位5頭 + 波乱度を保存
+        sim = {}
+        for num in top5_nums[:5]:
+            k = str(num)
+            if k in mc_result:
+                sim[k] = mc_result[k]
+        sim["race_volatility"] = mc_result.get("race_volatility", 0)
+        sim["is_volatile_race"] = mc_result.get("is_volatile_race", False)
+        cache[race_id]["simulation"] = sim
+    except Exception as e:
+        logger.warning(f"モンテカルロシミュレーション失敗: {e}")
 
     _save_cache(cache)
 
@@ -1095,7 +1134,7 @@ def _check_sanrenpuku_raw(
 
 
 def _format_simple_message(race_id: str, entry: dict) -> str:
-    """予想キャッシュから シンプルなDiscord通知メッセージを生成する。"""
+    """予想キャッシュから Discord通知メッセージを生成する。"""
     venue = entry.get("venue", "")
     if not venue and race_id and len(race_id) >= 10:
         venue = VENUE_MAP.get(race_id[4:6], "")
@@ -1112,10 +1151,26 @@ def _format_simple_message(race_id: str, entry: dict) -> str:
     taikou = entry.get("taikou", {})
     ana = entry.get("ana", {})
 
+    # EVマップ
+    ev_map: dict[int, float] = {}
+    for e in entry.get("ev_top3", []):
+        num = e.get("horse_number")
+        if num is not None:
+            ev_map[int(num)] = e.get("ev_score", 0)
+
+    # MC確率マップ
+    sim = entry.get("simulation", {})
+
     def _horse_line(mark: str, h: dict) -> str:
         num = h.get("horse_number", "?")
         name = h.get("horse_name", "")
-        return f"{mark} {num}番 {name}"
+        # MC確率を優先
+        mc = sim.get(str(num), {})
+        mc_rate = mc.get("top3_rate")
+        prob = (mc_rate * 100) if mc_rate is not None else (h.get("prob", 0) * 100)
+        ev = ev_map.get(int(num) if num != "?" else 0, 0)
+        ev_str = f" EV{ev:.2f}" if ev else ""
+        return f"{mark} {num}番 {name}　{prob:.1f}%{ev_str}"
 
     lines = [
         f"🏇 {venue} {race_num} {race_name}".strip(),
@@ -1126,6 +1181,10 @@ def _format_simple_message(race_id: str, entry: dict) -> str:
     lines.append(_horse_line("◎", honmei))
     lines.append(_horse_line("○", taikou))
     lines.append(_horse_line("△", ana))
+
+    # 波乱度表示
+    if sim.get("is_volatile_race"):
+        lines.append(f"🌀 波乱注意（波乱度{sim.get('race_volatility', 0):.2f}）")
 
     # 買い目（上位3頭から固定パターン: 複勝1 + 馬連2 + 3連複1 = 4点）
     h1 = honmei.get("horse_number", "?")
