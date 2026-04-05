@@ -1822,16 +1822,18 @@ def run_result_notify(
         send_discord(webhook_url,
             f"⚠️ スクレイピング失敗 → featured_races.csv から {len(grade_races)} レースを使用")
 
-    dates_str = " / ".join(sorted({r["race_date"] for r in grade_races}))
-    send_discord(webhook_url,
-        f"🏆 **今週末の重賞結果** ({dates_str})  全{len(grade_races)}レース")
-
     from keiba_predictor.scraper.netkeiba_scraper import scrape_race_result
     from keiba_predictor.history import (
         record_result, load_history,
         weekly_summary, cumulative_summary, hit_streak, format_summary_message,
     )
     from datetime import date as _date
+
+    # 全レース通知済みなら何も送信せず終了
+    pending = [r for r in grade_races if not cache.get(r["race_id"], {}).get("result_notified")]
+    if not pending:
+        logger.info("全レース通知済み → スキップ")
+        return
 
     # 手動結果を読み込む
     manual_results: dict = {}
@@ -1932,7 +1934,8 @@ def run_result_notify(
             except Exception as e:
                 logger.warning(f"  [X] 結果投稿エラー: {e}")
 
-    send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース結果送信完了")
+    if notified > 0:
+        send_discord(webhook_url, f"✅ {notified}レース結果送信完了")
 
     # 週次サマリーを Discord に送信（日曜のみ）
     try:
