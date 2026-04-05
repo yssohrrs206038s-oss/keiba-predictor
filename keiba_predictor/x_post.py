@@ -309,20 +309,6 @@ def post_result_tweet(
         logger.warning(f"[X] 1投稿目失敗: {e}")
         return False
 
-    # 2投稿目（的中時のみ・リプライ）
-    if tweet2 and tweet_id:
-        print(f"[X結果ツイート2（リプライ）]\n{tweet2}", flush=True)
-        if len(tweet2) > _CHAR_LIMIT:
-            tweet2 = tweet2[: _CHAR_LIMIT - 1] + "…"
-        try:
-            client.create_tweet(
-                text=tweet2,
-                in_reply_to_tweet_id=tweet_id,
-            )
-            logger.info(f"[X] 2投稿目（リプライ）完了")
-        except Exception as e:
-            logger.warning(f"[X] 2投稿目（リプライ）失敗: {e}")
-
     return True
 
 
