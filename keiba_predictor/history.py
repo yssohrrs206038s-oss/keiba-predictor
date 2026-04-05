@@ -258,8 +258,13 @@ def record_result(
         "return_total":    return_total,
     }
 
-    # CSV 追記
+    # CSV 追記（race_id重複チェック）
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if HISTORY_PATH.exists():
+        existing = pd.read_csv(HISTORY_PATH, encoding="utf-8-sig", dtype=str)
+        if race_id in existing.get("race_id", pd.Series(dtype=str)).values:
+            logger.info(f"  [history] 重複スキップ: {race_name} ({race_id})")
+            return row
     new_row_df = pd.DataFrame([row])
     if HISTORY_PATH.exists():
         new_row_df.to_csv(HISTORY_PATH, mode="a", header=False,

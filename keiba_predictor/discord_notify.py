@@ -1847,6 +1847,11 @@ def run_result_notify(
         race_name = cached_name or race.get("race_name", race_id)
         race_date = race.get("race_date", "")
 
+        # 結果通知済みならスキップ（日曜に土曜分を再送信しない）
+        if cache.get(race_id, {}).get("result_notified"):
+            logger.info(f"  結果通知済みスキップ: {race_name} ({race_id})")
+            continue
+
         # 手動結果があればスクレイピングをスキップ
         manual = manual_results.get(race_id)
         if manual:
@@ -1899,6 +1904,10 @@ def run_result_notify(
         if send_discord(webhook_url, msg):
             notified += 1
             logger.info(f"  送信: {race_name}")
+            # 結果通知済みフラグをキャッシュに保存
+            if race_id in cache:
+                cache[race_id]["result_notified"] = True
+                _save_cache(cache)
 
         # 的中実績を CSV に記録
         if manual and "fukusho_hit" in manual:
