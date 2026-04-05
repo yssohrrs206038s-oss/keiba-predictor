@@ -1143,12 +1143,20 @@ def _fmt_result(race_name: str, race_date: str,
 
 def _get_payout(payouts: dict, bet_type: str, combo: str) -> str:
     """払戻金辞書から指定の組み合わせ・金額を文字列で返す。"""
-    for entry in payouts.get(bet_type, []):
-        e_nums = set(re.findall(r"\d+", entry["combo"]))
-        c_nums = set(re.findall(r"\d+", combo))
-        if e_nums == c_nums:
-            amt = entry["amount"]
-            return f"¥{amt:,}" if amt else ""
+    _ALIASES = {
+        "三連複": ["三連複", "3連複"],
+        "三連単": ["三連単", "3連単"],
+        "馬連": ["馬連"], "馬単": ["馬単"],
+        "ワイド": ["ワイド"], "単勝": ["単勝"], "複勝": ["複勝"],
+    }
+    keys = _ALIASES.get(bet_type, [bet_type])
+    for key in keys:
+        for entry in payouts.get(key, []):
+            e_nums = set(re.findall(r"\d+", entry["combo"]))
+            c_nums = set(re.findall(r"\d+", combo))
+            if e_nums == c_nums:
+                amt = entry["amount"]
+                return f"¥{amt:,}" if amt else ""
     return ""
 
 
