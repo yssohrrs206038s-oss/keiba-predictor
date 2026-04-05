@@ -594,7 +594,7 @@
       "horse_number": 15,
       "horse_name": "クロワデュノール",
       "prob": 0.0264101754873991,
-      "odds": 2.9,
+      "odds": 2.8,
       "shap_top": [
         {
           "feature": "odds",
@@ -640,7 +640,7 @@
       "horse_number": 5,
       "horse_name": "ショウヘイ",
       "prob": 0.011090856976807117,
-      "odds": 6.0,
+      "odds": 6.1,
       "shap_top": [
         {
           "feature": "odds",
@@ -709,25 +709,25 @@
       {
         "horse_number": 10,
         "horse_name": "ボルドグフーシュ",
-        "ev_score": 0.352,
+        "ev_score": 0.363,
         "prob": 0.0026,
-        "odds": 135.5,
+        "odds": 139.8,
         "popularity": 14
       },
       {
         "horse_number": 1,
         "horse_name": "サンストックトン",
-        "ev_score": 0.229,
+        "ev_score": 0.236,
         "prob": 0.0011,
-        "odds": 208.4,
+        "odds": 214.4,
         "popularity": 15
       },
       {
         "horse_number": 14,
         "horse_name": "タガノデュード",
-        "ev_score": 0.141,
+        "ev_score": 0.146,
         "prob": 0.0019,
-        "odds": 74.3,
+        "odds": 77.1,
         "popularity": 13
       }
     ],
@@ -887,7 +887,7 @@
       "horse_number": 2,
       "horse_name": "スライビングロード",
       "prob": 0.939,
-      "odds": 4.2,
+      "odds": 4.3,
       "shap_top": [
         {
           "feature": "odds",
@@ -914,7 +914,7 @@
       "horse_number": 13,
       "horse_name": "スカイハイ",
       "prob": 0.791,
-      "odds": 5.8,
+      "odds": 6.0,
       "shap_top": [
         {
           "feature": "last_3f",
@@ -941,7 +941,7 @@
       "horse_number": 18,
       "horse_name": "ミルテンベルク",
       "prob": 0.32,
-      "odds": 13.6,
+      "odds": 13.1,
       "shap_top": [
         {
           "feature": "last_3f",
@@ -1019,25 +1019,25 @@
       {
         "horse_number": 12,
         "horse_name": "ショウナンラスボス",
-        "ev_score": 10.8,
+        "ev_score": 11.941,
         "prob": 0.1563,
-        "odds": 69.1,
-        "popularity": 16
+        "odds": 76.4,
+        "popularity": 17
       },
       {
         "horse_number": 18,
         "horse_name": "ミルテンベルク",
-        "ev_score": 7.719,
+        "ev_score": 7.436,
         "prob": 0.5676,
-        "odds": 13.6,
+        "odds": 13.1,
         "popularity": 5
       },
       {
         "horse_number": 7,
         "horse_name": "サクセスアイ",
-        "ev_score": 7.184,
+        "ev_score": 7.255,
         "prob": 0.3574,
-        "odds": 20.1,
+        "odds": 20.3,
         "popularity": 9
       }
     ],
