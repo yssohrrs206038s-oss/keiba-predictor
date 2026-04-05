@@ -622,15 +622,22 @@ def _load_featured_race_ids_for_weekend(
         return []
 
     # race_date 列がない新フォーマット（race_id, race_name, grade）の場合は全件返す
+    # キャッシュに日付情報があればそちらを優先する
     if "race_date" not in df.columns:
         dates = _weekend_dates()
         sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
+        try:
+            pred_cache = json.loads(PRED_CACHE.read_text(encoding="utf-8")) if PRED_CACHE.exists() else {}
+        except Exception:
+            pred_cache = {}
         result = []
         for _, row in df.drop_duplicates(subset=["race_id"]).iterrows():
+            rid = str(row["race_id"])
+            cached_date = pred_cache.get(rid, {}).get("race_date", "")
             result.append({
-                "race_id":   str(row["race_id"]),
+                "race_id":   rid,
                 "race_name": str(row.get("race_name", row["race_id"])),
-                "race_date": sat,
+                "race_date": cached_date or sat,
             })
         if result:
             logger.info(
@@ -1615,6 +1622,25 @@ def run_predict_notify(
     # 当日のレースのみ通知（土曜実行→土曜レース、日曜実行→日曜レース）
     today_str = date.today().isoformat()  # "YYYY-MM-DD"
     logger.info(f"本日: {today_str}")
+
+    # キャッシュに当日の重賞予想があるが grade_races に含まれていない場合は補完
+    # （スクレイピング失敗やフォールバック日付ずれで通知漏れを防ぐ）
+    scraped_ids = {r["race_id"] for r in grade_races}
+    for rid, entry in cache.items():
+        if rid in scraped_ids:
+            continue
+        if entry.get("race_date") != today_str:
+            continue
+        if not entry.get("predicted_top3_nums"):
+            continue
+        if entry.get("is_grade") is False:
+            continue
+        grade_races.append({
+            "race_id": rid,
+            "race_name": entry.get("race_name", rid),
+            "race_date": today_str,
+        })
+        logger.info(f"  キャッシュから補完: {entry.get('race_name', rid)} ({rid})")
 
     # 発走時刻順にソート（キャッシュの start_time を使用）
     grade_races = sorted(
