@@ -111,226 +111,52 @@ def generate_loss_comment(race_name: str, pred: dict, actual_result: list) -> st
 
 
 def analyze_week() -> str:
-    """今週のレース結果を分析してレポート文字列を返す。"""
+    """今週のレース結果を集計し、的中率・回収率のみ返す。"""
     from datetime import date, timedelta
 
-    cache = _load_json(CACHE_PATH)
-    manual = _load_json(MANUAL_PATH)
-
-    if not cache and not manual:
+    if not HISTORY_PATH.exists():
         return ""
 
-    # 今週の範囲（月曜〜日曜）を算出
+    try:
+        hist = pd.read_csv(HISTORY_PATH, encoding="utf-8-sig", dtype=str)
+    except Exception:
+        return ""
+
+    if hist.empty:
+        return ""
+
+    # 今週（月曜〜日曜）でフィルタ
     today = date.today()
-    week_start = today - timedelta(days=today.weekday())  # 月曜
-    week_end = week_start + timedelta(days=6)  # 日曜
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
     ws_str = week_start.isoformat()
     we_str = week_end.isoformat()
-    logger.info(f"週次分析対象期間: {ws_str} 〜 {we_str}")
 
-    sep = "━" * 18
-    danger_hits: list[str] = []    # パターン1
-    honmei_losses: list[str] = []  # パターン2
-    dark_horses: list[str] = []    # パターン3
-    wins: list[str] = []           # パターン4
-    fukusho_miss_races: list[tuple[str, dict, list]] = []  # (race_name, pred, result)
+    mask = hist["date"].apply(lambda d: ws_str <= str(d)[:10] <= we_str if pd.notna(d) else False)
+    week = hist[mask]
+    if week.empty:
+        return ""
 
-    # manual_results.json をベースに分析（結果データがある）— 今週分のみ
-    sources: dict = {}
-    if manual:
-        for rid, m in manual.items():
-            rd = m.get("race_date", "")
-            if rd and ws_str <= rd <= we_str:
-                sources[rid] = m
+    n = len(week)
+    f_hits = sum(1 for _, r in week.iterrows() if r.get("fukusho_hit") == "True")
+    u_hits = sum(1 for _, r in week.iterrows()
+                 if r.get("umaren_hit") == "True" or r.get("wide_hit") == "True")
+    s_hits = sum(1 for _, r in week.iterrows() if r.get("sanrenpuku_hit") == "True")
 
-    # manual がない場合は cache + history から組み立て — 今週分のみ
-    if not sources and HISTORY_PATH.exists():
-        try:
-            hist = pd.read_csv(HISTORY_PATH, encoding="utf-8-sig", dtype=str)
-            for _, row in hist.iterrows():
-                rid = str(row.get("race_id", ""))
-                rd = str(row.get("date", ""))
-                if not rid or not rd:
-                    continue
-                if rd < ws_str or rd > we_str:
-                    continue
-                if rid not in sources:
-                    sources[rid] = {
-                        "race_name": row.get("race_name", rid),
-                        "result": [
-                            int(row.get("actual1_num", 0) or 0),
-                            int(row.get("actual2_num", 0) or 0),
-                            int(row.get("actual3_num", 0) or 0),
-                        ],
-                        "fukusho_hit": row.get("fukusho_hit") == "True",
-                        "umaren_hit": row.get("umaren_hit") == "True",
-                        "sanrenpuku_hit": row.get("sanrenpuku_hit") == "True",
-                    }
-        except Exception:
-            pass
+    total_bet = sum(int(r.get("bet_total") or 0) for _, r in week.iterrows())
+    total_ret = sum(int(r.get("return_total") or 0) for _, r in week.iterrows())
+    roi = (total_ret / total_bet * 100) if total_bet > 0 else 0
 
-    for race_id, m in sources.items():
-        race_name = m.get("race_name", race_id)
-        result_nums = m.get("result", [])
-        pred = cache.get(race_id, {})
-        if not result_nums:
-            continue
-
-        top3_actual = set(result_nums[:3])
-        predicted_nums = set(pred.get("predicted_top5_nums", []))
-
-        # パターン1: 危険馬が3着以内
-        for d in pred.get("dangerous_horses", []):
-            dnum = d.get("horse_number")
-            dname = d.get("horse_name", "")
-            if dnum and dnum in top3_actual:
-                pos = result_nums.index(dnum) + 1 if dnum in result_nums else "?"
-                danger_hits.append(f"{race_name} {dname}{pos}着")
-
-        # パターン2: 本命大敗（5着以下）
-        honmei_num = pred.get("predicted_top3_nums", [None])[0] if pred.get("predicted_top3_nums") else None
-        if honmei_num and honmei_num not in top3_actual:
-            honmei_name = pred.get("honmei", {}).get("horse_name", f"{honmei_num}番")
-            # result に含まれていれば着順がわかる
-            if honmei_num in result_nums:
-                pos = result_nums.index(honmei_num) + 1
-                if pos >= 5:
-                    honmei_losses.append(f"{race_name} {honmei_name}{pos}着")
-            else:
-                honmei_losses.append(f"{race_name} {honmei_name}着外")
-
-        # パターン3: 穴馬見逃し（predicted_top5外が3着以内）
-        for num in result_nums[:3]:
-            if num not in predicted_nums and num != 0:
-                pos = result_nums.index(num) + 1
-                dark_horses.append(f"{race_name} {num}番{pos}着")
-
-        # 複勝ハズレの収集（AI外れ分析用）
-        is_fukusho_miss = not m.get("fukusho_hit", False)
-        if is_fukusho_miss and pred and result_nums:
-            fukusho_miss_races.append((race_name, pred, result_nums))
-
-        # パターン4: 的中
-        hit_parts = []
-        if m.get("fukusho_hit"):
-            hit_parts.append("複勝")
-        if m.get("umaren_hit"):
-            hit_parts.append("馬連")
-        if m.get("sanrenpuku_hit"):
-            hit_parts.append("3連複")
-        if hit_parts:
-            wins.append(f"{race_name}{'・'.join(hit_parts)}")
-
-    # レポート組み立て
-    lines = ["📊 **【KEIBA EDGE 週次分析】**", sep]
-
-    if danger_hits:
-        lines.append(f"⚠️ 危険馬が3着以内: {len(danger_hits)}件")
-        for h in danger_hits:
-            lines.append(f"　{h}")
-    else:
-        lines.append("⚠️ 危険馬が3着以内: 0件")
-
-    if honmei_losses:
-        lines.append(f"💔 本命大敗: {len(honmei_losses)}件")
-        for h in honmei_losses:
-            lines.append(f"　{h}")
-    else:
-        lines.append("💔 本命大敗: 0件")
-
-    if dark_horses:
-        lines.append(f"🎯 穴馬見逃し: {len(dark_horses)}件")
-        for h in dark_horses[:5]:  # 最大5件
-            lines.append(f"　{h}")
-    else:
-        lines.append("🎯 穴馬見逃し: 0件")
-
-    if wins:
-        lines.append(f"✅ 的中: {', '.join(wins)}")
-    else:
-        lines.append("✅ 的中: なし")
-
-    lines.append(sep)
-
-    # 示唆
-    if danger_hits:
-        lines.append("💡 来週への示唆: 危険馬判定の閾値見直しを検討")
-    elif honmei_losses:
-        lines.append("💡 来週への示唆: 本命選定の精度向上を検討")
-    elif dark_horses:
-        lines.append("💡 来週への示唆: 穴馬検出の感度向上を検討")
-    else:
-        lines.append("💡 来週への示唆: 好調維持。現在のモデル設定を継続")
-
-    # AI外れ分析コメント（複勝ハズレのレースのみ）
-    if fukusho_miss_races and os.environ.get("ANTHROPIC_API_KEY"):
-        lines += ["", sep, "💔 **本命大敗レース AI分析**", sep]
-        for rname, rpred, rresult in fukusho_miss_races[:3]:  # 最大3レース
-            hon = rpred.get("honmei", {})
-            hon_name = hon.get("horse_name", "?")
-            hon_num = hon.get("horse_number", "?")
-            # 本命の着順
-            hon_pos = "着外"
-            if hon_num in rresult:
-                hon_pos = f"{rresult.index(hon_num) + 1}着"
-            lines.append(f"{rname}: ◎{hon_name}{hon_pos}")
-            comment = generate_loss_comment(rname, rpred, rresult)
-            if comment:
-                lines.append(f"🤖 AI分析: 「{comment}」")
-            lines.append("")
-
-    # 危険馬・穴馬の的中率追跡
-    try:
-        from keiba_predictor.history import (
-            load_history, jockey_stats, course_stats,
-            dangerous_horse_stats, ana_horse_stats,
-        )
-        hist_df = load_history()
-
-        if not hist_df.empty and cache:
-            d_stats = dangerous_horse_stats(cache, hist_df)
-            a_stats = ana_horse_stats(cache, hist_df)
-
-            if d_stats["total"] > 0:
-                lines += ["", sep, "⚠️ **危険馬分析**"]
-                lines.append(
-                    f"回避精度: {d_stats['accuracy']*100:.0f}%"
-                    f"（{d_stats['total']}回中{d_stats['total']-d_stats['hit']}回正解）"
-                )
-                for d in d_stats["details"][-3:]:
-                    icon = "❌来た" if d["came"] else "✅回避"
-                    lines.append(f"　{d['race']} {d['horse']}({d['popularity']}人気) → {icon}")
-
-            if a_stats["total"] > 0:
-                lines += ["", "★ **穴馬分析**"]
-                lines.append(
-                    f"的中率: {a_stats['hit_rate']*100:.0f}%"
-                    f"（{a_stats['total']}回中{a_stats['hit']}回）"
-                )
-                for d in a_stats["details"][-3:]:
-                    icon = "✅的中" if d["came"] else "❌ハズレ"
-                    lines.append(f"　★{d['race']} {d['horse']}({d['popularity']}人気) → {icon}")
-    except Exception as e:
-        logger.debug(f"危険馬・穴馬分析失敗: {e}")
-
-    # 騎手別・コース別成績サマリー
-    try:
-        if not hist_df.empty:
-            lines += ["", sep, "📊 **成績サマリー**"]
-
-            j_stats = jockey_stats(hist_df)
-            if j_stats:
-                lines.append("🏅 本命馬別（3戦以上）:")
-                for j in j_stats[:5]:
-                    lines.append(f"　{j['name']} 複勝{j['fukusho_rate']*100:.0f}% ({j['n']}戦)")
-
-            c_stats = course_stats(hist_df)
-            if c_stats:
-                lines.append("📍 コース別:")
-                for c in c_stats[:5]:
-                    lines.append(f"　{c['course']} 複勝{c['fukusho_rate']*100:.0f}% ({c['n']}戦)")
-    except Exception as e:
-        logger.debug(f"成績サマリー生成失敗: {e}")
+    sep = "━" * 16
+    lines = [
+        "📊 **【KEIBA EDGE】今週の成績**",
+        sep,
+        f"複勝的中率: {f_hits/n*100:.0f}%（{f_hits}/{n}）",
+        f"馬連的中率: {u_hits/n*100:.0f}%（{u_hits}/{n}）",
+        f"3連複的中率: {s_hits/n*100:.0f}%（{s_hits}/{n}）",
+        f"回収率: {roi:.0f}%",
+        sep,
+    ]
 
     return "\n".join(lines)
 
