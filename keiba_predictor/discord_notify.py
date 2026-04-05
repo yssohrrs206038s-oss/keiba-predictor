@@ -1400,7 +1400,11 @@ def run_predict_notify(
     test_race_id: Optional[str] = None,
     use_live: bool = False,
 ) -> None:
-    """週末重賞を予想して Discord に送信する。"""
+    """週末重賞+平場（芝1勝以上）を予想���てDiscordに送信する。
+
+    重賞: Discord通知 + ダッシュボード表示
+    平場: ダッシュボード表示のみ（Discordには送らない）
+    """
     webhook_url = _resolve_webhook(webhook_url)
 
     if model_path is None:
@@ -1408,19 +1412,6 @@ def run_predict_notify(
     if not model_path.exists():
         send_discord(webhook_url, "⚠️ モデルファイルが見つかりません。")
         return
-
-    # 重賞レース一覧を取得
-    if test_race_id:
-        grade_races = [{"race_id": test_race_id, "race_name": str(test_race_id), "race_date": ""}]
-    else:
-        session = requests.Session()
-        logger.info("週末重賞を検索中...")
-        grade_races = scrape_grade_race_ids(session)
-        if not grade_races:
-            grade_races = _load_featured_race_ids_for_weekend(featured_path)
-        if not grade_races:
-            send_discord(webhook_url, "🏇 今週末の重賞レース情報が取得できませんでした。")
-            return
 
     today_str = date.today().isoformat()
     cache = _load_cache()
@@ -1436,6 +1427,16 @@ def run_predict_notify(
         for rid in stale_ids:
             del cache[rid]
         _save_cache(cache)
+
+    # ── 重賞レース ──────────────────────────────────────
+    if test_race_id:
+        grade_races = [{"race_id": test_race_id, "race_name": str(test_race_id), "race_date": ""}]
+    else:
+        session = requests.Session()
+        logger.info("週末重賞を検索中...")
+        grade_races = scrape_grade_race_ids(session)
+        if not grade_races:
+            grade_races = _load_featured_race_ids_for_weekend(featured_path)
 
     # キャッシュから当日の重賞を補完
     scraped_ids = {r["race_id"] for r in grade_races}
@@ -1461,7 +1462,6 @@ def run_predict_notify(
 
         cached_entry = cache.get(race_id, {})
         if not (cached_entry and cached_entry.get("predicted_top3_nums")):
-            # キャッシュになければ predict_live() で生成
             logger.info(f"  predict_live 実行: {race_name} ({race_id})")
             try:
                 from keiba_predictor.model.predict import predict_live
@@ -1475,12 +1475,20 @@ def run_predict_notify(
 
         msg = _format_simple_message(race_id, cached_entry)
         print(msg, flush=True)
-
         if send_discord(webhook_url, msg):
             notified += 1
             logger.info(f"  送信完了: {race_name}")
 
-    send_discord(webhook_url, f"✅ {notified}/{len(grade_races)} レース送信完了")
+    # ── 平場レース（芝・1勝以上） → ダッシュボード用にキャッシュのみ ──
+    if not test_race_id:
+        flat_count = 0
+        cache = _load_cache()
+        for rid, entry in cache.items():
+            if isinstance(entry, dict) and entry.get("is_grade") is False and entry.get("race_date") == today_str:
+                flat_count += 1
+        logger.info(f"平場（芝1勝以上）: 当日 {flat_count} レースがキャッシュ済み")
+
+    send_discord(webhook_url, f"✅ 重賞 {notified} レース送信完了（平場はダッシュボードで確認）")
 
 
 # ══════════════════════════════════════════════════════════════
