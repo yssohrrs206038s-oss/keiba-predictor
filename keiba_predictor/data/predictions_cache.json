@@ -185,6 +185,7 @@
     "is_grade": true,
     "bet_strategy": {
       "fukusho": [],
+      "tansho": [],
       "umaren": [],
       "wide": [
         {
@@ -217,10 +218,12 @@
           14
         ]
       },
+      "sanrentan": {},
       "total_points": 6,
-      "strategy_note": "ワイド（上位拮抗） + 3連複2頭軸×3",
+      "total_cost": 600,
+      "strategy_note": "ワイド(波乱) + 3連複2頭軸x3",
       "use_wide": true,
-      "is_volatile_race": false
+      "is_volatile_race": true
     },
     "confidence": 1,
     "confidence_stars": "★",
@@ -475,6 +478,7 @@
     "is_grade": true,
     "bet_strategy": {
       "fukusho": [],
+      "tansho": [],
       "umaren": [],
       "wide": [
         {
@@ -507,10 +511,12 @@
           3
         ]
       },
+      "sanrentan": {},
       "total_points": 6,
-      "strategy_note": "ワイド（上位拮抗） + 3連複2頭軸×3",
+      "total_cost": 600,
+      "strategy_note": "ワイド(波乱) + 3連複2頭軸x3",
       "use_wide": true,
-      "is_volatile_race": false
+      "is_volatile_race": true
     },
     "confidence": 1,
     "confidence_stars": "★",
@@ -765,6 +771,7 @@
     "is_grade": true,
     "bet_strategy": {
       "fukusho": [],
+      "tansho": [],
       "umaren": [],
       "wide": [
         {
@@ -797,10 +804,12 @@
           12
         ]
       },
+      "sanrentan": {},
       "total_points": 6,
-      "strategy_note": "ワイド（上位拮抗） + 3連複2頭軸×3",
+      "total_cost": 600,
+      "strategy_note": "ワイド(波乱) + 3連複2頭軸x3",
       "use_wide": true,
-      "is_volatile_race": false
+      "is_volatile_race": true
     },
     "confidence": 1,
     "confidence_stars": "★",
