@@ -846,210 +846,58 @@ function renderPredictions(cache) {
         </div>`;
     }
 
-    // 予想馬
+    // 予想馬（シンプル表示）
     const roles = [
       { key: 'honmei', mark: '◎', cls: 'mark-honmei' },
       { key: 'taikou', mark: '○', cls: 'mark-taikou' },
-      { key: 'ana',    mark: '☆', cls: 'mark-ana'    },
+      { key: 'ana',    mark: '△', cls: 'mark-ana'    },
     ];
-    const evMap = {};
-    (r.ev_top3 || []).forEach(e => { if (e.horse_number != null) evMap[+e.horse_number] = e.ev_score; });
-    const aiComments = r.ai_comments || {};
-
-    // MC確率マップ
-    const sim = r.simulation || {};
 
     const horseHTML = roles.map(({ key, mark, cls }) => {
       const p = r[key];
       if (!p || !p.horse_name) return '';
-      // MC確率を優先、なければXGBoost prob
-      const mcData = sim[String(p.horse_number)] || {};
-      const mcRate = mcData.top3_rate;
-      const prob = mcRate != null ? (mcRate * 100).toFixed(1) : ((p.prob || 0) * 100).toFixed(1);
-      const ev   = evMap[+p.horse_number];
-      const evStr = ev ? `EV${ev.toFixed(2)}` : '';
-
-      // SHAP値タグ
-      let shapHTML = '';
-      if (p.shap_top && p.shap_top.length) {
-        const tags = p.shap_top.map(s => {
-          const cls2 = s.value > 0 ? 'shap-plus' : 'shap-minus';
-          const sign = s.value > 0 ? '+' : '';
-          return `<span class="shap-tag ${cls2}">${esc(s.label)} ${sign}${s.value.toFixed(2)}</span>`;
-        }).join('');
-        shapHTML = `<div class="horse-shap">${tags}</div>`;
-      }
-
-      // 1行サマリー: SHAP根拠 → 判定（AI長文解説は非表示）
-      let summaryHTML = '';
-      if (p.shap_top && p.shap_top.length) {
-        const pros = p.shap_top.filter(s => s.value > 0).map(s => s.label).slice(0, 2);
-        const cons = p.shap_top.filter(s => s.value < 0).map(s => s.label).slice(0, 1);
-        const parts = [];
-        if (pros.length) parts.push(pros.join('・'));
-        if (cons.length) parts.push('⚠' + cons[0]);
-        let verdict = '';
-        if (ev && ev >= 1.5) verdict = '妙味あり';
-        else if (prob >= 50) verdict = '安定軸';
-        else if (prob >= 30) verdict = '展開次第';
-        summaryHTML = `<div class="horse-summary">→ ${parts.join(' / ')}${verdict ? '。' + verdict : ''}</div>`;
-      }
-
+      const prob = ((p.prob || 0) * 100).toFixed(1);
       return `
         <div class="horse-item">
           <span class="horse-mark ${cls}">${mark}</span>
           <span class="horse-num">${esc(p.horse_number)}番</span>
           <div>
             <div class="horse-name">${esc(p.horse_name)}</div>
-            ${shapHTML}
-            ${summaryHTML}
           </div>
           <div class="horse-stats">
             <div class="horse-prob">${prob}%</div>
-            ${evStr ? `<div class="horse-ev">${evStr}</div>` : ''}
           </div>
         </div>`;
     }).join('');
 
-    // 危険馬・穴馬
-    const predNums = new Set((r.predicted_top3_nums || []).map(Number));
-    const dangerous = (r.dangerous_horses || []).slice(0, 2).map(d =>
-      `<div class="alert-item alert-danger">⚠️ <span>危険：${esc(d.horse_number)}番 ${esc(d.horse_name)}（${esc(d.popularity)}番人気）${d.reasons?.length ? ' — ' + esc(d.reasons[0]) : ''}</span></div>`
-    ).join('');
-
-    let anaBakkeHTML = '';
-    for (const e of (r.ev_top3 || [])) {
-      if (e.horse_number != null && !predNums.has(+e.horse_number) && (e.ev_score || 0) >= 1.0) {
-        anaBakkeHTML = `<div class="alert-item alert-dark">★ 穴馬注目：${esc(e.horse_number)}番 ${esc(e.horse_name)} EV${e.ev_score.toFixed(2)}（${(e.odds||0).toFixed(0)}倍）</div>`;
-        break;
-      }
-    }
-
-    // 大口投票検知
-    let largeBetHTML = '';
-    const lbFlags = r.large_bet_flags || [];
-    if (lbFlags.length) {
-      largeBetHTML = lbFlags.map(f => {
-        const icon = f.rank === 'A' ? '🚨' : '⚠️';
-        return `<div class="alert-item alert-danger">${icon} <span>大口検知：${esc(f.horse_number)}番 ${esc(f.horse_name)}（ランク${f.rank} スコア${f.score}）</span></div>`;
-      }).join('');
-    }
-
-    // 買い目（bet_strategy があれば使用）
-    const bs = r.bet_strategy;
+    // 買い目（上位3頭から固定パターン）
+    const pnums = (r.predicted_top3_nums || []).filter(n => n != null);
     let betHTML = '';
-    if (bs && bs.total_points > 0) {
-      const rows = [];
-
-      // 複勝
-      if (bs.fukusho && bs.fukusho.length) {
-        rows.push(`<div class="bet-row"><span class="bet-label">複勝</span>${bs.fukusho[0].num}番 ${esc(bs.fukusho[0].name || '')}</div>`);
-      }
-
-      // ワイド or 馬連
-      if (bs.use_wide && bs.wide && bs.wide.length) {
-        const wideStr = bs.wide.map(w => `${w.nums[0]}-${w.nums[1]}`).join(' / ');
-        rows.push(`<div class="bet-row"><span class="bet-label">ワイド</span>${wideStr}</div>`);
-      }
-      if (bs.umaren && bs.umaren.length) {
-        const umarenStr = bs.umaren.map(u => `${u.nums[0]}-${u.nums[1]}`).join(' / ');
-        rows.push(`<div class="bet-row"><span class="bet-label">馬連</span>${umarenStr}</div>`);
-      }
-
-      // 3連複
-      const sr = bs.sanrenpuku;
-      if (sr && sr.jiku && sr.aite) {
-        const jikuStr = sr.jiku.length === 1 ? `軸${sr.jiku[0]}` : `軸${sr.jiku[0]}-${sr.jiku[1]}`;
-        const aiteStr = sr.aite.join('/');
-        rows.push(`<div class="bet-row"><span class="bet-label">3連複</span>${jikuStr} × ${aiteStr}</div>`);
-      }
-
-      const noteHTML = bs.strategy_note ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">💡 ${esc(bs.strategy_note)}</div>` : '';
+    if (pnums.length >= 2) {
+      const h1 = pnums[0], h2 = pnums[1], h3 = pnums[2] || pnums[1];
       betHTML = `
         <div class="bet-box">
-          <div class="bet-box-title">💰 AI自動買い目（${bs.total_points}点）</div>
-          <div class="bet-rows">${rows.join('')}</div>
-          ${noteHTML}
+          <div class="bet-box-title">💰 買い目（4点）</div>
+          <div class="bet-rows">
+            <div class="bet-row"><span class="bet-label">複勝</span>${h1}番</div>
+            <div class="bet-row"><span class="bet-label">馬連</span>${h1}-${h2} / ${h1}-${h3}</div>
+            <div class="bet-row"><span class="bet-label">3連複</span>${h1}-${h2}-${h3}</div>
+          </div>
         </div>`;
-    } else {
-      // フォールバック: 従来の固定買い目
-      const pnums  = (r.predicted_top3_nums || []).filter(n => n != null);
-      const p5nums = (r.predicted_top5_nums || pnums).filter(n => n != null);
-      if (pnums.length >= 2) {
-        const combos = [];
-        for (let i = 0; i < Math.min(pnums.length, 3); i++)
-          for (let j = i + 1; j < Math.min(pnums.length, 3); j++)
-            combos.push(`${pnums[i]}-${pnums[j]}`);
-        let sanren = '';
-        if (p5nums.length >= 3) {
-          sanren = `軸${p5nums[0]} × ${p5nums.slice(1).join('/')}`;
-        }
-        betHTML = `
-          <div class="bet-box">
-            <div class="bet-box-title">💰 推奨買い目</div>
-            <div class="bet-rows">
-              <div class="bet-row"><span class="bet-label">複勝</span>${pnums[0]}番</div>
-              <div class="bet-row"><span class="bet-label">馬連</span>${combos.join(' / ')}</div>
-              ${sanren ? `<div class="bet-row"><span class="bet-label">3連複</span>${sanren}</div>` : ''}
-            </div>
-          </div>`;
-      }
     }
-
-    // モンテカルロシミュレーション（simは上部で定義済み）
-    let simHTML = '';
-    if (sim && Object.keys(sim).length > 0) {
-      const simMarks = ['◎','○','▲','△','　'];
-      const simNums = (r.predicted_top5_nums || []).filter(n => n != null);
-      const simRows = simNums.slice(0, 5).map((num, i) => {
-        const mc = sim[String(num)];
-        if (!mc) return '';
-        const mark = simMarks[i] || '　';
-        const rate = (mc.top3_rate * 100).toFixed(1);
-        const tag = mc.is_stable ? '🔒安定軸' : '⚡展開依存';
-        const hi = (mc.scenario?.high_pace * 100 || 0).toFixed(0);
-        const sl = (mc.scenario?.slow_pace * 100 || 0).toFixed(0);
-        const oob = mc.out_of_board_rate ? (mc.out_of_board_rate * 100).toFixed(0) : null;
-        const oobWarn = (oob && +oob > 15 && i < 3) ? `<span style="color:var(--red);font-size:10px;">⚠️飛${oob}%</span>` : '';
-        return `<div class="sim-row">
-          <span class="sim-mark">${mark}${num}番</span>
-          <span class="sim-rate">3着以内 ${rate}%</span>
-          <span class="sim-tag ${mc.is_stable ? 'tag-stable' : 'tag-volatile'}">${tag}</span>
-          <span class="sim-scenario">ハイ${hi}% / スロー${sl}%</span>
-          ${oobWarn}
-        </div>`;
-      }).filter(s => s).join('');
-
-      if (simRows) {
-        const volBanner = sim.is_volatile_race
-          ? `<div style="color:var(--red);font-size:11px;font-weight:700;margin-bottom:4px;">🌀 波乱レース注意（波乱度${(sim.race_volatility||0).toFixed(2)}）</div>`
-          : '';
-        simHTML = `
-          <div class="sim-box">
-            <div class="sim-title">📊 モンテカルロ分析（1万回）</div>
-            ${volBanner}
-            ${simRows}
-          </div>`;
-      }
-    }
-
-    const confStars = r.confidence_stars || '';
-    const confHTML = confStars ? `<span style="font-size:12px;color:var(--gold);margin-left:8px;">🎯${esc(confStars)}</span>` : '';
 
     const html = `
       <div class="race-card">
         <div class="race-card-header">
           <div>
-            <div class="race-name">${esc(shortName)}${course}${confHTML}</div>
-            <div class="race-meta">${esc(r.race_date || '')}${r.start_time ? '\u3000' + esc(r.start_time) + '発走' : ''}</div>
+            <div class="race-name">${esc(shortName)}${course}</div>
+            <div class="race-meta">${esc(r.race_date || '')}${r.venue ? '\u3000' + esc(r.venue) : ''}${r.start_time ? '\u3000' + esc(r.start_time) + '発走' : ''}</div>
           </div>
           ${gLabel ? `<span class="grade-badge ${gClass}">${gLabel}</span>` : ''}
         </div>
         <div class="race-card-body">
           <div class="horse-list">${horseHTML}</div>
-          ${(dangerous || anaBakkeHTML || largeBetHTML) ? `<div class="alert-section">${dangerous}${anaBakkeHTML}${largeBetHTML}</div>` : ''}
           ${betHTML}
-          ${simHTML}
         </div>
       </div>`;
     _predHtmlMap[raceId] = html;
@@ -1154,10 +1002,11 @@ function renderDangerAnaStats(cache, rows) {
     actualMap[rid] = [+(r.actual1_num||0), +(r.actual2_num||0), +(r.actual3_num||0)];
   });
 
-  // 危険馬集計
+  // 危険馬・穴馬集計（���素化キャッシュでは空になる場合がある）
   const dangerDetails = [];
   const anaDetails = [];
   for (const [raceId, pred] of Object.entries(cache).filter(([k]) => !k.startsWith('_'))) {
+    if (!pred || typeof pred !== 'object') continue;
     const top3 = new Set(actualMap[raceId] || []);
     if (!top3.size || (top3.size === 1 && top3.has(0))) continue;
 
@@ -1171,9 +1020,11 @@ function renderDangerAnaStats(cache, rows) {
       });
     });
 
-    const anaNum = pred.ana_horse_num;
+    // 穴馬: ana フィールドから取得
+    const anaEntry = pred.ana || {};
+    const anaNum = anaEntry.horse_number || pred.ana_horse_num;
     if (anaNum != null) {
-      const info = pred.ana_horse_info || {};
+      const info = pred.ana_horse_info || anaEntry || {};
       anaDetails.push({
         race: pred.race_name || raceId,
         horse: info.horse_name || anaNum + '番',
