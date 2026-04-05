@@ -749,7 +749,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
             top3_nums.append(int(v))
 
     top5_nums = []
-    for _, row in result_df.head(5).iterrows():
+    for _, row in result_df.head(6).iterrows():
         v = row.get("horse_number")
         if pd.notna(v):
             top5_nums.append(int(v))
