@@ -887,18 +887,22 @@ function renderPredictions(cache) {
       volHTML = `<div style="color:var(--red);font-size:11px;font-weight:700;padding:4px 8px;">🌀 波乱レース注意（波乱度${(sim.race_volatility||0).toFixed(2)}）</div>`;
     }
 
-    // 買い目（上位3頭から固定パターン）
-    const pnums = (r.predicted_top3_nums || []).filter(n => n != null);
+    // 買い目: 複勝1 + 馬連2 + 3連複(◎軸×相手5頭)10 = 13点
+    const p5nums = (r.predicted_top5_nums || r.predicted_top3_nums || []).filter(n => n != null);
     let betHTML = '';
-    if (pnums.length >= 2) {
-      const h1 = pnums[0], h2 = pnums[1], h3 = pnums[2] || pnums[1];
+    if (p5nums.length >= 2) {
+      const h1 = p5nums[0], h2 = p5nums[1], h3 = p5nums[2] || p5nums[1];
+      const aite = p5nums.slice(1, 6);
+      const aiteStr = aite.join('/');
+      const sanrenPt = aite.length >= 2 ? aite.length * (aite.length - 1) / 2 : 1;
+      const total = 1 + 2 + sanrenPt;
       betHTML = `
         <div class="bet-box">
-          <div class="bet-box-title">💰 買い目（4点）</div>
+          <div class="bet-box-title">💰 買い目（${total}点）</div>
           <div class="bet-rows">
             <div class="bet-row"><span class="bet-label">複勝</span>${h1}番</div>
             <div class="bet-row"><span class="bet-label">馬連</span>${h1}-${h2} / ${h1}-${h3}</div>
-            <div class="bet-row"><span class="bet-label">3連複</span>${h1}-${h2}-${h3}</div>
+            <div class="bet-row"><span class="bet-label">3連複</span>軸${h1} × ${aiteStr}</div>
           </div>
         </div>`;
     }
@@ -940,12 +944,13 @@ function _renderFlatCard(raceId, r) {
     if (!p || !p.horse_name) return '';
     return `<span style="margin-right:10px;">${mark}${p.horse_number}番 ${esc(p.horse_name)}</span>`;
   }).join('');
-  // 買い目（上位3頭）
-  const pnums = (r.predicted_top3_nums || []).filter(n => n != null);
+  // 買い目: ◎軸×相手5頭
+  const fp5 = (r.predicted_top5_nums || r.predicted_top3_nums || []).filter(n => n != null);
   let betLine = '';
-  if (pnums.length >= 2) {
-    const h1 = pnums[0], h2 = pnums[1], h3 = pnums[2] || pnums[1];
-    betLine = `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">複勝:${h1} / 馬連:${h1}-${h2},${h1}-${h3} / 3連複:${h1}-${h2}-${h3}</div>`;
+  if (fp5.length >= 2) {
+    const h1 = fp5[0], h2 = fp5[1], h3 = fp5[2] || fp5[1];
+    const aite = fp5.slice(1, 6).join('/');
+    betLine = `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">複勝:${h1} / 馬連:${h1}-${h2},${h1}-${h3} / 3連複:軸${h1}×${aite}</div>`;
   }
   return `<div class="race-card" style="padding:12px 16px;">
     <div style="font-size:13px;font-weight:700;margin-bottom:4px;">

@@ -1112,12 +1112,12 @@ def _check_sanrenpuku_raw(
     payouts: dict,
     ana_horse_num: Optional[int] = None,
 ) -> tuple[bool, str]:
-    """3連複的中判定。買い目は軸(top5[0])×相手(top5[1:5]+穴馬)。(hit, pay_str) を返す。"""
+    """3連複的中判定。買い目は軸(top5[0])×相手(top5[1:6])。(hit, pay_str) を返す。"""
     if len(predicted_nums) < 2 or len(actual_top3_nums) < 3:
         return False, ""
-    # 買い目: 軸 = predicted_nums[0], 相手 = predicted_nums[1:5] + 穴馬
+    # 買い目: 軸 = predicted_nums[0], 相手 = predicted_nums[1:6]（2-6番手の5頭）
     axis = predicted_nums[0]
-    partners = list(predicted_nums[1:5])
+    partners = list(predicted_nums[1:6])
     if ana_horse_num and ana_horse_num not in partners:
         partners.append(ana_horse_num)
     # 軸が3着以内に含まれることが前提
@@ -1186,15 +1186,20 @@ def _format_simple_message(race_id: str, entry: dict) -> str:
     if sim.get("is_volatile_race"):
         lines.append(f"🌀 波乱注意（波乱度{sim.get('race_volatility', 0):.2f}）")
 
-    # 買い目（上位3頭から固定パターン: 複勝1 + 馬連2 + 3連複1 = 4点）
+    # 買い目: 複勝1 + 馬連2 + 3連複(◎軸×相手5頭)10 = 13点
+    top5 = entry.get("predicted_top5_nums", [])
     h1 = honmei.get("horse_number", "?")
     h2 = taikou.get("horse_number", "?")
     h3 = ana.get("horse_number", "?")
+    aite = [n for n in top5[1:6] if n != h1] if len(top5) >= 3 else [h2, h3]
+    aite_str = "/".join(str(n) for n in aite)
+    from itertools import combinations
+    sanren_count = len(list(combinations(aite, 2)))
     lines.append("")
-    lines.append("【買い目】")
+    lines.append(f"【買い目 {1 + 2 + sanren_count}点】")
     lines.append(f"複勝: {h1}")
     lines.append(f"馬連: {h1}-{h2}, {h1}-{h3}")
-    lines.append(f"3連複: {h1}-{h2}-{h3}")
+    lines.append(f"3連複: 軸{h1} × {aite_str}")
 
     return "\n".join(lines)
 
