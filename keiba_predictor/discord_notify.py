@@ -1095,7 +1095,23 @@ def _fmt_result(race_name: str, race_date: str,
             tansho_line += f"（{re.sub(r'[¥,]', '', str(tansho_pay))}円）"
         lines.append(tansho_line)
 
-    lines.append(f"複勝 {'✅' if fukusho_hit else '❌'}（◎{honmei_num}番 {honmei_name}）")
+    # 複勝配当を取得
+    fukusho_pay_str = ""
+    if fukusho_hit and honmei_num:
+        if manual and manual.get("payouts", {}).get("fukusho"):
+            fukusho_pay_str = f"{manual['payouts']['fukusho']:,}"
+        else:
+            for _entry in payouts.get("複勝", []):
+                _cnums = set(re.findall(r"\d+", str(_entry.get("combo", ""))))
+                if str(honmei_num) in _cnums:
+                    _amt = _entry.get("amount")
+                    if _amt:
+                        fukusho_pay_str = f"{_amt:,}" if isinstance(_amt, int) else re.sub(r"[¥￥,円\s]", "", str(_amt))
+                    break
+    if fukusho_hit and fukusho_pay_str:
+        lines.append(f"複勝 ✅（◎{honmei_num}番 {honmei_name} 配当{fukusho_pay_str}円）")
+    else:
+        lines.append(f"複勝 {'✅' if fukusho_hit else '❌'}（◎{honmei_num}番 {honmei_name}）")
 
     if use_wide:
         wide_line = f"ワイド {'✅' if wide_hit else '❌'}"
