@@ -1543,6 +1543,14 @@ def run_predict_notify(
             notified += 1
             logger.info(f"  送信完了: {race_name}")
 
+        # X（Twitter）に予想を投稿
+        if os.environ.get("ENABLE_X_POST", "false").lower() == "true":
+            try:
+                from keiba_predictor.x_post import post_predict_tweet
+                post_predict_tweet(race_name, cached_entry)
+            except Exception as e:
+                logger.warning(f"  [X] 予想投稿エラー: {e}")
+
     # ── 平場レース（芝・1勝以上） → ダッシュボード用にキャッシュのみ ──
     if not test_race_id:
         flat_count = 0
