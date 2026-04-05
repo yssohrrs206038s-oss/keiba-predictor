@@ -54,6 +54,10 @@ jobs:
           if [ -f keiba_predictor/data/cleaned_races.csv ]; then
             LINES=$(wc -l < keiba_predictor/data/cleaned_races.csv)
             echo "✅ クリーニング完了 (${LINES} 行)"
+            # gzip圧縮（LFS不要化）
+            gzip -f keiba_predictor/data/cleaned_races.csv
+            SIZE=$(du -h keiba_predictor/data/cleaned_races.csv.gz | cut -f1)
+            echo "✅ gzip圧縮完了: ${SIZE}"
           else
             echo "::error::cleaned_races.csv が生成されませんでした"
             exit 1
@@ -64,25 +68,25 @@ jobs:
         continue-on-error: true
         run: python -m keiba_predictor.main update-featured --save-cache
 
-      # ── 成果物をリポジトリにコミット（LFS対応） ──────────────
+      # ── 成果物をリポジトリにコミット ──────────────────────────
       - name: データをコミット
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config pull.rebase true
           git config rebase.autoStash true
-          git lfs install
-          git add .gitattributes 2>/dev/null || true
-          git add keiba_predictor/data/cleaned_races.csv 2>/dev/null || true
+          # LFS管理の旧CSVがあれば削除
+          git rm --cached keiba_predictor/data/cleaned_races.csv 2>/dev/null || true
+          git add keiba_predictor/data/cleaned_races.csv.gz 2>/dev/null || true
           git add keiba_predictor/data/featured_races.csv 2>/dev/null || true
           git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "ℹ️ 変更なし（コミットスキップ）"
           else
-            git commit -m "chore: 水曜データ更新 — cleaned_races.csv 更新 [skip ci]"
+            git commit -m "chore: 水曜データ更新 — cleaned_races.csv.gz 更新 [skip ci]"
             git pull --rebase -X theirs origin ${{ github.ref_name }} || true
             git push
-            echo "✅ コミット・プッシュ完了（cleaned_races.csv含む）"
+            echo "✅ コミット・プッシュ完了（cleaned_races.csv.gz含む）"
           fi
 
       # ── Discord に完了通知 ────────────────────────────────────

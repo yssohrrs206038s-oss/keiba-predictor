@@ -28,20 +28,31 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 
 def _load_history(cleaned_path: Optional[Path] = None) -> pd.DataFrame:
     if cleaned_path is None:
-        cleaned_path = DATA_DIR / "cleaned_races.csv"
+        # .csv.gz を優先、なければ .csv にフォールバック
+        gz_path = DATA_DIR / "cleaned_races.csv.gz"
+        csv_path = DATA_DIR / "cleaned_races.csv"
+        if gz_path.exists():
+            cleaned_path = gz_path
+        elif csv_path.exists():
+            cleaned_path = csv_path
+        else:
+            logger.warning(f"過去成績CSVが見つかりません → 過去成績なしで予想を実行します")
+            return pd.DataFrame()
     if not cleaned_path.exists():
         logger.warning(f"過去成績CSVが見つかりません: {cleaned_path} → 過去成績なしで予想を実行します")
         return pd.DataFrame()
     try:
+        # pandas は .gz 拡張子を自動検出して透過的に展開する
         df = pd.read_csv(cleaned_path, encoding="utf-8-sig")
         if "race_date" in df.columns:
             df["race_date"] = pd.to_datetime(df["race_date"], errors="coerce")
         else:
-            logger.warning(f"cleaned_races.csv に race_date 列がありません → 過去成績なしで予想を実行します")
+            logger.warning(f"{cleaned_path.name} に race_date 列がありません → 過去成績なしで予想を実行します")
             return pd.DataFrame()
+        logger.info(f"過去成績読み込み完了: {cleaned_path.name} ({len(df)} 行)")
         return df
     except Exception as e:
-        logger.warning(f"cleaned_races.csv 読み込み失敗: {e} → 過去成績なしで予想を実行します")
+        logger.warning(f"過去成績CSV読み込み失敗: {e} → 過去成績なしで予想を実行します")
         return pd.DataFrame()
 
 

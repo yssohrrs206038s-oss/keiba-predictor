@@ -38,7 +38,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          lfs: true
 
       - name: 最新コミットをプル
         run: |
@@ -96,15 +95,23 @@ jobs:
           echo "✅ モデルファイル確認OK"
 
       # ── 予想生成（11時JST） ──────────────────────────────────
-      - name: 過去成績データを確認（水曜にコミット済みのcleaned_races.csvを使用）
+      - name: 過去成績データを確認（水曜にコミット済みのcleaned_races.csv.gzを使用）
         if: steps.mode.outputs.mode == 'predict' || steps.mode.outputs.mode == 'both'
         run: |
-          # 水曜ワークフローでcleaned_races.csvをコミット済み → スクレイピング不要
-          if [ -f keiba_predictor/data/cleaned_races.csv ]; then
-            LINES=$(wc -l < keiba_predictor/data/cleaned_races.csv)
-            echo "✅ cleaned_races.csv 確認OK (${LINES} 行) — 水曜更新分を使用"
+          if [ -f keiba_predictor/data/cleaned_races.csv.gz ]; then
+            SIZE=$(du -h keiba_predictor/data/cleaned_races.csv.gz | cut -f1)
+            echo "✅ cleaned_races.csv.gz 確認OK (${SIZE}) — 水曜更新分を使用"
+          elif [ -f keiba_predictor/data/cleaned_races.csv ]; then
+            # LFSポインタでないか確認
+            HEAD=$(head -c 30 keiba_predictor/data/cleaned_races.csv)
+            if echo "$HEAD" | grep -q "version https://git-lfs"; then
+              echo "⚠️ cleaned_races.csv はLFSポインタです（実データなし）→ 過去成績なしで予想を実行"
+            else
+              LINES=$(wc -l < keiba_predictor/data/cleaned_races.csv)
+              echo "✅ cleaned_races.csv 確認OK (${LINES} 行)"
+            fi
           else
-            echo "⚠️ cleaned_races.csv が見つかりません（水曜更新未実行？過去成績なしで予想を実行）"
+            echo "⚠️ 過去成績ファイルが見つかりません（水曜更新未実行？過去成績なしで予想を実行）"
           fi
 
       - name: 今週末重賞CSVを更新
