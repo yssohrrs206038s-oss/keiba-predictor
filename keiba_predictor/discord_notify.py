@@ -1203,23 +1203,43 @@ def _check_sanrenpuku_raw(
     actual_top3_nums: list[int],
     payouts: dict,
     ana_horse_num: Optional[int] = None,
+    pred: Optional[dict] = None,
 ) -> tuple[bool, str]:
-    """3連���的中判定。買い���は軸(top[0])×相手(top[1:5]+穴馬)。(hit, pay_str) を返す。"""
-    if len(predicted_nums) < 2 or len(actual_top3_nums) < 3:
+    """3連複的中判定。(hit, pay_str) を返す。
+
+    predicted_top5_nums の全馬を相手候補として、
+    軸(◎) × 相手2頭 の組合せが実際の3着以内と一致するか判定。
+    """
+    if len(actual_top3_nums) < 3:
         return False, ""
-    # 買い目: 軸 = predicted_nums[0], 相手 = 2-5番手（4頭）+ 穴馬
-    axis = predicted_nums[0]
-    partners = list(predicted_nums[1:5])
+
+    # 軸 = honmei
+    axis = None
+    if pred:
+        axis = (pred.get("honmei") or {}).get("horse_number")
+    if axis is None and predicted_nums:
+        axis = predicted_nums[0]
+    if axis is None:
+        return False, ""
+
+    if int(axis) not in actual_top3_nums:
+        return False, ""
+
+    # 相手候補: predicted_top5_nums を優先
+    partners = []
+    if pred:
+        top5 = pred.get("predicted_top5_nums", [])
+        if top5:
+            partners = [n for n in top5 if n != axis]
+    if not partners:
+        partners = list(predicted_nums[1:5]) if len(predicted_nums) > 1 else []
     if ana_horse_num and ana_horse_num not in partners:
         partners.append(ana_horse_num)
-    # 軸が3着以内に含まれることが前提
-    if axis not in actual_top3_nums:
-        return False, ""
-    # 相手2頭が3着以内に含まれるか
+
     actual_set = set(actual_top3_nums[:3])
     for pair in combinations(partners, 2):
-        if {axis, pair[0], pair[1]} == actual_set:
-            combo = "-".join(str(n) for n in sorted([axis, pair[0], pair[1]]))
+        if {int(axis), pair[0], pair[1]} == actual_set:
+            combo = "-".join(str(n) for n in sorted([int(axis), pair[0], pair[1]]))
             pay = _get_payout(payouts, "三連複", combo)
             return True, pay
     return False, ""
@@ -1344,7 +1364,7 @@ def check_hits_from_bet_strategy(
         fukusho_hit = honmei_num is not None and int(honmei_num) in actual_top3_nums
         umaren_hit, umaren_pay = _check_umaren_raw(predicted_nums, actual_top3_nums, payouts)
         sanren_hit, sanren_pay = _check_sanrenpuku_raw(
-            predicted_nums, actual_top3_nums, payouts, ana_horse_num)
+            predicted_nums, actual_top3_nums, payouts, ana_horse_num, pred=pred)
         wide_pairs = _check_wide_pairs_raw(predicted_nums, actual_top3_nums, payouts)
         wide_hit = any(h for _, h, _ in wide_pairs)
         wide_pay_total = sum(_payout_str_to_int(p) for _, h, p in wide_pairs if h)
