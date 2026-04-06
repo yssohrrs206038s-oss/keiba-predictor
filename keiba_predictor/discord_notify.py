@@ -1264,11 +1264,21 @@ def _format_simple_message(race_id: str, entry: dict) -> str:
         ev_str = f" EV{ev:.2f}" if ev else ""
         return f"{mark} {num}番 {name}　{prob:.1f}%{ev_str}"
 
-    lines = [
-        f"🏇 {venue} {race_num} {race_name}".strip(),
-    ]
+    flag_sep = "🏁━━━━━━━━━━━━━━━━━━🏁"
+    title = f"　　{venue} {race_num} {race_name}".rstrip()
+    meta_parts = []
+    if venue:
+        meta_parts.append(f"📍{venue}")
+    start_time = entry.get("start_time", "")
+    if start_time:
+        meta_parts.append(f"🕐{start_time}発走")
     if course_info:
-        lines.append(course_info)
+        meta_parts.append(course_info)
+    meta_line = f"　　{' | '.join(meta_parts)}" if meta_parts else ""
+    lines = [flag_sep, title]
+    if meta_line:
+        lines.append(meta_line)
+    lines.append(flag_sep)
     lines.append("")
     lines.append(_horse_line("◎", honmei))
     lines.append(_horse_line("○", taikou))
