@@ -84,8 +84,24 @@ jobs:
           from keiba_predictor.model.predict import predict_live
           import requests
 
+          from keiba_predictor.discord_notify import _save_cache
+
           session = requests.Session()
           cache = _load_cache()
+
+          # 今週末以外のキャッシュを削除
+          from keiba_predictor.discord_notify import _weekend_dates
+          weekend_set = set()
+          for d in _weekend_dates():
+              weekend_set.add(f'{d[:4]}-{d[4:6]}-{d[6:]}')
+          stale = [k for k, v in cache.items()
+                   if not k.startswith('_') and isinstance(v, dict)
+                   and v.get('race_date') and v['race_date'] not in weekend_set]
+          if stale:
+              for k in stale:
+                  del cache[k]
+              _save_cache(cache)
+              print(f'  過去キャッシュ {len(stale)} 件削除')
 
           # 重賞
           grade_races = scrape_grade_race_ids(session)
