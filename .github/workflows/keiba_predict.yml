@@ -49,10 +49,22 @@ jobs:
       - name: 依存パッケージをインストール
         run: pip install -r requirements.txt
 
+      - name: Playwright Chromium キャッシュ
+        if: inputs.mode != 'notify'
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-chromium-
+
       - name: Playwright Chromium をインストール
         if: inputs.mode != 'notify'
         run: |
-          python -m playwright install chromium
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            python -m playwright install chromium
+          fi
           python -m playwright install-deps chromium
 
       - name: モデルファイルを確認
