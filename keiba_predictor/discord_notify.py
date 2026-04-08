@@ -544,13 +544,13 @@ def _save_upcoming_to_cache() -> None:
     """
     featured_path = DATA_DIR / "featured_races.csv"
     if not featured_path.exists():
-        logger.warning("featured_races.csv が見つかりません")
+        logger.debug("featured_races.csv なし → キャッシュ優先運用のためスキップ")
         return
 
     try:
         df = pd.read_csv(featured_path, encoding="utf-8-sig", dtype={"race_id": str})
     except Exception as e:
-        logger.warning(f"featured_races.csv 読み込み失敗: {e}")
+        logger.debug(f"featured_races.csv 読み込み失敗（キャッシュ優先運用）: {e}")
         return
 
     cache = _load_cache()
@@ -610,13 +610,13 @@ def _load_featured_race_ids_for_weekend(
     if featured_path is None:
         featured_path = DATA_DIR / "featured_races.csv"
     if not featured_path.exists():
-        logger.warning(f"featured_races.csv が見つかりません: {featured_path}")
+        logger.debug(f"featured_races.csv なし（キャッシュ優先運用）: {featured_path}")
         return []
 
     try:
         df = pd.read_csv(featured_path, encoding="utf-8-sig", dtype={"race_id": str})
     except Exception as e:
-        logger.warning(f"featured_races.csv 読み込み失敗: {e}")
+        logger.debug(f"featured_races.csv 読み込み失敗（キャッシュ優先運用）: {e}")
         return []
 
     if "race_id" not in df.columns:
