@@ -123,10 +123,12 @@ def _horse_hist_features(
         feats["finish_pos_trend"] = (float(fp1) - float(fp3)) / 2.0
 
     # 平均タイム（同コース / 全コース）
-    times_all  = pd.to_numeric(past["time_sec"], errors="coerce").dropna()
+    time_sec_all = past["time_sec"] if "time_sec" in past.columns else pd.Series(dtype=float)
+    times_all  = pd.to_numeric(time_sec_all, errors="coerce").dropna()
     same_course = past[pd.to_numeric(past.get("course_type_enc", pd.Series(dtype=float)),
                                      errors="coerce") == course_type_enc]
-    times_same  = pd.to_numeric(same_course["time_sec"], errors="coerce").dropna()
+    time_sec_same = same_course["time_sec"] if "time_sec" in same_course.columns else pd.Series(dtype=float)
+    times_same  = pd.to_numeric(time_sec_same, errors="coerce").dropna()
 
     feats["avg_time_3"]     = float(times_same.tail(3).mean()) if len(times_same) >= 1 else np.nan
     feats["avg_time_5"]     = float(times_same.tail(5).mean()) if len(times_same) >= 1 else np.nan
