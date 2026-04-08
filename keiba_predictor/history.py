@@ -108,10 +108,11 @@ def _top3_actual(actual_df: pd.DataFrame) -> list[dict]:
 def _pred_row(pred: dict, role: str) -> dict:
     """キャッシュ dict から pred1/2/3 用の {name, num, prob} を返す。"""
     p = pred.get(role, {})
+    prob_val = p.get("prob")
     return {
         "name": p.get("horse_name", ""),
         "num":  p.get("horse_number") or 0,
-        "prob": round(float(p.get("prob", 0.0)) * 100, 1),
+        "prob": round(float(prob_val or 0.0) * 100, 1),
     }
 
 
