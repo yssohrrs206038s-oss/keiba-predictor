@@ -184,12 +184,7 @@
     },
     "is_grade": true,
     "bet_strategy": {
-      "fukusho": [
-        {
-          "num": 8,
-          "name": "ファーヴェント"
-        }
-      ],
+      "fukusho": [],
       "umaren": [],
       "wide": [
         {
@@ -213,19 +208,19 @@
       ],
       "sanrenpuku": {
         "jiku": [
-          8
+          8,
+          2
         ],
         "aite": [
-          2,
           6,
           11,
           14
         ]
       },
-      "total_points": 10,
-      "total_cost": 1900,
-      "strategy_note": "複勝 + ワイド(波乱) + 3連複◎軸x4",
-      "use_wide": true
+      "total_points": 6,
+      "strategy_note": "ワイド（上位拮抗） + 3連複2頭軸×3",
+      "use_wide": true,
+      "is_volatile_race": false
     },
     "confidence": 1,
     "confidence_stars": "★",
@@ -479,12 +474,7 @@
     },
     "is_grade": true,
     "bet_strategy": {
-      "fukusho": [
-        {
-          "num": 8,
-          "name": "アンドゥーリル"
-        }
-      ],
+      "fukusho": [],
       "umaren": [],
       "wide": [
         {
@@ -508,19 +498,19 @@
       ],
       "sanrenpuku": {
         "jiku": [
-          8
+          8,
+          6
         ],
         "aite": [
-          6,
           14,
           10,
           3
         ]
       },
-      "total_points": 10,
-      "total_cost": 1900,
-      "strategy_note": "複勝 + ワイド(波乱) + 3連複◎軸x4",
-      "use_wide": true
+      "total_points": 6,
+      "strategy_note": "ワイド（上位拮抗） + 3連複2頭軸×3",
+      "use_wide": true,
+      "is_volatile_race": false
     },
     "confidence": 1,
     "confidence_stars": "★",
@@ -774,12 +764,7 @@
     },
     "is_grade": true,
     "bet_strategy": {
-      "fukusho": [
-        {
-          "num": 15,
-          "name": "クロワデュノール"
-        }
-      ],
+      "fukusho": [],
       "umaren": [],
       "wide": [
         {
@@ -803,19 +788,19 @@
       ],
       "sanrenpuku": {
         "jiku": [
-          15
+          15,
+          6
         ],
         "aite": [
-          6,
           5,
           4,
           12
         ]
       },
-      "total_points": 10,
-      "total_cost": 1900,
-      "strategy_note": "複勝 + ワイド(波乱) + 3連複◎軸x4",
-      "use_wide": true
+      "total_points": 6,
+      "strategy_note": "ワイド（上位拮抗） + 3連複2頭軸×3",
+      "use_wide": true,
+      "is_volatile_race": false
     },
     "confidence": 1,
     "confidence_stars": "★",
@@ -889,130 +874,55 @@
       "is_volatile_race": true
     }
   },
-  "202609020410": {
-    "race_name": "心斎橋S",
-    "race_date": "2026-04-05",
-    "start_time": "15:01",
+  "202606030511": {
+    "race_name": "NZT",
+    "race_date": "2026-04-11",
+    "start_time": "",
+    "venue": "中山",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202609020511": {
+    "race_name": "���腑����薤�S",
+    "race_date": "2026-04-11",
+    "start_time": "",
     "venue": "阪神",
-    "course_info": "芝1400m",
-    "honmei": {
-      "horse_number": 2,
-      "horse_name": "スライビングロード",
-      "prob": 0.0099
-    },
-    "taikou": {
-      "horse_number": 6,
-      "horse_name": "ミトノオルフェ",
-      "prob": 0.0091
-    },
-    "ana": {
-      "horse_number": 13,
-      "horse_name": "スカイハイ",
-      "prob": 0.0063
-    },
-    "predicted_top3_nums": [
-      2,
-      6,
-      13
-    ],
-    "predicted_top5_nums": [
-      2,
-      6,
-      13,
-      3,
-      8,
-      1
-    ],
-    "ev_top3": [
-      {
-        "horse_number": 11,
-        "horse_name": "エアミアーニ",
-        "ev_score": 0.185,
-        "prob": 0.0022
-      },
-      {
-        "horse_number": 10,
-        "horse_name": "スーサンアッシャー",
-        "ev_score": 0.178,
-        "prob": 0.0021
-      },
-      {
-        "horse_number": 17,
-        "horse_name": "サムハンター",
-        "ev_score": 0.144,
-        "prob": 0.0016
-      }
-    ],
-    "ana_horse_num": 11,
-    "is_grade": false,
-    "simulation": {
-      "2": {
-        "horse_name": "スライビングロード",
-        "top3_rate": 0.178,
-        "top3_std": 0.02,
-        "is_stable": true,
-        "out_of_board_rate": 0.71,
-        "variance": 5.214,
-        "scenario": {
-          "high_pace": 0.18,
-          "slow_pace": 0.17,
-          "normal": 0.19
-        }
-      },
-      "6": {
-        "horse_name": "ミトノオルフェ",
-        "top3_rate": 0.17,
-        "top3_std": 0.017,
-        "is_stable": true,
-        "out_of_board_rate": 0.715,
-        "variance": 5.205,
-        "scenario": {
-          "high_pace": 0.18,
-          "slow_pace": 0.16,
-          "normal": 0.17
-        }
-      },
-      "13": {
-        "horse_name": "スカイハイ",
-        "top3_rate": 0.168,
-        "top3_std": 0.015,
-        "is_stable": true,
-        "out_of_board_rate": 0.721,
-        "variance": 5.181,
-        "scenario": {
-          "high_pace": 0.17,
-          "slow_pace": 0.17,
-          "normal": 0.16
-        }
-      },
-      "3": {
-        "horse_name": "キャプテンシー",
-        "top3_rate": 0.165,
-        "top3_std": 0.018,
-        "is_stable": true,
-        "out_of_board_rate": 0.724,
-        "variance": 5.177,
-        "scenario": {
-          "high_pace": 0.16,
-          "slow_pace": 0.17,
-          "normal": 0.16
-        }
-      },
-      "8": {
-        "horse_name": "エマヌエーレ",
-        "top3_rate": 0.168,
-        "top3_std": 0.015,
-        "is_stable": true,
-        "out_of_board_rate": 0.72,
-        "variance": 5.182,
-        "scenario": {
-          "high_pace": 0.17,
-          "slow_pace": 0.16,
-          "normal": 0.17
-        }
-      },
-      "race_volatility": 5.188,
-      "is_volatile_race": true
-    }
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202609020611": {
+    "race_name": "罅���沿��",
+    "race_date": "2026-04-11",
+    "start_time": "",
+    "venue": "阪神",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
