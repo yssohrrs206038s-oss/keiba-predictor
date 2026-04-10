@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'predict=予想生成+通知 / notify=通知のみ'
+        description: 'predict=予想生成+通知 / both=両方 / notify=オッズ更新のみ(通知なし)'
         required: false
         default: 'predict'
 
@@ -143,8 +143,17 @@ jobs:
           print('予想生成完了')
           "
 
-      - name: Discord に予想を送信
+      - name: Discord に予想を送信（predict/both時のみ）
+        if: inputs.mode != 'notify'
         run: python -m keiba_predictor.main notify --mode predict
+
+      - name: オッズ更新のみ（notify時）
+        if: inputs.mode == 'notify'
+        continue-on-error: true
+        run: |
+          echo "📊 オッズ更新中..."
+          python -m keiba_predictor.odds_updater
+          echo "✅ オッズ更新完了"
 
       - name: キャッシュをコミット
         if: always()
