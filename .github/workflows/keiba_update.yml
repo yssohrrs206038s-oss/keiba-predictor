@@ -38,6 +38,11 @@ jobs:
           pip install -r requirements.txt
           echo "✅ pip install 完了"
 
+      - name: Playwright Chromium をインストール
+        run: |
+          python -m playwright install chromium
+          python -m playwright install-deps chromium
+
       # ── データ収集（先週土日分） ─────────────────────────────
       - name: スクレイピング（先週土日の結果）
         run: |
