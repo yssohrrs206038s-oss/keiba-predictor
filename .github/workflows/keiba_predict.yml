@@ -1,9 +1,7 @@
 name: 重賞予想・Discord通知（土日）
 
 on:
-  schedule:
-    - cron: '0 0 * * 6'   # 土曜 09:00 JST — 予想生成+即通知
-    - cron: '0 0 * * 0'   # 日曜 09:00 JST — 予想生成+即通知
+  # スケジュールは外部cron-jobで管理
   workflow_dispatch:
     inputs:
       mode:

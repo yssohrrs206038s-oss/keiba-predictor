@@ -1,10 +1,8 @@
 name: 結果通知（土日）
 
 on:
-  schedule:
-    - cron: '0 9 * * 6'   # 土曜 18:00 JST（土曜レースのみ照合）
-    - cron: '0 9 * * 0'   # 日曜 18:00 JST（全レース照合・週次サマリー）
-  workflow_dispatch:       # 手動実行ボタンも有効化
+  # スケジュールは外部cron-jobで管理
+  workflow_dispatch:
     inputs:
       race_id:
         description: '結果照合対象のレースID（例: 202506050811）。空欄の場合は予想キャッシュ内の全レースを対象。'
