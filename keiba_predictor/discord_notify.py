@@ -723,6 +723,18 @@ def _ana_horse_info(result_df: pd.DataFrame, ana_horse_num: "Optional[int]") -> 
     }
 
 
+def _load_cache_direct() -> dict:
+    """predictions_cache.json を直接読み込む（スナップショット無視）。
+    予想生成時に使用。スナップショット優先だと古いキャッシュで上書きされるため。"""
+    if PRED_CACHE.exists():
+        try:
+            with open(PRED_CACHE, encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return {}
+
+
 def _store_prediction(race_id: str, race_name: str, race_date: str,
                       result_df: pd.DataFrame,
                       course_info: str = "",
@@ -730,7 +742,7 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
                       venue: str = "",
                       is_grade: bool = True) -> None:
     """予想結果をキャッシュに保存する（Discord通知・結果照合に使用）。"""
-    cache = _load_cache()
+    cache = _load_cache_direct()  # スナップショットではなく実ファイルを読む
 
     def _horse(df: pd.DataFrame, idx: int) -> dict:
         if len(df) <= idx:
