@@ -1011,8 +1011,9 @@ def _fmt_result(race_name: str, race_date: str,
                 pred: dict,
                 payouts: dict,
                 manual: Optional[dict] = None,
-                race_id: str = "") -> str:
-    """日曜結果メッセージを生成する。"""
+                race_id: str = "",
+                is_grade: bool = False) -> str:
+    """結果メッセージを生成する。is_grade=True で重賞の詳細版、False で平場の簡易版。"""
     RULE = "─" * 16
     venue = pred.get("venue", "")
     race_num = ""
@@ -1024,7 +1025,7 @@ def _fmt_result(race_name: str, race_date: str,
     if not venue and race_id and len(race_id) >= 10:
         venue = VENUE_MAP.get(race_id[8:10], "")
     header = f"{venue} {race_num}{race_name}".strip()
-    lines = [f"🏆 【KEIBA EDGE】{header} 結果  {race_date}", RULE]
+    lines = [f"🏆 【KEIBA EDGE】結果  {race_date}", header, RULE]
 
     # 予想馬番→印 のマッピング
     pred_num_to_mark: dict[int, str] = {}
@@ -1079,6 +1080,24 @@ def _fmt_result(race_name: str, race_date: str,
         lines.append(f"{fp}着 {mark} {num}番 {name}{icon}")
 
     lines.append(RULE)
+
+    # 平場はあっさり版（着順 + 的中/不的中 のみ）
+    if not is_grade and not manual:
+        hits = check_hits_from_bet_strategy(pred, actual_top3_nums, payouts)
+        any_hit = hits["fukusho_hit"] or hits["wide_hit"] or hits["sanren_hit"]
+        parts = []
+        if hits["fukusho_hit"]:
+            parts.append("複勝✅")
+        if hits["wide_hit"]:
+            pay = hits["wide_pay"]
+            parts.append(f"ワイド✅{f'({pay})' if pay else ''}")
+        if hits["sanren_hit"]:
+            pay = hits["sanren_pay"]
+            parts.append(f"3連複✅{f'({pay})' if pay else ''}")
+        if not any_hit:
+            parts.append("❌")
+        lines.append(" ".join(parts))
+        return "\n".join(lines)
 
     # manual_results.json のフラグがあればそちらを優先
     if manual and "fukusho_hit" in manual:
@@ -1973,7 +1992,9 @@ def run_result_notify(
             if manual.get("predicted_top3_nums"):
                 pred["predicted_top3_nums"] = manual["predicted_top3_nums"]
 
-        msg = _fmt_result(race_name, race_date, actual_df, pred, payouts, manual=manual, race_id=race_id)
+        is_grade = pred.get("is_grade", False) or any(
+            kw in race_name for kw in ("重賞", "特別", "記念", "杯", "賞", "ステークス", "(G"))
+        msg = _fmt_result(race_name, race_date, actual_df, pred, payouts, manual=manual, race_id=race_id, is_grade=is_grade)
         if send_discord(webhook_url, msg):
             notified += 1
             logger.info(f"  送信: {race_name}")
