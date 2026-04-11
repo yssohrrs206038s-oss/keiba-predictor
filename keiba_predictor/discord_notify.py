@@ -1932,8 +1932,13 @@ def run_result_notify(
             logger.warning(f"manual_results.json 読み込み失敗: {e}")
 
     notified = 0
+    flat_results: list[str] = []  # 平場まとめ用
+    seen_ids: set[str] = set()    # 重複チェック
     for race in grade_races:
         race_id   = race["race_id"]
+        if race_id in seen_ids:
+            continue
+        seen_ids.add(race_id)
         # キャッシュのrace_nameを優先（スクレイプ由来は文字化けの可能性あり）
         cached_name = cache.get(race_id, {}).get("race_name", "")
         race_name = cached_name or race.get("race_name", race_id)
@@ -1994,18 +1999,43 @@ def run_result_notify(
 
         is_grade = pred.get("is_grade", False) or any(
             kw in race_name for kw in ("重賞", "特別", "記念", "杯", "賞", "ステークス", "(G"))
-        msg = _fmt_result(race_name, race_date, actual_df, pred, payouts, manual=manual, race_id=race_id, is_grade=is_grade)
-        if send_discord(webhook_url, msg):
+
+        if is_grade:
+            # 重賞: 個別に詳細送信
+            msg = _fmt_result(race_name, race_date, actual_df, pred, payouts, manual=manual, race_id=race_id, is_grade=True)
+            if send_discord(webhook_url, msg):
+                notified += 1
+                logger.info(f"  送信: {race_name}")
+        else:
+            # 平場: まとめ用にデータを蓄積（後で一括送信）
+            hits = check_hits_from_bet_strategy(pred, actual_top3_nums, payouts)
+            any_hit = hits["fukusho_hit"] or hits["wide_hit"] or hits["sanren_hit"]
+            parts = []
+            if hits["wide_hit"]:
+                parts.append(f"ワイド✅")
+            if hits["sanren_hit"]:
+                pay = hits["sanren_pay"]
+                parts.append(f"3連複✅{f'({pay})' if pay else ''}")
+            venue_r = pred.get("venue", "")
+            rn = ""
+            if race_id and len(race_id) >= 12:
+                try:
+                    rn = f"{int(race_id[10:12])}R"
+                except ValueError:
+                    pass
+            icon = "✅" if any_hit else "❌"
+            hit_str = " ".join(parts) if parts else ""
+            flat_results.append(f"{icon} {venue_r}{rn} {race_name} {hit_str}".strip())
             notified += 1
-            logger.info(f"  送信: {race_name}")
-            # 結果通知済みフラグをキャッシュに保存
-            if race_id in cache:
-                cache[race_id]["result_notified"] = True
-                _save_cache(cache)
+            logger.info(f"  平場まとめ: {race_name} {'的中' if any_hit else '不的中'}")
+
+        # 結果通知済みフラグをキャッシュに保存
+        if race_id in cache:
+            cache[race_id]["result_notified"] = True
+            _save_cache(cache)
 
         # 的中実績を CSV に記録
         if manual and "fukusho_hit" in manual:
-            # manual_results.json の的中フラグで直接記録
             try:
                 _record_manual_result(race_id, race_name, race_date, pred, manual)
             except Exception as e:
@@ -2023,6 +2053,12 @@ def run_result_notify(
                 post_result_tweet(race_name, actual_df, pred, payouts)
             except Exception as e:
                 logger.warning(f"  [X] 結果投稿エラー: {e}")
+
+    # 平場まとめ送信
+    if flat_results:
+        flat_hits = sum(1 for r in flat_results if r.startswith("✅"))
+        flat_msg = f"📋 **平場結果** {flat_hits}/{len(flat_results)}的中\n" + "\n".join(flat_results)
+        send_discord(webhook_url, flat_msg)
 
     if notified > 0:
         send_discord(webhook_url, f"✅ {notified}レース結果送信完了")
