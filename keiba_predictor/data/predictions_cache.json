@@ -3,5 +3,351 @@
     "auc": 0.8639,
     "fukusho_rate": 61.3,
     "n_features": 47
+  },
+  "202606030511": {
+    "race_name": "ニュージーランドT",
+    "race_date": "2026-04-11",
+    "start_time": "15:45",
+    "venue": "中山",
+    "course_info": "芝1600m",
+    "honmei": {
+      "horse_number": 7,
+      "horse_name": "ロデオドライブ",
+      "prob": 0.9066
+    },
+    "taikou": {
+      "horse_number": 11,
+      "horse_name": "ゴーラッキー",
+      "prob": 0.7712
+    },
+    "ana": {
+      "horse_number": 12,
+      "horse_name": "アルデトップガン",
+      "prob": 0.7013
+    },
+    "predicted_top3_nums": [
+      7,
+      11,
+      12
+    ],
+    "predicted_top5_nums": [
+      7,
+      11,
+      12,
+      14,
+      5,
+      4
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 2,
+        "horse_name": "マダックス",
+        "ev_score": 32.336,
+        "prob": 0.3
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "レザベーション",
+        "ev_score": 15.068,
+        "prob": 0.4293
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "ブルズアイプリンス",
+        "ev_score": 12.495,
+        "prob": 0.1827
+      }
+    ],
+    "ana_horse_num": 2,
+    "is_grade": true,
+    "confidence": 5,
+    "confidence_stars": "★★★★★",
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 7,
+          "name": "ロデオドライブ"
+        }
+      ],
+      "umaren": [
+        {
+          "nums": [
+            7,
+            11
+          ]
+        },
+        {
+          "nums": [
+            7,
+            12
+          ]
+        },
+        {
+          "nums": [
+            11,
+            12
+          ]
+        }
+      ],
+      "wide": [],
+      "sanrenpuku": {
+        "jiku": [
+          7
+        ],
+        "aite": [
+          11,
+          12,
+          14,
+          5,
+          3
+        ]
+      },
+      "total_points": 14,
+      "total_cost": 2300,
+      "strategy_note": "複勝 + 馬連 + 3連複◎軸x5+穴",
+      "use_wide": false
+    },
+    "simulation": {
+      "7": {
+        "horse_name": "ロデオドライブ",
+        "top3_rate": 0.95,
+        "top3_std": 0.009,
+        "is_stable": true,
+        "out_of_board_rate": 0.004,
+        "variance": 0.904,
+        "scenario": {
+          "high_pace": 0.94,
+          "slow_pace": 0.95,
+          "normal": 0.96
+        }
+      },
+      "11": {
+        "horse_name": "ゴーラッキー",
+        "top3_rate": 0.73,
+        "top3_std": 0.022,
+        "is_stable": true,
+        "out_of_board_rate": 0.04,
+        "variance": 1.378,
+        "scenario": {
+          "high_pace": 0.73,
+          "slow_pace": 0.73,
+          "normal": 0.72
+        }
+      },
+      "12": {
+        "horse_name": "アルデトップガン",
+        "top3_rate": 0.488,
+        "top3_std": 0.019,
+        "is_stable": true,
+        "out_of_board_rate": 0.116,
+        "variance": 1.532,
+        "scenario": {
+          "high_pace": 0.5,
+          "slow_pace": 0.49,
+          "normal": 0.48
+        }
+      },
+      "14": {
+        "horse_name": "ディールメーカー",
+        "top3_rate": 0.418,
+        "top3_std": 0.02,
+        "is_stable": true,
+        "out_of_board_rate": 0.145,
+        "variance": 1.561,
+        "scenario": {
+          "high_pace": 0.41,
+          "slow_pace": 0.43,
+          "normal": 0.42
+        }
+      },
+      "5": {
+        "horse_name": "ジーネキング",
+        "top3_rate": 0.331,
+        "top3_std": 0.021,
+        "is_stable": true,
+        "out_of_board_rate": 0.202,
+        "variance": 1.591,
+        "scenario": {
+          "high_pace": 0.33,
+          "slow_pace": 0.33,
+          "normal": 0.34
+        }
+      },
+      "race_volatility": 1.763,
+      "is_volatile_race": true
+    }
+  },
+  "202609020511": {
+    "race_name": "阪神牝馬S",
+    "race_date": "2026-04-11",
+    "start_time": "15:30",
+    "venue": "阪神",
+    "course_info": "芝1600m",
+    "honmei": {
+      "horse_number": 1,
+      "horse_name": "エンブロイダリー",
+      "prob": 0.7803
+    },
+    "taikou": {
+      "horse_number": 4,
+      "horse_name": "ラヴァンダ",
+      "prob": 0.714
+    },
+    "ana": {
+      "horse_number": 6,
+      "horse_name": "アスコリピチェーノ",
+      "prob": 0.6912
+    },
+    "predicted_top3_nums": [
+      1,
+      4,
+      6
+    ],
+    "predicted_top5_nums": [
+      1,
+      4,
+      6,
+      5,
+      2,
+      3
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 9,
+        "horse_name": "エポックヴィーナス",
+        "ev_score": 12.851,
+        "prob": 0.1091
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "ビップデイジー",
+        "ev_score": 9.717,
+        "prob": 0.2012
+      },
+      {
+        "horse_number": 8,
+        "horse_name": "カナテープ",
+        "ev_score": 7.092,
+        "prob": 0.238
+      }
+    ],
+    "ana_horse_num": 9,
+    "is_grade": true,
+    "confidence": 4,
+    "confidence_stars": "★★★★",
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 1,
+          "name": "エンブロイダリー"
+        }
+      ],
+      "umaren": [
+        {
+          "nums": [
+            1,
+            4
+          ]
+        },
+        {
+          "nums": [
+            1,
+            6
+          ]
+        },
+        {
+          "nums": [
+            4,
+            6
+          ]
+        }
+      ],
+      "wide": [],
+      "sanrenpuku": {
+        "jiku": [
+          1
+        ],
+        "aite": [
+          4,
+          6,
+          5,
+          2,
+          3
+        ]
+      },
+      "total_points": 14,
+      "total_cost": 2300,
+      "strategy_note": "複勝 + 馬連 + 3連複◎軸x5+穴",
+      "use_wide": false
+    },
+    "simulation": {
+      "1": {
+        "horse_name": "エンブロイダリー",
+        "top3_rate": 0.931,
+        "top3_std": 0.013,
+        "is_stable": true,
+        "out_of_board_rate": 0.003,
+        "variance": 0.984,
+        "scenario": {
+          "high_pace": 0.93,
+          "slow_pace": 0.93,
+          "normal": 0.94
+        }
+      },
+      "4": {
+        "horse_name": "ラヴァンダ",
+        "top3_rate": 0.838,
+        "top3_std": 0.019,
+        "is_stable": true,
+        "out_of_board_rate": 0.006,
+        "variance": 1.118,
+        "scenario": {
+          "high_pace": 0.84,
+          "slow_pace": 0.84,
+          "normal": 0.83
+        }
+      },
+      "6": {
+        "horse_name": "アスコリピチェーノ",
+        "top3_rate": 0.784,
+        "top3_std": 0.016,
+        "is_stable": true,
+        "out_of_board_rate": 0.012,
+        "variance": 1.159,
+        "scenario": {
+          "high_pace": 0.79,
+          "slow_pace": 0.78,
+          "normal": 0.78
+        }
+      },
+      "5": {
+        "horse_name": "カムニャック",
+        "top3_rate": 0.381,
+        "top3_std": 0.019,
+        "is_stable": true,
+        "out_of_board_rate": 0.065,
+        "variance": 1.227,
+        "scenario": {
+          "high_pace": 0.37,
+          "slow_pace": 0.39,
+          "normal": 0.38
+        }
+      },
+      "2": {
+        "horse_name": "カピリナ",
+        "top3_rate": 0.038,
+        "top3_std": 0.009,
+        "is_stable": true,
+        "out_of_board_rate": 0.501,
+        "variance": 1.384,
+        "scenario": {
+          "high_pace": 0.04,
+          "slow_pace": 0.04,
+          "normal": 0.04
+        }
+      },
+      "race_volatility": 1.259,
+      "is_volatile_race": true
+    }
   }
 }
