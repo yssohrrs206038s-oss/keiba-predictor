@@ -1874,16 +1874,23 @@ def run_result_notify(
         grade_races = [{"race_id": race_id, "race_name": race_name, "race_date": race_date}]
         logger.info(f"指定レースID: {race_id} ({race_name})")
     else:
-        # キャッシュ内の全レース（重賞+平場）を対象にする
-        logger.info("キャッシュ内の全レースを結果照合対象にします...")
+        # キャッシュ内の今週末レース（重賞+平場）を対象にする
+        logger.info("キャッシュ内の今週末レースを結果照合対象にします...")
+        weekend_set = set()
+        for d in _weekend_dates():
+            weekend_set.add(f"{d[:4]}-{d[4:6]}-{d[6:]}")
+        logger.info(f"  今週末: {weekend_set}")
         grade_races = []
         for rid, entry in cache.items():
             if rid.startswith("_") or not isinstance(entry, dict):
                 continue
+            rd = entry.get("race_date", "")
+            if rd and rd not in weekend_set:
+                continue
             grade_races.append({
                 "race_id": rid,
                 "race_name": entry.get("race_name", rid),
-                "race_date": entry.get("race_date", ""),
+                "race_date": rd,
             })
     if not grade_races:
         logger.warning("結果照合対象のレースがありません")
