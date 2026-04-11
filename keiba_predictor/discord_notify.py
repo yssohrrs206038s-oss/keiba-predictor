@@ -1025,7 +1025,7 @@ def _fmt_result(race_name: str, race_date: str,
     if not venue and race_id and len(race_id) >= 10:
         venue = VENUE_MAP.get(race_id[8:10], "")
     header = f"{venue} {race_num}{race_name}".strip()
-    lines = [f"🏆 【KEIBA EDGE】結果  {race_date}", header, RULE]
+    lines = [f"🏆 【KEIBA EDGE】結果", f"📅 {race_date}　{header}", RULE]
 
     # 予想馬番→印 のマッピング
     pred_num_to_mark: dict[int, str] = {}
