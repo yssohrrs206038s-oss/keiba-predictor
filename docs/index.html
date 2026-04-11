@@ -850,7 +850,7 @@ function renderPredictions(cache) {
     const roles = [
       { key: 'honmei', mark: '◎', cls: 'mark-honmei' },
       { key: 'taikou', mark: '○', cls: 'mark-taikou' },
-      { key: 'ana',    mark: '△', cls: 'mark-ana'    },
+      { key: 'ana',    mark: '★穴', cls: 'mark-ana'    },
     ];
     const evMap = {};
     (r.ev_top3 || []).forEach(e => { if (e.horse_number != null) evMap[+e.horse_number] = e.ev_score; });
