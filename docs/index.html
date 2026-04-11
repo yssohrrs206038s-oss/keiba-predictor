@@ -912,7 +912,8 @@ function renderPredictions(cache) {
       const sr = bs.sanrenpuku;
       if (sr && sr.jiku && sr.aite) {
         const jikuStr = sr.jiku.length === 1 ? `軸${sr.jiku[0]}` : `軸${sr.jiku[0]}-${sr.jiku[1]}`;
-        const aiteStr = sr.aite.join('/');
+        const anaNum = r.ana_horse_num;
+        const aiteStr = sr.aite.map(n => n === anaNum ? `<span style="color:var(--gold);font-weight:700;">${n}(穴)</span>` : String(n)).join('/');
         rows.push(`<div class="bet-row"><span class="bet-label">3連複</span>${jikuStr} × ${aiteStr}<span style="color:var(--text-muted);margin-left:auto;font-size:11px;">各100円</span></div>`);
       }
 
