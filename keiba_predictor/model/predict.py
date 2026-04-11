@@ -412,14 +412,14 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     is_tight = prob_spread < 0.05
     use_wide = is_tight or is_volatile_race
 
-    # 穴馬
+    # 穴馬（AI確率35%以上 & 8番人気以下 = 市場が過小評価している馬のみ）
     ana_num = None
     top5_set = set(nums)
     if len(result_df) > 5:
         rest = result_df.iloc[5:]
         rest_prob = pd.to_numeric(rest.get("prob_top3", pd.Series(dtype=float)), errors="coerce")
         rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
-        cands = rest[(rest_prob >= 0.30) & (rest_pop >= 6)]
+        cands = rest[(rest_prob >= 0.35) & (rest_pop >= 8)]
         if not cands.empty:
             best = cands.nlargest(1, "prob_top3").iloc[0]
             v = best.get("horse_number")
