@@ -602,6 +602,47 @@ function gradeLabel(name = '') {
   return '';
 }
 
+/* 内部カラム名（snake_case）→ 日本語ラベル変換マップ */
+const FEATURE_LABEL_JA = {
+  'distance': '距離適性', 'course_type_enc': 'コース適性',
+  'track_condition_enc': '馬場状態', 'weather_enc': '天候',
+  'frame_number': '枠番', 'horse_number': '馬番',
+  'weight_carried': '斤量', 'odds': 'オッズ有利',
+  'popularity': '人気', 'sex_enc': '性別', 'age': '年齢',
+  'horse_weight': '馬体重', 'horse_weight_diff': '馬体重増減',
+  'last_3f': '上がり3F',
+  'avg_time_3': '近3走タイム', 'avg_time_5': '近5走タイム',
+  'avg_time_3_any': '近3走タイム(全)', 'avg_time_5_any': '近5走タイム(全)',
+  'jockey_fukusho_rate': '騎手好成績', 'trainer_fukusho_rate': '調教師好成績',
+  'dist_diff_prev': '距離変更', 'days_since_last_race': 'レース間隔',
+  'weeks_since_last_race': 'レース間隔',
+  'prev_finish_pos': '前走着順', 'prev_odds': '前走オッズ',
+  'prev2_finish_pos': '2走前着順', 'prev2_odds': '2走前オッズ',
+  'prev2_last_3f': '2走前上がり3F', 'prev3_finish_pos': '3走前着順',
+  'prev3_last_3f': '3走前上がり3F', 'finish_pos_trend': '着順トレンド',
+  'horse_course_fukusho_rate': 'コース実績',
+  'horse_dist_fukusho_rate': '距離実績',
+  'horse_track_fukusho_rate': '馬場実績',
+  'race_grade_enc': 'レース格',
+  'jockey_horse_fukusho_rate': '騎手馬相性',
+  'jockey_course_fukusho_rate': '騎手コース相性',
+  'jockey_dist_fukusho_rate': '騎手距離適性',
+  'jockey_trainer_fukusho_rate': '騎手調教師相性',
+  'running_style_enc': '脚質', 'pace_pressure': '展開圧力',
+  'is_fresh': '休み明け', 'is_continuous': '連闘・中2週',
+  'weight_carried_diff': '斤量増減', 'is_weight_increase': '斤量増加',
+  'same_day_rank': 'レース内順位', 'prob_vs_avg': '平均比確率',
+};
+
+function prettyLabel(label) {
+  if (!label) return label;
+  if (FEATURE_LABEL_JA[label]) return FEATURE_LABEL_JA[label];
+  const m = label.match(/^([a-z0-9_]+)(.*)$/);
+  if (m && FEATURE_LABEL_JA[m[1]]) return FEATURE_LABEL_JA[m[1]] + m[2];
+  if (/^[a-z0-9_]+$/.test(label)) return label.replace(/_/g, ' ');
+  return label;
+}
+
 async function fetchJSON(url) {
   const r = await fetch(url + '?t=' + Date.now());
   if (!r.ok) throw new Error(`HTTP ${r.status}: ${url}`);
@@ -894,12 +935,37 @@ function renderPredictions(cache) {
       const stableTag = mcData.is_stable != null
         ? (mcData.is_stable ? '<span style="color:#2ecc71;font-size:10px;">🔒安定</span>' : '<span style="color:#e67e22;font-size:10px;">⚡展開依存</span>')
         : '';
+      // SHAP値タグ
+      let shapHTML = '';
+      if (p.shap_top && p.shap_top.length) {
+        shapHTML = '<div class="horse-shap" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">' + p.shap_top.map(s => {
+          const c2 = s.value > 0 ? 'shap-plus' : 'shap-minus';
+          const sign = s.value > 0 ? '+' : '';
+          return `<span class="shap-tag ${c2}">${esc(prettyLabel(s.label))} ${sign}${s.value.toFixed(2)}</span>`;
+        }).join('') + '</div>';
+      }
+      // サマリー
+      let summaryHTML = '';
+      if (p.shap_top && p.shap_top.length) {
+        const pros = p.shap_top.filter(s => s.value > 0).map(s => prettyLabel(s.label)).slice(0, 2);
+        const cons = p.shap_top.filter(s => s.value < 0).map(s => prettyLabel(s.label)).slice(0, 1);
+        const parts = [];
+        if (pros.length) parts.push(pros.join('・'));
+        if (cons.length) parts.push(`⚠${cons[0]}`);
+        let verdict = '';
+        if (ev && ev >= 1.5) verdict = '妙味あり';
+        else if (prob >= 50) verdict = '安定軸';
+        else if (prob >= 30) verdict = '展開次第';
+        if (parts.length) summaryHTML = `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">→ ${parts.join(' / ')}${verdict ? '。' + verdict : ''}</div>`;
+      }
       return `
         <div class="horse-item">
           <span class="horse-mark ${cls}">${mark}</span>
           <span class="horse-num">${esc(p.horse_number)}番</span>
           <div>
             <div class="horse-name">${esc(p.horse_name)} ${stableTag}</div>
+            ${shapHTML}
+            ${summaryHTML}
           </div>
           <div class="horse-stats">
             <div class="horse-prob">${prob}%</div>
