@@ -1874,25 +1874,20 @@ def run_result_notify(
         grade_races = [{"race_id": race_id, "race_name": race_name, "race_date": race_date}]
         logger.info(f"指定レースID: {race_id} ({race_name})")
     else:
-        # 今週末の重賞IDを取得
-        logger.info("今週末の重賞を検索中...")
-        grade_races = scrape_grade_race_ids(session)
+        # キャッシュ内の全レース（重賞+平場）を対象にする
+        logger.info("キャッシュ内の全レースを結果照合対象にします...")
+        grade_races = []
+        for rid, entry in cache.items():
+            if rid.startswith("_") or not isinstance(entry, dict):
+                continue
+            grade_races.append({
+                "race_id": rid,
+                "race_name": entry.get("race_name", rid),
+                "race_date": entry.get("race_date", ""),
+            })
     if not grade_races:
-        dates = _weekend_dates()
-        sat = f"{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}"
-        sun = f"{dates[1][:4]}-{dates[1][4:6]}-{dates[1][6:]}"
-        logger.warning(f"スクレイピングで重賞0件 ({sat}/{sun}) → featured_races.csv にフォールバック")
-        grade_races = _load_featured_race_ids_for_weekend()
-        if not grade_races:
-            msg = (
-                f"🏆 今週末（{sat} / {sun}）の重賞レース情報が取得できませんでした。\n"
-                "netkeibaへのアクセス失敗または重賞レースなしの可能性があります。"
-            )
-            logger.warning(msg)
-            send_discord(webhook_url, msg)
-            return
-        send_discord(webhook_url,
-            f"⚠️ スクレイピング失敗 → featured_races.csv から {len(grade_races)} レースを使用")
+        logger.warning("結果照合対象のレースがありません")
+        return
 
     from keiba_predictor.scraper.netkeiba_scraper import scrape_race_result
     from keiba_predictor.history import (
