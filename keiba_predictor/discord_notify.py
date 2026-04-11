@@ -688,18 +688,33 @@ def _load_cache() -> dict:
 
 
 def _load_cache_for_result() -> dict:
-    """結果照合用: 13時スナップショットを優先して読み込む（後出し防止）。"""
+    """結果照合用: 実キャッシュをベースに、13時スナップショットの予想データを補完（後出し防止）。
+    result_notified 等のフラグは実キャッシュから取得し、予想内容はスナップショットを優先する。"""
+    real = _load_cache()
     snapshot_13 = DATA_DIR / "predictions_snapshot_13.json"
-    if snapshot_13.exists():
-        logger.info(f"13時スナップショットを使用: {snapshot_13.name}")
-        try:
-            with open(snapshot_13, encoding="utf-8") as f:
-                data = json.load(f)
-            data.pop("_snapshot_time", None)
-            return data
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.warning(f"スナップショットの読み込みに失敗: {e}")
-    return _load_cache()
+    if not snapshot_13.exists():
+        return real
+    try:
+        with open(snapshot_13, encoding="utf-8") as f:
+            snap = json.load(f)
+        snap.pop("_snapshot_time", None)
+        logger.info(f"13時スナップショットを補完使用: {snapshot_13.name}")
+        # スナップショットの予想データを使いつつ、実キャッシュのフラグを保持
+        for rid, entry in snap.items():
+            if rid.startswith("_"):
+                continue
+            if rid not in real:
+                real[rid] = entry
+            else:
+                # 予想内容はスナップショット優先、フラグ（result_notified等）は実キャッシュ保持
+                flags = {k: real[rid][k] for k in ("result_notified", "notified_predict", "result_settled", "wide_hit")
+                         if k in real[rid]}
+                real[rid].update({k: v for k, v in entry.items() if k not in flags})
+                real[rid].update(flags)
+        return real
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.warning(f"スナップショットの読み込みに失敗: {e}")
+        return real
 
 
 def _save_cache(cache: dict) -> None:
