@@ -676,8 +676,19 @@ def _load_featured_race_ids_for_weekend(
 # ══════════════════════════════════════════════════════════════
 
 def _load_cache() -> dict:
-    """予想キャッシュを読み込む。13時スナップショット → cache の優先順位。"""
-    # 13時スナップショット（後出し防止用）を優先
+    """予想キャッシュを読み込む。常に predictions_cache.json を使用。
+    13時スナップショットは結果照合時のみ _load_cache_for_result() で使用する。"""
+    if PRED_CACHE.exists():
+        try:
+            with open(PRED_CACHE, encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(f"キャッシュの読み込みに失敗: {e}")
+    return {}
+
+
+def _load_cache_for_result() -> dict:
+    """結果照合用: 13時スナップショットを優先して読み込む（後出し防止）。"""
     snapshot_13 = DATA_DIR / "predictions_snapshot_13.json"
     if snapshot_13.exists():
         logger.info(f"13時スナップショットを使用: {snapshot_13.name}")
@@ -688,13 +699,7 @@ def _load_cache() -> dict:
             return data
         except (json.JSONDecodeError, ValueError) as e:
             logger.warning(f"スナップショットの読み込みに失敗: {e}")
-    if PRED_CACHE.exists():
-        try:
-            with open(PRED_CACHE, encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.warning(f"キャッシュの読み込みに失敗: {e}")
-    return {}
+    return _load_cache()
 
 
 def _save_cache(cache: dict) -> None:
@@ -1844,7 +1849,7 @@ def run_result_notify(
     webhook_url = result_url if result_url else _resolve_webhook(webhook_url)
 
     session = requests.Session()
-    cache   = _load_cache()
+    cache   = _load_cache_for_result()  # 結果照合は13時スナップショット優先（後出し防止）
 
     # --race-id 指定時はそのレースのみ対象
     if race_id:
