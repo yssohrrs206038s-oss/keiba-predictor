@@ -82,7 +82,7 @@ jobs:
             echo "⚠️ 過去成績なし — 予想精度が低下します"
           fi
 
-      - name: 重賞+平場（芝1勝以上）予想を生成
+      - name: 重賞+平場（1勝以上）予想を生成
         if: inputs.mode != 'notify'
         continue-on-error: true
         run: |

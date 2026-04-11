@@ -331,7 +331,7 @@ _FLAT_EXCLUDE = {"未勝利", "新馬", "障害"}
 
 
 def scrape_flat_race_ids(session: requests.Session) -> list[dict]:
-    """今週末の平場レース（芝・1勝クラス以上）を venue ごとに取得する。
+    """今週末の平場レース（1勝クラス以上）を venue ごとに取得する。
 
     Returns:
         [{"race_id", "race_name", "race_date", "venue", "is_grade": False}, ...]
@@ -384,12 +384,7 @@ def scrape_flat_race_ids(session: requests.Session) -> list[dict]:
             if any(kw in li_text for kw in _FLAT_EXCLUDE):
                 continue
 
-            # 芝のみ（"芝" を含むか、Turf クラスがあるか）
-            is_turf = ("芝" in li_text
-                       or li.select_one("[class*='Turf']") is not None
-                       or "Icon_Turf" in str(li))
-            if not is_turf:
-                continue
+            # 芝・ダート両方対象（障害は除外済み）
 
             seen.add(race_id)
             venue_name = VENUE_MAP.get(venue_code, "")
@@ -403,7 +398,7 @@ def scrape_flat_race_ids(session: requests.Session) -> list[dict]:
 
         _sleep()
 
-    logger.info(f"平場（芝・1勝以上）: {len(found)} レース")
+    logger.info(f"平場（1勝以上）: {len(found)} レース")
     return found
 
 
@@ -1750,7 +1745,7 @@ def run_predict_notify(
     test_race_id: Optional[str] = None,
     use_live: bool = False,
 ) -> None:
-    """週末重賞+平場（芝1勝以上）を予想���てDiscordに送信する。
+    """週末重賞+平場（1勝以上）を予想���てDiscordに送信する。
 
     重賞: Discord通知 + ダッシュボード表示
     平場: ダッシュボード表示のみ（Discordには送らない）
@@ -1844,7 +1839,7 @@ def run_predict_notify(
         for rid, entry in cache.items():
             if isinstance(entry, dict) and entry.get("is_grade") is False and entry.get("race_date") == today_str:
                 flat_count += 1
-        logger.info(f"平場（芝1勝以上）: 当日 {flat_count} レースがキャッシュ済み")
+        logger.info(f"平場（1勝以上）: 当日 {flat_count} レースがキャッシュ済み")
 
     send_discord(webhook_url, f"✅ 重賞 {notified} レース送信完了（平場はダッシュボードで確認）")
 
