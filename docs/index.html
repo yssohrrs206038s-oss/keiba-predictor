@@ -465,7 +465,8 @@
   <!-- タブ1: 今週の予想 -->
   <div class="tab-panel active" id="panel-predict">
     <div id="venue-tabs" style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px;">
-      <button class="tab-btn active" data-venue="grade" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">重賞</button>
+      <button class="tab-btn active" data-venue="all" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">全レース</button>
+      <button class="tab-btn" data-venue="grade" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">重賞</button>
     </div>
     <div class="section-title">🏇 今週の予想</div>
     <div class="race-grid" id="race-grid">
@@ -842,7 +843,7 @@ function renderWeeklyChart(rows) {
 ════════════════════════════════════════════════════════════ */
 let _predHtmlMap = {};  // raceId → html
 let _allPredEntries = [];
-let _currentVenue = 'grade';
+let _currentVenue = 'all';
 let _resultMap = {};
 
 function renderPredictions(cache) {
@@ -863,7 +864,8 @@ function renderPredictions(cache) {
   });
   const vtabs = document.getElementById('venue-tabs');
   if (vtabs && venues.size) {
-    let btns = '<button class="tab-btn active" data-venue="grade" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">重賞</button>';
+    let btns = '<button class="tab-btn active" data-venue="all" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">全レース</button>';
+    btns += '<button class="tab-btn" data-venue="grade" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">重賞</button>';
     for (const v of [...venues].sort()) {
       btns += `<button class="tab-btn" data-venue="${esc(v)}" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">${esc(v)}</button>`;
     }
@@ -1130,6 +1132,7 @@ function _renderFlatCard(raceId, r) {
 function _renderFilteredPredictions() {
   const grid = document.getElementById('race-grid');
   const filtered = _allPredEntries.filter(([, r]) => {
+    if (_currentVenue === 'all') return true;
     if (_currentVenue === 'grade') return r.is_grade !== false;
     return r.is_grade === false && r.venue === _currentVenue;
   });
