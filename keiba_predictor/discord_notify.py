@@ -840,9 +840,10 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
         from keiba_predictor.model.predict import _decide_bet_strategy
         _is_vol = cache[race_id].get("simulation", {}).get("is_volatile_race", False)
         _ana = cache[race_id].get("ana_horse_num")
+        _rname = cache[race_id].get("race_name", "")
         cache[race_id]["bet_strategy"] = _decide_bet_strategy(
             result_df, is_volatile_race=_is_vol, confidence=confidence_score,
-            ana_horse_num=_ana)
+            ana_horse_num=_ana, race_id=race_id, race_name=_rname)
     except Exception as e:
         logger.warning(f"買い目自動決定失敗: {e}")
 

@@ -372,14 +372,19 @@ def _calc_confidence(pred: dict) -> tuple[int, str]:
 
 
 def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False,
-                         confidence: int = 0, ana_horse_num: int | None = None) -> dict:
+                         confidence: int = 0, ana_horse_num: int | None = None,
+                         race_id: str = "", race_name: str = "") -> dict:
     """
     予測結果DataFrameから予算3000円以内で最適な買い目を自動決定する。
 
     固定構成（上から順に予算配分）:
     1. 複勝 1000円（◎の1頭）
-    2. 馬連 or ワイド 100円×3点（上位3頭の組合せ、波乱/拮抗時はワイド）
+    2. ワイド 300円×3点（上位3頭の組合せ）
     3. 3連複 ◎1頭軸 × 相手4頭(+穴馬) 100円×N点（残り予算で）
+
+    フィルタ（成績分析に基づく見送り条件）:
+    - 福島開催: 複勝のみ（回収率55%→ワイド・3連複を見送り）
+    - 古馬2勝クラス以上: 複勝のみ（回収率11%→多点買い見送り）
     """
     from itertools import combinations as _comb
 
@@ -388,13 +393,22 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     WIDE_UNIT = 300
     FUKUSHO_UNIT = 1000
 
+    _SKIP = {
+        "fukusho": [], "umaren": [], "wide": [],
+        "sanrenpuku": {},
+        "total_points": 0, "total_cost": 0,
+        "strategy_note": "", "use_wide": False,
+    }
+
     if len(result_df) < 3:
-        return {
-            "fukusho": [], "umaren": [], "wide": [],
-            "sanrenpuku": {},
-            "total_points": 0, "total_cost": 0,
-            "strategy_note": "出走頭数不足", "use_wide": False,
-        }
+        _SKIP["strategy_note"] = "出走頭数不足"
+        return _SKIP
+
+    # ── フィルタ: 開催場・クラスによる投資縮小 ──
+    venue_code = race_id[4:6] if len(race_id) >= 6 else ""
+    is_fukushima = venue_code == "03"
+    is_old_upper = any(kw in race_name for kw in ("2勝クラス", "3勝クラス", "オープン"))
+    fukusho_only = is_fukushima or is_old_upper
 
     top5 = result_df.head(5)
     nums = [int(r["horse_number"]) for _, r in top5.iterrows()
@@ -441,8 +455,17 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
         remaining -= FUKUSHO_UNIT
         notes.append("複勝")
 
+    if fukusho_only:
+        # 福島 or 古馬上級クラス → 複勝のみで打ち止め
+        filter_reason = "福島" if is_fukushima else "古馬上級"
+        notes.append(f"({filter_reason}フィルタ)")
+        total_cost = BUDGET - remaining
+        strategy["total_points"] = len(strategy["fukusho"])
+        strategy["total_cost"] = total_cost
+        strategy["strategy_note"] = " + ".join(notes)
+        return strategy
+
     # ── 優先2: ワイド（上位3頭の組合せ 3点） ──
-    # 馬連は削除（4月実績: 0的中で回収0円のため）
     pairs = [{"nums": list(p)} for p in _comb(nums[:3], 2)]
     cost = len(pairs) * WIDE_UNIT
     if remaining >= cost:
