@@ -1918,8 +1918,20 @@ def run_result_notify(
     )
     from datetime import date as _date
 
+    # results_history.csv に記録済みの race_id を取得（二重通知防止）
+    history_ids: set[str] = set()
+    try:
+        hist = load_history()
+        if hist is not None and not hist.empty and "race_id" in hist.columns:
+            history_ids = set(hist["race_id"].astype(str))
+            logger.info(f"results_history.csv: {len(history_ids)}件の記録済みレース")
+    except Exception as e:
+        logger.warning(f"results_history.csv 読み込み失敗: {e}")
+
     # 全レース通知済みなら何も送信せず終了
-    pending = [r for r in grade_races if not cache.get(r["race_id"], {}).get("result_notified")]
+    pending = [r for r in grade_races
+               if not cache.get(r["race_id"], {}).get("result_notified")
+               and r["race_id"] not in history_ids]
     if not pending:
         logger.info("全レース通知済み → スキップ")
         return
@@ -1946,7 +1958,7 @@ def run_result_notify(
         race_date = race.get("race_date", "")
 
         # 結果通知済みならスキップ（日曜に土曜分を再送信しない）
-        if cache.get(race_id, {}).get("result_notified"):
+        if cache.get(race_id, {}).get("result_notified") or race_id in history_ids:
             logger.info(f"  結果通知済みスキップ: {race_name} ({race_id})")
             continue
 
