@@ -98,7 +98,8 @@ def send_discord(webhook_url: str, content: str) -> bool:
 
 def _weekend_dates() -> list[str]:
     """今週末（土・日）の YYYYMMDD リストを返す。月〜土曜実行を想定。"""
-    today   = date.today()
+    from datetime import datetime, timezone, timedelta as _td
+    today   = (datetime.now(timezone.utc) + _td(hours=9)).date()  # JST基準
     wd      = today.weekday()          # 0=月 … 5=土 6=日
     if   wd == 5: d = 0                # 土 → 当日
     elif wd == 6: d = -1               # 日 → 昨日=土
