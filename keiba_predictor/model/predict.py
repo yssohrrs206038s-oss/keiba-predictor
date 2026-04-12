@@ -447,6 +447,7 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     cost = len(pairs) * WIDE_UNIT
     if remaining >= cost:
         strategy["wide"] = pairs
+        strategy["use_wide"] = True
         notes.append("ワイド")
         remaining -= cost
 

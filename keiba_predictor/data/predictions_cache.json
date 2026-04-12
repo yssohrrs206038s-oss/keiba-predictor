@@ -3197,7 +3197,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "2": {
@@ -3370,7 +3370,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "5": {
@@ -3543,7 +3543,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "1": {
@@ -3887,7 +3887,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "9": {
@@ -4060,7 +4060,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "14": {
@@ -4232,7 +4232,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "2": {
@@ -4404,7 +4404,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "4": {
@@ -4576,7 +4576,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "7": {
@@ -4920,7 +4920,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "3": {
@@ -5093,7 +5093,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "4": {
@@ -5265,7 +5265,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "5": {
@@ -5437,7 +5437,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "9": {
@@ -5609,7 +5609,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "6": {
@@ -5782,7 +5782,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "14": {
@@ -6127,7 +6127,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "7": {
@@ -6299,7 +6299,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "16": {
@@ -6472,7 +6472,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "3": {
@@ -6654,7 +6654,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "15": {
@@ -6836,7 +6836,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "15": {
@@ -7018,7 +7018,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "5": {
@@ -7199,7 +7199,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "4": {
@@ -7381,7 +7381,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "3": {
@@ -7744,7 +7744,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "8": {
@@ -8108,7 +8108,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "7": {
@@ -8289,7 +8289,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "9": {
@@ -8471,7 +8471,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "2": {
@@ -8653,7 +8653,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "12": {
@@ -8835,7 +8835,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "15": {
@@ -9199,7 +9199,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "4": {
@@ -9381,7 +9381,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "11": {
@@ -9563,7 +9563,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "16": {
@@ -9744,7 +9744,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "10": {
@@ -9925,7 +9925,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "2": {
@@ -10107,7 +10107,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "11": {
@@ -10653,7 +10653,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "2": {
@@ -10835,7 +10835,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "11": {
@@ -11017,7 +11017,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "9": {
@@ -11199,7 +11199,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "11": {
@@ -11381,7 +11381,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "16": {
@@ -11563,7 +11563,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "14": {
@@ -12108,7 +12108,7 @@
       "total_points": 10,
       "total_cost": 2500,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x4",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "6": {
@@ -12471,7 +12471,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "8": {
@@ -12653,7 +12653,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "2": {
@@ -12835,7 +12835,7 @@
       "total_points": 14,
       "total_cost": 2900,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x5+穴",
-      "use_wide": false
+      "use_wide": true
     },
     "simulation": {
       "15": {
