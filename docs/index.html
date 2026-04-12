@@ -156,6 +156,21 @@
       transform: translateY(-3px);
       box-shadow: 0 8px 32px rgba(212,175,55,.15);
     }
+    .race-card.next-race {
+      border: 2px solid var(--gold);
+      box-shadow: 0 0 20px rgba(212,175,55,.3);
+    }
+    .next-race-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: linear-gradient(135deg, var(--gold), #f39c12);
+      color: #000;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 800;
+      margin-left: 8px;
+      animation: pulse 1.5s infinite;
+    }
     .race-card.hit-card {
       border: 2px solid var(--green);
       box-shadow: 0 0 20px rgba(46,204,113,.25);
@@ -893,6 +908,22 @@ function renderPredictions(cache) {
     });
   }
 
+  // 次のレースを特定（JST基準で現在時刻より後の最も近いレース）
+  const _now = new Date();
+  const _todayJST = new Date(_now.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  let _nextRaceId = '';
+  let _nextTime = '99:99';
+  for (const [rid, r] of entries) {
+    if ((r.race_date || '') !== _todayJST) continue;
+    const st = r.start_time || '';
+    if (!st || !/^\d{1,2}:\d{2}$/.test(st)) continue;
+    const [h, m] = st.split(':').map(Number);
+    const raceTime = new Date(_now);
+    raceTime.setHours(h - 9, m, 0, 0); // JST→UTC
+    if (raceTime < _now) continue;
+    if (st < _nextTime) { _nextTime = st; _nextRaceId = rid; }
+  }
+
   if (!entries.length) {
     grid.innerHTML = '<div class="no-data">今週の予想データがありません</div>';
     return;
@@ -1079,11 +1110,14 @@ function renderPredictions(cache) {
     }
 
     const anyHitClass = res ? ((res.fukusho_hit === 'True' || res.wide_hit === 'True' || res.umaren_hit === 'True' || res.sanrenpuku_hit === 'True') ? 'hit-card' : 'miss-card') : '';
+    const isNext = raceId === _nextRaceId;
+    const nextClass = isNext ? 'next-race' : '';
+    const nextBadge = isNext ? '<span class="next-race-badge">⏭ 次のレース</span>' : '';
     const html = `
-      <div class="race-card ${anyHitClass}">
+      <div class="race-card ${anyHitClass} ${nextClass}">
         <div class="race-card-header">
           <div>
-            <div class="race-name">${esc(raceTitle)}${course}</div>
+            <div class="race-name">${esc(raceTitle)}${course}${nextBadge}</div>
             <div class="race-meta">${esc(r.race_date || '')}${r.start_time ? '　' + esc(r.start_time) + '発走' : ''}</div>
           </div>
           ${gLabel ? `<span class="grade-badge ${gClass}">${gLabel}</span>` : ''}
