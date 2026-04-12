@@ -795,14 +795,14 @@ def _store_prediction(race_id: str, race_name: str, race_date: str,
             "prob":         round(float(r["prob_top3"]), 4),
         })
 
-    # 穴馬: TOP5外 & AI確率高め & 6番人気以下 → EV最高の1頭
+    # 穴馬: TOP5外 & 8番人気以下 & EV>0 → EV最高の1頭
     ana_horse_num: Optional[int] = None
     top5_set = set(top5_nums[:5])
     if len(result_df) > 5:
         rest = result_df.iloc[5:]
         rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
         rest_ev = pd.to_numeric(rest.get("ev_score", pd.Series(dtype=float)), errors="coerce")
-        cands = rest[(rest_pop >= 6) & (rest_ev > 0)]
+        cands = rest[rest_pop.notna() & (rest_pop >= 8) & (rest_ev > 0)]
         if not cands.empty:
             best = cands.nlargest(1, "ev_score").iloc[0]
             v = best.get("horse_number")
