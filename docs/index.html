@@ -1086,12 +1086,13 @@ function renderPredictions(cache) {
       const roiColor = ret >= bet ? 'color:var(--green)' : 'color:var(--red)';
       const hitParts = [];
       hitParts.push(`複勝${fHit ? '✅' : '❌'}`);
+      const hasWide = r.bet_strategy && r.bet_strategy.use_wide && r.bet_strategy.wide && r.bet_strategy.wide.length;
       if (res.wide_hit === 'True') {
         hitParts.push(`ワイド✅${wPay ? ' ' + wPay.toLocaleString() + '円' : ''}`);
       } else if (res.umaren_hit === 'True') {
         hitParts.push(`馬連✅${uPay ? ' ' + uPay.toLocaleString() + '円' : ''}`);
       } else {
-        hitParts.push(`馬連❌`);
+        hitParts.push(hasWide ? `ワイド❌` : `馬連❌`);
       }
       hitParts.push(`3連複${sHit ? '✅' : '❌'}${sPay ? ' ' + sPay.toLocaleString() + '円' : ''}`);
       const anyHit = fHit || uHit || sHit;
