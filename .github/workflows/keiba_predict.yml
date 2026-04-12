@@ -130,7 +130,10 @@ jobs:
                                    'horse_name': h.get('horse_name',''), 'prob_top3': h.get('prob',0),
                                    'odds': h.get('odds'), 'popularity': h.get('popularity')})
                   df = pd.DataFrame(rows)
-                  entry['bet_strategy'] = _decide_bet_strategy(df)
+                  _ana = entry.get('ana_horse_num')
+                  _rname = entry.get('race_name', '')
+                  entry['bet_strategy'] = _decide_bet_strategy(
+                      df, ana_horse_num=_ana, race_id=rid, race_name=_rname)
                   recalc += 1
               except Exception as e:
                   print(f'  bet_strategy再計算失敗 {rid}: {e}')

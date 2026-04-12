@@ -321,7 +321,10 @@ def _check_bet_strategy_changes(cache: dict) -> list[str]:
                 df["popularity"] = range(1, len(df) + 1)
 
             from keiba_predictor.model.predict import _decide_bet_strategy
-            new_bs = _decide_bet_strategy(df)
+            _ana = entry.get("ana_horse_num")
+            _rname = entry.get("race_name", "")
+            new_bs = _decide_bet_strategy(df, ana_horse_num=_ana,
+                                          race_id=race_id, race_name=_rname)
         except Exception:
             continue
 

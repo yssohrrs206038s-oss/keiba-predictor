@@ -1692,23 +1692,36 @@ def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = ""
             return msg1, ""
         hon = nums[0]
         hon_name = entry.get("honmei", {}).get("horse_name", "")
-        umaren_pairs = list(combinations(nums[:3], 2))
-        umaren_str = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
-        partners = nums[1:5]
-        ana_buy = entry.get("ana_horse_num")
-        if ana_buy and ana_buy not in partners:
-            partners = partners + [ana_buy]
-        sanren_pt = len(list(combinations(partners, 2)))
-        partners_str = "/".join(str(n) for n in partners)
-        total = 1 + len(umaren_pairs) + sanren_pt
         header = f"💰 {race_name}  買い目" if race_name else "💰 買い目"
-        lines2 = [
-            _SEP, header, _SEP,
-            "■ 複勝（1点）", f"  {hon}番 {hon_name}",
-            f"■ 馬連（{len(umaren_pairs)}点）", f"  {umaren_str}",
-            f"■ 3連複（{sanren_pt}点）", f"  軸{hon}番 x {partners_str}",
-            _SEP, f"合計 {total}点",
-        ]
+
+        # フィルタ判定
+        venue_code = race_id[4:6] if len(race_id) >= 6 else ""
+        is_fukushima = venue_code == "03"
+        is_old_upper = any(kw in race_name for kw in ("2勝クラス", "3勝クラス", "オープン"))
+        if is_fukushima or is_old_upper:
+            filter_label = "福島" if is_fukushima else "古馬上級"
+            lines2 = [
+                _SEP, header, _SEP,
+                "■ 複勝（1点）", f"  {hon}番 {hon_name}",
+                _SEP, f"合計 1点（{filter_label}フィルタ: 複勝のみ）",
+            ]
+        else:
+            wide_pairs = list(combinations(nums[:3], 2))
+            wide_str = " / ".join(f"{a}-{b}" for a, b in wide_pairs)
+            partners = nums[1:5]
+            ana_buy = entry.get("ana_horse_num")
+            if ana_buy and ana_buy not in partners:
+                partners = partners + [ana_buy]
+            sanren_pt = len(list(combinations(partners, 2)))
+            partners_str = "/".join(str(n) for n in partners)
+            total = 1 + len(wide_pairs) + sanren_pt
+            lines2 = [
+                _SEP, header, _SEP,
+                "■ 複勝（1点）", f"  {hon}番 {hon_name}",
+                f"■ ワイド（{len(wide_pairs)}点）", f"  {wide_str}",
+                f"■ 3連複（{sanren_pt}点）", f"  軸{hon}番 x {partners_str}",
+                _SEP, f"合計 {total}点",
+            ]
 
     msg2 = "\n".join(lines2)
     return msg1, msg2

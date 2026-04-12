@@ -503,11 +503,11 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     return strategy
 
 
-def _build_buy_lines(result_df: pd.DataFrame, race_name: str = "") -> list[str]:
+def _build_buy_lines(result_df: pd.DataFrame, race_name: str = "",
+                     race_id: str = "") -> list[str]:
     """
     買い目リストを返す。
-    3連複: 軸（◎）× 相手（2〜5位 + 穴馬）
-    穴馬=AI確率35%以上&6番人気以下&TOP5外。穴馬あり→10点、穴馬なし→6点。
+    フィルタ対象（福島・古馬上級）は複勝のみ。
     """
     from itertools import combinations as _comb
 
@@ -529,18 +529,36 @@ def _build_buy_lines(result_df: pd.DataFrame, race_name: str = "") -> list[str]:
     if pd.notna(hon_row.get("horse_name")):
         hon_name = str(hon_row["horse_name"])
 
-    # 馬連: top3の組み合わせ
-    umaren_pairs = list(_comb(nums[:3], 2))
-    umaren_str   = " / ".join(f"{a}-{b}" for a, b in umaren_pairs)
+    header = f"💰 {race_name}  買い目" if race_name else "💰 買い目"
 
-    # 穴馬: AI確率35%以上 & 6番人気以下 & TOP5外 → AI確率最高の1頭
+    # フィルタ判定: 福島 or 古馬上級 → 複勝のみ
+    venue_code = race_id[4:6] if len(race_id) >= 6 else ""
+    is_fukushima = venue_code == "03"
+    is_old_upper = any(kw in race_name for kw in ("2勝クラス", "3勝クラス", "オープン"))
+    if is_fukushima or is_old_upper:
+        filter_label = "福島" if is_fukushima else "古馬上級"
+        lines = [
+            SEP, header, SEP,
+            "■ 複勝（1点）",
+            f"　{hon}番 {hon_name}",
+            SEP,
+            f"合計 1点（{filter_label}フィルタ: 複勝のみ）",
+            SEP,
+        ]
+        return lines
+
+    # ワイド: top3の組み合わせ
+    wide_pairs = list(_comb(nums[:3], 2))
+    wide_str   = " / ".join(f"{a}-{b}" for a, b in wide_pairs)
+
+    # 穴馬: AI確率35%以上 & 8番人気以下 & TOP5外 → AI確率最高の1頭
     ana_num = None
     top5_set = set(nums)
     if len(result_df) > 5:
         rest = result_df.iloc[5:]
         rest_prob = pd.to_numeric(rest.get("prob_top3", pd.Series(dtype=float)), errors="coerce")
         rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
-        cands = rest[(rest_prob >= 0.35) & (rest_pop >= 6)]
+        cands = rest[(rest_prob >= 0.35) & (rest_pop >= 8)]
         if not cands.empty:
             best = cands.nlargest(1, "prob_top3").iloc[0]
             v = best.get("horse_number")
@@ -556,17 +574,14 @@ def _build_buy_lines(result_df: pd.DataFrame, race_name: str = "") -> list[str]:
         f"{n}（穴）" if n == ana_num else str(n) for n in partners
     )
 
-    total = 1 + len(umaren_pairs) + sanren_pt
+    total = 1 + len(wide_pairs) + sanren_pt
 
-    header = f"💰 {race_name}  買い目" if race_name else "💰 買い目"
     lines = [
-        SEP,
-        header,
-        SEP,
+        SEP, header, SEP,
         "■ 複勝（1点）",
         f"　{hon}番 {hon_name}",
-        f"■ 馬連（{len(umaren_pairs)}点）",
-        f"　{umaren_str}",
+        f"■ ワイド（{len(wide_pairs)}点）",
+        f"　{wide_str}",
         f"■ 3連複（{sanren_pt}点）",
         f"　軸 {hon}番",
         f"　× {partners_str}",
@@ -582,6 +597,7 @@ def format_prediction(
     race_name: str = "",
     ai_comments: Optional[dict] = None,
     course_info: str = "",
+    race_id: str = "",
 ) -> tuple[str, str]:
     """
     予測結果を競馬新聞風の2メッセージ（予想・買い目）で返す。
@@ -648,7 +664,7 @@ def format_prediction(
     msg1 = "\n".join(lines1)
 
     # ── Message 2: 買い目 ────────────────────────────────────
-    msg2 = "\n".join(_build_buy_lines(result_df, race_name=race_name))
+    msg2 = "\n".join(_build_buy_lines(result_df, race_name=race_name, race_id=race_id))
 
     return msg1, msg2
 
@@ -701,7 +717,7 @@ def predict_from_csv(
     course_info = _build_course_info(race_id, race_df)
 
     msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments={},
-                                   course_info=course_info)
+                                   course_info=course_info, race_id=race_id)
     print(msg1)
     print(msg2)
 
@@ -748,7 +764,7 @@ def predict_upcoming(
     """
     model_bundle = load_model(model_path)
     result = predict_race(race_df, model_bundle)
-    msg1, msg2 = format_prediction(result, race_name=race_name)
+    msg1, msg2 = format_prediction(result, race_name=race_name, race_id=race_id)
     print(msg1)
     print(msg2)
     return result
@@ -812,7 +828,8 @@ def predict_live(
     race_name   = shutuba_info.get("race_name", "")
     course_info = shutuba_info.get("course_info", "")
 
-    msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments={}, course_info=course_info)
+    msg1, msg2 = format_prediction(result, race_name=race_name, ai_comments={},
+                                   course_info=course_info, race_id=race_id)
     print(msg1)
     print(msg2)
 
