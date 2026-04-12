@@ -372,7 +372,7 @@ def _calc_confidence(pred: dict) -> tuple[int, str]:
 
 
 def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False,
-                         confidence: int = 0) -> dict:
+                         confidence: int = 0, ana_horse_num: int | None = None) -> dict:
     """
     予測結果DataFrameから予算3000円以内で最適な買い目を自動決定する。
 
@@ -412,10 +412,10 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     is_tight = prob_spread < 0.05
     use_wide = is_tight or is_volatile_race
 
-    # 穴馬（AI確率35%以上 & 8番人気以下 = 市場が過小評価している馬のみ）
-    ana_num = None
+    # 穴馬（外部指定 or AI確率35%以上 & 8番人気以下）
+    ana_num = ana_horse_num
     top5_set = set(nums)
-    if len(result_df) > 5:
+    if ana_num is None and len(result_df) > 5:
         rest = result_df.iloc[5:]
         rest_prob = pd.to_numeric(rest.get("prob_top3", pd.Series(dtype=float)), errors="coerce")
         rest_pop = pd.to_numeric(rest.get("popularity", pd.Series(dtype=float)), errors="coerce")
