@@ -63,3 +63,5 @@ python -m keiba_predictor.main notify --mode result
 - 競馬新聞本命集計
 - WIN5予想
 - 独自サイト構築
+
+あなたの作業が完了したら、Codexが出力をレビューします。
