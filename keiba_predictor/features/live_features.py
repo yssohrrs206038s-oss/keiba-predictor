@@ -270,6 +270,135 @@ def _jockey_trainer_rate(
     return float(top3.mean()) if len(top3) >= 5 else np.nan
 
 
+def _load_pedigree_db() -> pd.DataFrame:
+    """pedigree_db.csv を読み込んで返す。存在しなければ空DataFrameを返す。"""
+    ped_path = DATA_DIR / "pedigree_db.csv"
+    if not ped_path.exists():
+        logger.warning(f"pedigree_db.csv が見つかりません: {ped_path}")
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(ped_path, dtype=str)
+    except Exception as e:
+        logger.warning(f"pedigree_db.csv 読み込み失敗: {e}")
+        return pd.DataFrame()
+
+
+def _sire_rate(
+    sire: str,
+    history: pd.DataFrame,
+    ped_db: pd.DataFrame,
+    race_date: pd.Timestamp,
+) -> float:
+    """父馬の過去複勝率を返す。"""
+    if not sire or history.empty or ped_db.empty:
+        return np.nan
+    # 同じ父馬を持つhorse_idを取得
+    sire_horses = set(ped_db[ped_db["sire"] == sire]["horse_id"].tolist())
+    if not sire_horses:
+        return np.nan
+    past = history[
+        (history["horse_id"].astype(str).isin(sire_horses)) &
+        (history["race_date"] < race_date)
+    ]
+    top3 = pd.to_numeric(past["top3"], errors="coerce").dropna()
+    return float(top3.mean()) if len(top3) >= 1 else np.nan
+
+
+def _bms_rate(
+    bms: str,
+    history: pd.DataFrame,
+    ped_db: pd.DataFrame,
+    race_date: pd.Timestamp,
+) -> float:
+    """母父の過去複勝率を返す。"""
+    if not bms or history.empty or ped_db.empty:
+        return np.nan
+    bms_horses = set(ped_db[ped_db["bms"] == bms]["horse_id"].tolist())
+    if not bms_horses:
+        return np.nan
+    past = history[
+        (history["horse_id"].astype(str).isin(bms_horses)) &
+        (history["race_date"] < race_date)
+    ]
+    top3 = pd.to_numeric(past["top3"], errors="coerce").dropna()
+    return float(top3.mean()) if len(top3) >= 1 else np.nan
+
+
+def _sire_course_rate(
+    sire: str,
+    history: pd.DataFrame,
+    ped_db: pd.DataFrame,
+    race_date: pd.Timestamp,
+    course_type_enc: int,
+) -> float:
+    """父馬×コース種別の過去複勝率を返す。"""
+    if not sire or history.empty or ped_db.empty:
+        return np.nan
+    sire_horses = set(ped_db[ped_db["sire"] == sire]["horse_id"].tolist())
+    if not sire_horses:
+        return np.nan
+    past = history[
+        (history["horse_id"].astype(str).isin(sire_horses)) &
+        (history["race_date"] < race_date) &
+        (pd.to_numeric(history["course_type_enc"], errors="coerce") == course_type_enc)
+    ]
+    top3 = pd.to_numeric(past["top3"], errors="coerce").dropna()
+    return float(top3.mean()) if len(top3) >= 1 else np.nan
+
+
+def _sire_dist_rate(
+    sire: str,
+    history: pd.DataFrame,
+    ped_db: pd.DataFrame,
+    race_date: pd.Timestamp,
+    distance: int,
+) -> float:
+    """父馬×距離帯の過去複勝率を返す。"""
+    if not sire or history.empty or ped_db.empty:
+        return np.nan
+    sire_horses = set(ped_db[ped_db["sire"] == sire]["horse_id"].tolist())
+    if not sire_horses:
+        return np.nan
+    hist_dist = pd.to_numeric(history["distance"], errors="coerce")
+    if distance < 1400:
+        band_mask = hist_dist < 1400
+    elif distance <= 1800:
+        band_mask = (hist_dist >= 1400) & (hist_dist <= 1800)
+    elif distance <= 2200:
+        band_mask = (hist_dist > 1800) & (hist_dist <= 2200)
+    else:
+        band_mask = hist_dist > 2200
+    past = history[
+        (history["horse_id"].astype(str).isin(sire_horses)) &
+        (history["race_date"] < race_date) &
+        band_mask
+    ]
+    top3 = pd.to_numeric(past["top3"], errors="coerce").dropna()
+    return float(top3.mean()) if len(top3) >= 1 else np.nan
+
+
+def _bms_course_rate(
+    bms: str,
+    history: pd.DataFrame,
+    ped_db: pd.DataFrame,
+    race_date: pd.Timestamp,
+    course_type_enc: int,
+) -> float:
+    """母父×コース種別の過去複勝率を返す。"""
+    if not bms or history.empty or ped_db.empty:
+        return np.nan
+    bms_horses = set(ped_db[ped_db["bms"] == bms]["horse_id"].tolist())
+    if not bms_horses:
+        return np.nan
+    past = history[
+        (history["horse_id"].astype(str).isin(bms_horses)) &
+        (history["race_date"] < race_date) &
+        (pd.to_numeric(history["course_type_enc"], errors="coerce") == course_type_enc)
+    ]
+    top3 = pd.to_numeric(past["top3"], errors="coerce").dropna()
+    return float(top3.mean()) if len(top3) >= 1 else np.nan
+
+
 def _horse_track_rate(
     horse_hist: pd.DataFrame,
     race_date: pd.Timestamp,
@@ -326,6 +455,9 @@ def build_live_features(
     history  = _load_history(cleaned_path)
     defaults = _column_medians(history) if not history.empty else {c: np.nan for c in FEATURE_COLS}
 
+    # 血統DBを読み込む
+    ped_db = _load_pedigree_db()
+
     if horses_df.empty:
         logger.warning("出馬表が空のため特徴量を生成できません")
         return pd.DataFrame()
@@ -353,6 +485,14 @@ def build_live_features(
         jockey_course_rate = _jockey_course_rate(jockey_id, history, race_date, venue, course_type_enc)
         jockey_dist_rate   = _jockey_dist_rate(jockey_id, history, race_date, distance)
         jt_rate = _jockey_trainer_rate(jockey_id, trainer_id, history, race_date)
+
+        # 血統情報の取得
+        sire, bms = "", ""
+        if not ped_db.empty and horse_id:
+            ped_row = ped_db[ped_db["horse_id"] == horse_id]
+            if not ped_row.empty:
+                sire = str(ped_row.iloc[0].get("sire", ""))
+                bms = str(ped_row.iloc[0].get("bms", ""))
 
         row: dict = {
             # メタ情報（モデル特徴量ではないが後処理で使用）
@@ -393,6 +533,12 @@ def build_live_features(
             "jockey_course_fukusho_rate": jockey_course_rate,
             "jockey_dist_fukusho_rate":   jockey_dist_rate,
             "jockey_trainer_fukusho_rate": jt_rate,
+            # 血統特徴量
+            "sire_win_rate": _sire_rate(sire, history, ped_db, race_date),
+            "bms_win_rate": _bms_rate(bms, history, ped_db, race_date),
+            "sire_course_win_rate": _sire_course_rate(sire, history, ped_db, race_date, course_type_enc),
+            "sire_dist_win_rate": _sire_dist_rate(sire, history, ped_db, race_date, distance),
+            "bms_course_win_rate": _bms_course_rate(bms, history, ped_db, race_date, course_type_enc),
         }
 
         # 斤量増減
