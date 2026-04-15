@@ -388,10 +388,16 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     """
     from itertools import combinations as _comb
 
-    BUDGET = 3000
+    # ── 予算: 得意ゾーンは増額 ──
+    venue_code = race_id[4:6] if len(race_id) >= 6 else ""
+    is_hanshin = venue_code == "09"  # 阪神 ROI 119%
+    is_young = any(kw in race_name for kw in ("3歳", "2歳"))  # 3歳戦 ROI 104-143%
+    is_boost = is_hanshin or is_young
+
+    BUDGET = 4500 if is_boost else 3000  # 得意ゾーン: 4,500円、通常: 3,000円
     UNIT = 100
-    WIDE_UNIT = 300
-    FUKUSHO_UNIT = 1000
+    WIDE_UNIT = 300 if not is_boost else 500  # 増額時ワイド500円
+    FUKUSHO_UNIT = 1500 if is_boost else 1000  # 増額時複勝1,500円
 
     _SKIP = {
         "fukusho": [], "umaren": [], "wide": [],
@@ -405,7 +411,6 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
         return _SKIP
 
     # ── フィルタ: 開催場・クラスによる投資縮小 ──
-    venue_code = race_id[4:6] if len(race_id) >= 6 else ""
     is_fukushima = venue_code == "03"
     is_old_upper = any(kw in race_name for kw in ("2勝クラス", "3勝クラス", "オープン"))
     fukusho_only = is_fukushima or is_old_upper or low_ev

@@ -39,3 +39,4 @@ logs/
 keiba_predictor/data/debug/
 outputs/
 .claude/
+keiba_predictor/data/featured_races.csv
