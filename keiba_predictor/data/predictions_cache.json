@@ -1,8 +1,8 @@
 {
   "_model_metrics": {
-    "auc": 0.8639,
-    "fukusho_rate": 61.3,
-    "n_features": 47
+    "auc": 0.8645,
+    "fukusho_rate": 61.1,
+    "n_features": 52
   },
   "202606030511": {
     "race_name": "ニュージーランドT",

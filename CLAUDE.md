@@ -45,19 +45,19 @@ python -m keiba_predictor.main notify --mode result
 
 ## モデル情報
 - アルゴリズム: XGBoost（距離帯別モデルあり）
-- 特徴量数: 47
-- 主要特徴量: オッズ・人気・脚質・馬場状態・前走成績・騎手適性など
-- AUC: 0.8638 / 複勝的中率: 61.3%
+- 特徴量数: 52
+- 主要特徴量: オッズ・人気・脚質・馬場状態・前走成績・騎手適性・血統（父馬/母父）など
+- AUC: 0.8645 / 複勝的中率: 61.1%
+- 血統DB: 53,712頭（pedigree_db.csv）
 - モデル再学習: ローカルPCで実行（Actionsでは行わない）
 
 ## 開発ルール
 - モデル学習は必ずローカルPCで実行（Actions環境はデータ不足）
 - git pushは必ずgit pull --rebaseしてから
 - Discord Webhookはダミーを使わない（本番URLはSecretsに登録済み）
-- X投稿はENABLE_X_POST=trueで有効化済み
+- X投稿はENABLE_X_POST=falseで停止中（アカウント凍結）
 
 ## 未実装リスト
-- 血統特徴量
 - LINE公式アカウント連携
 - 天気予報連携
 - 競馬新聞本命集計
