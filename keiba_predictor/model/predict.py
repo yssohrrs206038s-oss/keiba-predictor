@@ -408,7 +408,7 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     venue_code = race_id[4:6] if len(race_id) >= 6 else ""
     is_fukushima = venue_code == "03"
     is_old_upper = any(kw in race_name for kw in ("2勝クラス", "3勝クラス", "オープン"))
-    fukusho_only = is_fukushima or is_old_upper
+    fukusho_only = is_fukushima or is_old_upper or low_ev
 
     top5 = result_df.head(5)
     nums = [int(r["horse_number"]) for _, r in top5.iterrows()
@@ -420,6 +420,12 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
             names[int(n)] = str(r.get("horse_name", ""))
 
     hon = nums[0]
+
+    # ◎のEV（期待値）チェック: prob × odds < 1.0 なら期待値マイナス → 複勝のみ
+    hon_prob = pd.to_numeric(result_df.iloc[0].get("prob_top3"), errors="coerce")
+    hon_odds = pd.to_numeric(result_df.iloc[0].get("odds"), errors="coerce")
+    hon_ev = float(hon_prob) * float(hon_odds) if pd.notna(hon_prob) and pd.notna(hon_odds) else None
+    low_ev = hon_ev is not None and hon_ev < 1.0
 
     probs = [float(result_df.iloc[i]["prob_top3"]) for i in range(min(3, len(result_df)))]
     prob_spread = max(probs) - min(probs) if len(probs) >= 3 else 1.0
@@ -457,7 +463,7 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
 
     if fukusho_only:
         # 福島 or 古馬上級クラス → 複勝のみで打ち止め
-        filter_reason = "福島" if is_fukushima else "古馬上級"
+        filter_reason = "福島" if is_fukushima else "古馬上級" if is_old_upper else f"低EV{hon_ev:.2f}"
         notes.append(f"({filter_reason}フィルタ)")
         total_cost = BUDGET - remaining
         strategy["total_points"] = len(strategy["fukusho"])
