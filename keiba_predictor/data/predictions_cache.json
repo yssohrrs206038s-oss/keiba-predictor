@@ -12926,5 +12926,56 @@
       "race_volatility": 2.17,
       "is_volatile_race": true
     }
+  },
+  "202609020711": {
+    "race_name": "��≪�潟�帥�����S",
+    "race_date": "2026-04-18",
+    "start_time": "",
+    "venue": "阪神",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202606030811": {
+    "race_name": "������莖�",
+    "race_date": "2026-04-18",
+    "start_time": "",
+    "venue": "中山",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202603010411": {
+    "race_name": "胼鎤句��薤�S",
+    "race_date": "2026-04-18",
+    "start_time": "",
+    "venue": "福島",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
