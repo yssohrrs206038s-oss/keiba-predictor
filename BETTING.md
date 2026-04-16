@@ -60,6 +60,8 @@
 
 **動的フィルタ**: `_get_dynamic_skip_venues(recent_n=20, roi_threshold=0.50, min_sample=20)` が results_history.csv を読み、会場別の直近20戦ROIが50%未満の会場を自動的に SKIP_VENUES に追加。プロセス内でキャッシュ。
 
+**シャドウ記録による自己復帰**: 動的フィルタで見送ったレースも、bet_strategy に付帯する `shadow_strategy`（会場フィルタを無視した本来の買い目）を元に `shadow_bet_total` / `shadow_return_total` を CSV に記録。動的フィルタは shadow 値でROIを集計するため、除外中の会場でも成績が追跡され、回復したら自動的に買い目再開する（永久除外を防ぐ）。
+
 ---
 
 ## コード参照
