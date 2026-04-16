@@ -51,11 +51,14 @@
 
 | 条件 | 閾値 | 理由 |
 |---|---|---|
-| 川崎・高知開催 | 見送り | 回収率43%・58% |
+| 川崎・高知開催（静的） | 見送り | 回収率43%・58% |
+| **動的会場フィルタ** | **直近20戦ROI < 50%** | **不調会場を自動除外（min_sample=20戦）** |
 | ○確率 < 20% | MIN_TAI_PROB=0.20 | 対抗馬の信頼度不足 |
 | ◎○差 > 25% | MAX_PROB_DIFF=0.25 | 1強レースで妙味なし |
 | 推定ワイドオッズ < 1.5倍 | MIN_WIDE_ODDS=1.5 | 低配当回避 |
 | 多頭数（11頭以上） | MAX_HORSES=10 | ROI低下 |
+
+**動的フィルタ**: `_get_dynamic_skip_venues(recent_n=20, roi_threshold=0.50, min_sample=20)` が results_history.csv を読み、会場別の直近20戦ROIが50%未満の会場を自動的に SKIP_VENUES に追加。プロセス内でキャッシュ。
 
 ---
 
@@ -65,5 +68,6 @@
 |---|---|
 | JRA買い目ロジック | `keiba_predictor/model/predict.py` `_decide_bet_strategy()` |
 | NAR買い目ロジック | `keiba-nar/keiba_predictor/model/predict.py` `_decide_bet_strategy()` |
+| NAR動的会場フィルタ | `keiba-nar/keiba_predictor/model/predict.py` `_get_dynamic_skip_venues()` |
 
-最終更新: 2026-04-15
+最終更新: 2026-04-17（動的会場フィルタ追加）
