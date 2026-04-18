@@ -1794,7 +1794,10 @@ def run_predict_notify(
         send_discord(webhook_url, "⚠️ モデルファイルが見つかりません。")
         return
 
-    today_str = date.today().isoformat()
+    # GitHub Actions は UTC で動作するため JST に変換
+    from datetime import datetime as _dt, timezone as _tz, timedelta as _td2
+    _jst = _tz(_td2(hours=9))
+    today_str = _dt.now(_jst).date().isoformat()
     cache = _load_cache()
 
     # 先週のキャッシュを除外
