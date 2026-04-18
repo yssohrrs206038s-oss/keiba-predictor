@@ -194,12 +194,13 @@
         ],
         "aite": [
           6,
-          1
+          1,
+          15
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -384,12 +385,13 @@
         ],
         "aite": [
           6,
-          8
+          8,
+          3
         ]
       },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -726,12 +728,13 @@
         ],
         "aite": [
           4,
-          13
+          13,
+          14
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -925,12 +928,13 @@
         ],
         "aite": [
           11,
-          7
+          7,
+          6
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -1101,7 +1105,7 @@
       "wide": [],
       "sanrenpuku": {},
       "total_points": 1,
-      "total_cost": 1500,
+      "total_cost": 1000,
       "strategy_note": "複勝 + (低EV0.91フィルタ)",
       "use_wide": false
     }
@@ -1296,12 +1300,13 @@
         ],
         "aite": [
           3,
-          10
+          10,
+          7
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -1495,12 +1500,13 @@
         ],
         "aite": [
           15,
-          14
+          14,
+          9
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -1698,7 +1704,7 @@
         ]
       },
       "total_points": 5,
-      "total_cost": 3100,
+      "total_cost": 2000,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
       "use_wide": true
     }
@@ -1860,46 +1866,14 @@
       }
     ],
     "bet_strategy": {
-      "fukusho": [
-        {
-          "num": 10,
-          "name": "リポサンテ"
-        }
-      ],
+      "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            10,
-            3
-          ]
-        },
-        {
-          "nums": [
-            10,
-            5
-          ]
-        },
-        {
-          "nums": [
-            3,
-            5
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          10
-        ],
-        "aite": [
-          3,
-          5
-        ]
-      },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
-      "use_wide": true
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬1勝: ROI 43%）",
+      "use_wide": false
     }
   },
   "202606030708": {
@@ -2059,46 +2033,14 @@
       }
     ],
     "bet_strategy": {
-      "fukusho": [
-        {
-          "num": 10,
-          "name": "ロードスカイブルー"
-        }
-      ],
+      "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            10,
-            15
-          ]
-        },
-        {
-          "nums": [
-            10,
-            6
-          ]
-        },
-        {
-          "nums": [
-            15,
-            6
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          10
-        ],
-        "aite": [
-          15,
-          6
-        ]
-      },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
-      "use_wide": true
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬1勝: ROI 43%）",
+      "use_wide": false
     }
   },
   "202606030709": {
@@ -2291,12 +2233,13 @@
         ],
         "aite": [
           8,
-          3
+          3,
+          5
         ]
       },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -2490,12 +2433,13 @@
         ],
         "aite": [
           10,
-          9
+          9,
+          11
         ]
       },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -2689,12 +2633,13 @@
         ],
         "aite": [
           3,
-          10
+          10,
+          9
         ]
       },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -2888,12 +2833,13 @@
         ],
         "aite": [
           5,
-          13
+          13,
+          3
         ]
       },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -3087,12 +3033,13 @@
         ],
         "aite": [
           9,
-          14
+          14,
+          10
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -3286,12 +3233,13 @@
         ],
         "aite": [
           12,
-          1
+          1,
+          4
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -3485,12 +3433,13 @@
         ],
         "aite": [
           1,
-          13
+          13,
+          15
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -3684,12 +3633,13 @@
         ],
         "aite": [
           16,
-          13
+          13,
+          11
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -3886,7 +3836,7 @@
         ]
       },
       "total_points": 5,
-      "total_cost": 3100,
+      "total_cost": 2000,
       "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
       "use_wide": true
     }
@@ -4081,12 +4031,13 @@
         ],
         "aite": [
           14,
-          15
+          15,
+          11
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -4247,46 +4198,14 @@
       }
     ],
     "bet_strategy": {
-      "fukusho": [
-        {
-          "num": 11,
-          "name": "パスコード"
-        }
-      ],
+      "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            11,
-            10
-          ]
-        },
-        {
-          "nums": [
-            11,
-            14
-          ]
-        },
-        {
-          "nums": [
-            10,
-            14
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          11
-        ],
-        "aite": [
-          10,
-          14
-        ]
-      },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
-      "use_wide": true
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬1勝: ROI 43%）",
+      "use_wide": false
     }
   },
   "202609020708": {
@@ -4446,46 +4365,14 @@
       }
     ],
     "bet_strategy": {
-      "fukusho": [
-        {
-          "num": 9,
-          "name": "マイネルビスマルク"
-        }
-      ],
+      "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            9,
-            8
-          ]
-        },
-        {
-          "nums": [
-            9,
-            4
-          ]
-        },
-        {
-          "nums": [
-            8,
-            4
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          9
-        ],
-        "aite": [
-          8,
-          4
-        ]
-      },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
-      "use_wide": true
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬1勝: ROI 43%）",
+      "use_wide": false
     }
   },
   "202609020709": {
@@ -4678,12 +4565,13 @@
         ],
         "aite": [
           13,
-          3
+          3,
+          5
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -4877,12 +4765,13 @@
         ],
         "aite": [
           1,
-          6
+          6,
+          9
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -5043,46 +4932,14 @@
       }
     ],
     "bet_strategy": {
-      "fukusho": [
-        {
-          "num": 9,
-          "name": "フェアリーメドウ"
-        }
-      ],
+      "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            9,
-            15
-          ]
-        },
-        {
-          "nums": [
-            9,
-            8
-          ]
-        },
-        {
-          "nums": [
-            15,
-            8
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          9
-        ],
-        "aite": [
-          15,
-          8
-        ]
-      },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
-      "use_wide": true
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬1勝: ROI 43%）",
+      "use_wide": false
     }
   },
   "202603010301": {
@@ -7090,12 +6947,13 @@
         ],
         "aite": [
           12,
-          11
+          11,
+          6
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -7280,12 +7138,13 @@
         ],
         "aite": [
           6,
-          13
+          13,
+          7
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -7470,12 +7329,13 @@
         ],
         "aite": [
           14,
-          13
+          13,
+          11
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -7660,12 +7520,13 @@
         ],
         "aite": [
           5,
-          9
+          9,
+          1
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -7850,12 +7711,13 @@
         ],
         "aite": [
           9,
-          7
+          7,
+          4
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -8040,12 +7902,13 @@
         ],
         "aite": [
           5,
-          4
+          4,
+          1
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -8197,46 +8060,14 @@
       }
     ],
     "bet_strategy": {
-      "fukusho": [
-        {
-          "num": 10,
-          "name": "ブリッツアロング"
-        }
-      ],
+      "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            10,
-            3
-          ]
-        },
-        {
-          "nums": [
-            10,
-            11
-          ]
-        },
-        {
-          "nums": [
-            3,
-            11
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          10
-        ],
-        "aite": [
-          3,
-          11
-        ]
-      },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
-      "use_wide": true
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬1勝: ROI 43%）",
+      "use_wide": false
     }
   },
   "202606030808": {
@@ -8420,12 +8251,13 @@
         ],
         "aite": [
           11,
-          2
+          2,
+          9
         ]
       },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -8610,12 +8442,13 @@
         ],
         "aite": [
           4,
-          11
+          11,
+          7
         ]
       },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -8800,12 +8633,13 @@
         ],
         "aite": [
           11,
-          7
+          7,
+          4
         ]
       },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -8990,12 +8824,13 @@
         ],
         "aite": [
           9,
-          3
+          3,
+          4
         ]
       },
-      "total_points": 5,
-      "total_cost": 2000,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -9180,12 +9015,13 @@
         ],
         "aite": [
           16,
-          8
+          8,
+          6
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -9370,12 +9206,13 @@
         ],
         "aite": [
           5,
-          13
+          13,
+          2
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -9560,12 +9397,13 @@
         ],
         "aite": [
           2,
-          12
+          12,
+          7
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -9750,12 +9588,13 @@
         ],
         "aite": [
           3,
-          5
+          5,
+          1
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -9940,12 +9779,13 @@
         ],
         "aite": [
           4,
-          2
+          2,
+          12
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -10130,12 +9970,13 @@
         ],
         "aite": [
           1,
-          11
+          11,
+          12
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -10320,12 +10161,13 @@
         ],
         "aite": [
           7,
-          6
+          6,
+          2
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -10477,46 +10319,14 @@
       }
     ],
     "bet_strategy": {
-      "fukusho": [
-        {
-          "num": 6,
-          "name": "レッドイステル"
-        }
-      ],
+      "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            6,
-            10
-          ]
-        },
-        {
-          "nums": [
-            6,
-            7
-          ]
-        },
-        {
-          "nums": [
-            10,
-            7
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          6
-        ],
-        "aite": [
-          10,
-          7
-        ]
-      },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
-      "use_wide": true
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬1勝: ROI 43%）",
+      "use_wide": false
     }
   },
   "202609020809": {
@@ -10700,12 +10510,13 @@
         ],
         "aite": [
           9,
-          3
+          3,
+          8
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -10890,12 +10701,13 @@
         ],
         "aite": [
           13,
-          10
+          10,
+          8
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
@@ -11080,12 +10892,13 @@
         ],
         "aite": [
           6,
-          1
+          1,
+          7
         ]
       },
-      "total_points": 5,
-      "total_cost": 3100,
-      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "total_points": 7,
+      "total_cost": 2200,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x3+穴",
       "use_wide": true
     }
   },
