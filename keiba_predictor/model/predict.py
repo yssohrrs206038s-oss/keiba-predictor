@@ -388,16 +388,13 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     """
     from itertools import combinations as _comb
 
-    # ── 予算: 得意ゾーンは増額 ──
+    # ── 予算: 全レース統一3,000円（得意ゾーン増額は廃止: ROI 89%で逆効果） ──
     venue_code = race_id[4:6] if len(race_id) >= 6 else ""
-    is_hanshin = venue_code == "09"  # 阪神 ROI 119%
-    is_young = any(kw in race_name for kw in ("3歳", "2歳"))  # 3歳戦 ROI 104-143%
-    is_boost = is_hanshin or is_young
 
-    BUDGET = 4500 if is_boost else 3000  # 得意ゾーン: 4,500円、通常: 3,000円
+    BUDGET = 3000
     UNIT = 100
-    WIDE_UNIT = 300 if not is_boost else 500  # 増額時ワイド500円
-    FUKUSHO_UNIT = 1500 if is_boost else 1000  # 増額時複勝1,500円
+    WIDE_UNIT = 300
+    FUKUSHO_UNIT = 1000
 
     _SKIP = {
         "fukusho": [], "umaren": [], "wide": [],
@@ -427,10 +424,20 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     hon_ev = float(hon_prob) * float(hon_odds) if pd.notna(hon_prob) and pd.notna(hon_odds) else None
     low_ev = hon_ev is not None and hon_ev < 1.0
 
-    # ── フィルタ: 開催場・クラスによる投資縮小 ──
+    # ── フィルタ: 開催場・クラスによる見送り ──
     is_fukushima = venue_code == "03"
     is_old_upper = any(kw in race_name for kw in ("2勝クラス", "3勝クラス", "オープン"))
-    fukusho_only = is_fukushima or is_old_upper or low_ev
+
+    # 福島・古馬2勝以上は完全見送り（ROI 46%・11%）
+    if is_fukushima:
+        _SKIP["strategy_note"] = "見送り（福島: ROI 46%）"
+        return _SKIP
+    if is_old_upper:
+        _SKIP["strategy_note"] = "見送り（古馬2勝以上: ROI 11%）"
+        return _SKIP
+
+    # EV < 1.0 → 複勝のみ
+    fukusho_only = low_ev
 
     probs = [float(result_df.iloc[i]["prob_top3"]) for i in range(min(3, len(result_df)))]
     prob_spread = max(probs) - min(probs) if len(probs) >= 3 else 1.0
@@ -467,9 +474,8 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
         notes.append("複勝")
 
     if fukusho_only:
-        # 福島 or 古馬上級クラス → 複勝のみで打ち止め
-        filter_reason = "福島" if is_fukushima else "古馬上級" if is_old_upper else f"低EV{hon_ev:.2f}"
-        notes.append(f"({filter_reason}フィルタ)")
+        # EV < 1.0 → 複勝のみで打ち止め
+        notes.append(f"(低EV{hon_ev:.2f}フィルタ)")
         total_cost = BUDGET - remaining
         strategy["total_points"] = len(strategy["fukusho"])
         strategy["total_cost"] = total_cost
