@@ -2090,11 +2090,11 @@ def run_result_notify(
             except Exception as e:
                 logger.warning(f"  [X] 結果投稿エラー: {e}")
 
-    # 平場まとめ送信
-    if flat_results:
-        flat_hits = sum(1 for r in flat_results if r.startswith("✅"))
-        flat_msg = f"📋 **平場結果** {flat_hits}/{len(flat_results)}的中\n" + "\n".join(flat_results)
-        send_discord(webhook_url, flat_msg)
+    # 平場まとめ送信（無効化: 重賞のみ通知）
+    # if flat_results:
+    #     flat_hits = sum(1 for r in flat_results if r.startswith("✅"))
+    #     flat_msg = f"📋 **平場結果** {flat_hits}/{len(flat_results)}的中\n" + "\n".join(flat_results)
+    #     send_discord(webhook_url, flat_msg)
 
     if notified > 0:
         send_discord(webhook_url, f"✅ {notified}レース結果送信完了")
