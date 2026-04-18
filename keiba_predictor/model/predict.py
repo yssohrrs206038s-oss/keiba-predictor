@@ -410,11 +410,6 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
         _SKIP["strategy_note"] = "出走頭数不足"
         return _SKIP
 
-    # ── フィルタ: 開催場・クラスによる投資縮小 ──
-    is_fukushima = venue_code == "03"
-    is_old_upper = any(kw in race_name for kw in ("2勝クラス", "3勝クラス", "オープン"))
-    fukusho_only = is_fukushima or is_old_upper or low_ev
-
     top5 = result_df.head(5)
     nums = [int(r["horse_number"]) for _, r in top5.iterrows()
             if pd.notna(r.get("horse_number"))]
@@ -431,6 +426,11 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     hon_odds = pd.to_numeric(result_df.iloc[0].get("odds"), errors="coerce")
     hon_ev = float(hon_prob) * float(hon_odds) if pd.notna(hon_prob) and pd.notna(hon_odds) else None
     low_ev = hon_ev is not None and hon_ev < 1.0
+
+    # ── フィルタ: 開催場・クラスによる投資縮小 ──
+    is_fukushima = venue_code == "03"
+    is_old_upper = any(kw in race_name for kw in ("2勝クラス", "3勝クラス", "オープン"))
+    fukusho_only = is_fukushima or is_old_upper or low_ev
 
     probs = [float(result_df.iloc[i]["prob_top3"]) for i in range(min(3, len(result_df)))]
     prob_spread = max(probs) - min(probs) if len(probs) >= 3 else 1.0
