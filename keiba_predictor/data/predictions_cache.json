@@ -139,6 +139,68 @@
       },
       "race_volatility": 2.181,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 4,
+        "horse_name": "ムルソー",
+        "prob": 0.8878,
+        "odds": 4.0
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "ルシュヴァルドール",
+        "prob": 0.8411,
+        "odds": 7.4
+      },
+      {
+        "horse_number": 1,
+        "horse_name": "ブライアンセンス",
+        "prob": 0.7735,
+        "odds": 5.3
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 4,
+          "name": "ムルソー"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            4,
+            6
+          ]
+        },
+        {
+          "nums": [
+            4,
+            1
+          ]
+        },
+        {
+          "nums": [
+            6,
+            1
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          4
+        ],
+        "aite": [
+          6,
+          1
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030811": {
@@ -267,6 +329,68 @@
       },
       "race_volatility": 5.168,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 16,
+        "horse_name": "アルトラムス",
+        "prob": 0.623,
+        "odds": null
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "フォルテアンジェロ",
+        "prob": 0.622,
+        "odds": null
+      },
+      {
+        "horse_number": 8,
+        "horse_name": "マテンロウゲイル",
+        "prob": 0.6219,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 16,
+          "name": "アルトラムス"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            16,
+            6
+          ]
+        },
+        {
+          "nums": [
+            16,
+            8
+          ]
+        },
+        {
+          "nums": [
+            6,
+            8
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          16
+        ],
+        "aite": [
+          6,
+          8
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202603010411": {
@@ -547,6 +671,68 @@
       },
       "race_volatility": 4.165,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 12,
+        "horse_name": "エコロセレナ",
+        "prob": 0.4929,
+        "odds": 11.0
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "アドミ",
+        "prob": 0.4753,
+        "odds": 4.9
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "ベイビーシスター",
+        "prob": 0.4392,
+        "odds": 109.9
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 12,
+          "name": "エコロセレナ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            12,
+            4
+          ]
+        },
+        {
+          "nums": [
+            12,
+            13
+          ]
+        },
+        {
+          "nums": [
+            4,
+            13
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          12
+        ],
+        "aite": [
+          4,
+          13
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030702": {
@@ -684,6 +870,68 @@
       },
       "race_volatility": 2.921,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 10,
+        "horse_name": "サウジバラード",
+        "prob": 0.619,
+        "odds": 10.8
+      },
+      {
+        "horse_number": 11,
+        "horse_name": "ロードステラート",
+        "prob": 0.6185,
+        "odds": 4.8
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "ホウオウファラオ",
+        "prob": 0.6152,
+        "odds": 83.2
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 10,
+          "name": "サウジバラード"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            10,
+            11
+          ]
+        },
+        {
+          "nums": [
+            10,
+            7
+          ]
+        },
+        {
+          "nums": [
+            11,
+            7
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          10
+        ],
+        "aite": [
+          11,
+          7
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030703": {
@@ -821,6 +1069,41 @@
       },
       "race_volatility": 3.937,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 11,
+        "horse_name": "クリオロゴールド",
+        "prob": 0.478,
+        "odds": 1.9
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "ビタミンドロップ",
+        "prob": 0.4178,
+        "odds": 7.0
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "コブラツイスト",
+        "prob": 0.4136,
+        "odds": 66.9
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 11,
+          "name": "クリオロゴールド"
+        }
+      ],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 1,
+      "total_cost": 1500,
+      "strategy_note": "複勝 + (低EV0.91フィルタ)",
+      "use_wide": false
     }
   },
   "202606030704": {
@@ -958,6 +1241,68 @@
       },
       "race_volatility": 3.353,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 13,
+        "horse_name": "ジョイグリーン",
+        "prob": 0.6323,
+        "odds": 38.4
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "メディチパワー",
+        "prob": 0.6278,
+        "odds": 10.9
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "レイズテンペスト",
+        "prob": 0.6173,
+        "odds": 5.8
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 13,
+          "name": "ジョイグリーン"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            13,
+            3
+          ]
+        },
+        {
+          "nums": [
+            13,
+            10
+          ]
+        },
+        {
+          "nums": [
+            3,
+            10
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          13
+        ],
+        "aite": [
+          3,
+          10
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030705": {
@@ -1095,6 +1440,68 @@
       },
       "race_volatility": 4.286,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 11,
+        "horse_name": "セイウンラピス",
+        "prob": 0.4554,
+        "odds": 7.6
+      },
+      {
+        "horse_number": 15,
+        "horse_name": "ホウオウロレンシア",
+        "prob": 0.4548,
+        "odds": 109.4
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "ナムラハンナ",
+        "prob": 0.4531,
+        "odds": 327.9
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 11,
+          "name": "セイウンラピス"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            11,
+            15
+          ]
+        },
+        {
+          "nums": [
+            11,
+            14
+          ]
+        },
+        {
+          "nums": [
+            15,
+            14
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          11
+        ],
+        "aite": [
+          15,
+          14
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030706": {
@@ -1232,6 +1639,68 @@
       },
       "race_volatility": 1.108,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 5,
+        "horse_name": "タッセルノット",
+        "prob": 0.9865,
+        "odds": 1.9
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "ルージュボヤージュ",
+        "prob": 0.9173,
+        "odds": 2.4
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "ターンザテーブルス",
+        "prob": 0.8564,
+        "odds": 8.3
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 5,
+          "name": "タッセルノット"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            5,
+            2
+          ]
+        },
+        {
+          "nums": [
+            5,
+            3
+          ]
+        },
+        {
+          "nums": [
+            2,
+            3
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          5
+        ],
+        "aite": [
+          2,
+          3
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030707": {
@@ -1369,6 +1838,68 @@
       },
       "race_volatility": 1.454,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 10,
+        "horse_name": "リポサンテ",
+        "prob": 0.9253,
+        "odds": 3.5
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "トゥルーサクセサー",
+        "prob": 0.8855,
+        "odds": 5.7
+      },
+      {
+        "horse_number": 5,
+        "horse_name": "バニーラビット",
+        "prob": 0.7951,
+        "odds": 16.5
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 10,
+          "name": "リポサンテ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            10,
+            3
+          ]
+        },
+        {
+          "nums": [
+            10,
+            5
+          ]
+        },
+        {
+          "nums": [
+            3,
+            5
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          10
+        ],
+        "aite": [
+          3,
+          5
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030708": {
@@ -1506,6 +2037,68 @@
       },
       "race_volatility": 3.441,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 10,
+        "horse_name": "ロードスカイブルー",
+        "prob": 0.6081,
+        "odds": 26.1
+      },
+      {
+        "horse_number": 15,
+        "horse_name": "セージグリーン",
+        "prob": 0.4068,
+        "odds": 17.3
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "リボルトバレット",
+        "prob": 0.3531,
+        "odds": 22.1
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 10,
+          "name": "ロードスカイブルー"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            10,
+            15
+          ]
+        },
+        {
+          "nums": [
+            10,
+            6
+          ]
+        },
+        {
+          "nums": [
+            15,
+            6
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          10
+        ],
+        "aite": [
+          15,
+          6
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030709": {
@@ -1643,6 +2236,68 @@
       },
       "race_volatility": 3.37,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 7,
+        "horse_name": "キョウエイボニータ",
+        "prob": 0.4147,
+        "odds": 71.0
+      },
+      {
+        "horse_number": 8,
+        "horse_name": "メイショウヨゾラ",
+        "prob": 0.3857,
+        "odds": 7.6
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "スターウェーブ",
+        "prob": 0.3814,
+        "odds": 14.9
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 7,
+          "name": "キョウエイボニータ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            7,
+            8
+          ]
+        },
+        {
+          "nums": [
+            7,
+            3
+          ]
+        },
+        {
+          "nums": [
+            8,
+            3
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          7
+        ],
+        "aite": [
+          8,
+          3
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030710": {
@@ -1780,6 +2435,68 @@
       },
       "race_volatility": 3.489,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 12,
+        "horse_name": "サトミノエンジェル",
+        "prob": 0.585,
+        "odds": 8.0
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "バギーウィップ",
+        "prob": 0.5842,
+        "odds": 6.8
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "ワイドブリザード",
+        "prob": 0.5784,
+        "odds": 3.3
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 12,
+          "name": "サトミノエンジェル"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            12,
+            10
+          ]
+        },
+        {
+          "nums": [
+            12,
+            9
+          ]
+        },
+        {
+          "nums": [
+            10,
+            9
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          12
+        ],
+        "aite": [
+          10,
+          9
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030711": {
@@ -1917,6 +2634,68 @@
       },
       "race_volatility": 1.245,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 6,
+        "horse_name": "エコロデュエル",
+        "prob": 0.812,
+        "odds": 1.5
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "ホウオウプロサンゲ",
+        "prob": 0.75,
+        "odds": 4.7
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "ディナースタ",
+        "prob": 0.5689,
+        "odds": 7.4
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 6,
+          "name": "エコロデュエル"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            6,
+            3
+          ]
+        },
+        {
+          "nums": [
+            6,
+            10
+          ]
+        },
+        {
+          "nums": [
+            3,
+            10
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          6
+        ],
+        "aite": [
+          3,
+          10
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030712": {
@@ -2054,6 +2833,68 @@
       },
       "race_volatility": 1.754,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 12,
+        "horse_name": "ライトニングゼウス",
+        "prob": 0.8503,
+        "odds": 2.2
+      },
+      {
+        "horse_number": 5,
+        "horse_name": "ホウオウプレミア",
+        "prob": 0.7013,
+        "odds": 8.3
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "ルイステソーロ",
+        "prob": 0.6315,
+        "odds": 8.5
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 12,
+          "name": "ライトニングゼウス"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            12,
+            5
+          ]
+        },
+        {
+          "nums": [
+            12,
+            13
+          ]
+        },
+        {
+          "nums": [
+            5,
+            13
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          12
+        ],
+        "aite": [
+          5,
+          13
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020701": {
@@ -2191,6 +3032,68 @@
       },
       "race_volatility": 4.263,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 15,
+        "horse_name": "グロリアス",
+        "prob": 0.6543,
+        "odds": 10.2
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "コイタマチャン",
+        "prob": 0.6539,
+        "odds": 6.1
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "ローゾフィア",
+        "prob": 0.6293,
+        "odds": 42.9
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 15,
+          "name": "グロリアス"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            15,
+            9
+          ]
+        },
+        {
+          "nums": [
+            15,
+            14
+          ]
+        },
+        {
+          "nums": [
+            9,
+            14
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          15
+        ],
+        "aite": [
+          9,
+          14
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020702": {
@@ -2328,6 +3231,68 @@
       },
       "race_volatility": 4.559,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 6,
+        "horse_name": "グレイトソン",
+        "prob": 0.4318,
+        "odds": 4.9
+      },
+      {
+        "horse_number": 12,
+        "horse_name": "プルミエショコラ",
+        "prob": 0.3921,
+        "odds": 247.5
+      },
+      {
+        "horse_number": 1,
+        "horse_name": "ジョーヴェスタ",
+        "prob": 0.3905,
+        "odds": 267.7
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 6,
+          "name": "グレイトソン"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            6,
+            12
+          ]
+        },
+        {
+          "nums": [
+            6,
+            1
+          ]
+        },
+        {
+          "nums": [
+            12,
+            1
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          6
+        ],
+        "aite": [
+          12,
+          1
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020703": {
@@ -2465,6 +3430,68 @@
       },
       "race_volatility": 2.126,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 6,
+        "horse_name": "エイシンリブウェル",
+        "prob": 0.9024,
+        "odds": 3.4
+      },
+      {
+        "horse_number": 1,
+        "horse_name": "ハイビッグゴールド",
+        "prob": 0.8663,
+        "odds": 139.1
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "アビル",
+        "prob": 0.8327,
+        "odds": 7.1
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 6,
+          "name": "エイシンリブウェル"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            6,
+            1
+          ]
+        },
+        {
+          "nums": [
+            6,
+            13
+          ]
+        },
+        {
+          "nums": [
+            1,
+            13
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          6
+        ],
+        "aite": [
+          1,
+          13
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020704": {
@@ -2602,6 +3629,68 @@
       },
       "race_volatility": 5.149,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 15,
+        "horse_name": "ホワイトラバーズ",
+        "prob": 0.6217,
+        "odds": 531.9
+      },
+      {
+        "horse_number": 16,
+        "horse_name": "ジュンヴァッテッド",
+        "prob": 0.6213,
+        "odds": 181.4
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "オーケーキュート",
+        "prob": 0.6211,
+        "odds": 75.4
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 15,
+          "name": "ホワイトラバーズ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            15,
+            16
+          ]
+        },
+        {
+          "nums": [
+            15,
+            13
+          ]
+        },
+        {
+          "nums": [
+            16,
+            13
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          15
+        ],
+        "aite": [
+          16,
+          13
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020705": {
@@ -2738,6 +3827,68 @@
       },
       "race_volatility": 1.405,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 3,
+        "horse_name": "イベントホライゾン",
+        "prob": 0.5926,
+        "odds": 1.9
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "サトノアイボリー",
+        "prob": 0.5901,
+        "odds": 6.7
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "セイカンサンラン",
+        "prob": 0.5879,
+        "odds": 98.2
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 3,
+          "name": "イベントホライゾン"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            3,
+            4
+          ]
+        },
+        {
+          "nums": [
+            3,
+            2
+          ]
+        },
+        {
+          "nums": [
+            4,
+            2
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          3
+        ],
+        "aite": [
+          4,
+          2
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020706": {
@@ -2875,6 +4026,68 @@
       },
       "race_volatility": 4.255,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 12,
+        "horse_name": "ペトリコール",
+        "prob": 0.6763,
+        "odds": 6.0
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "リアンドゥクール",
+        "prob": 0.6293,
+        "odds": 4.9
+      },
+      {
+        "horse_number": 15,
+        "horse_name": "ヴァレンティーニ",
+        "prob": 0.6293,
+        "odds": 28.4
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 12,
+          "name": "ペトリコール"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            12,
+            14
+          ]
+        },
+        {
+          "nums": [
+            12,
+            15
+          ]
+        },
+        {
+          "nums": [
+            14,
+            15
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          12
+        ],
+        "aite": [
+          14,
+          15
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020707": {
@@ -3012,6 +4225,68 @@
       },
       "race_volatility": 3.752,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 11,
+        "horse_name": "パスコード",
+        "prob": 0.4691,
+        "odds": 8.0
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "パシフィックハイ",
+        "prob": 0.4601,
+        "odds": 137.4
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "ラガークイン",
+        "prob": 0.4357,
+        "odds": 39.7
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 11,
+          "name": "パスコード"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            11,
+            10
+          ]
+        },
+        {
+          "nums": [
+            11,
+            14
+          ]
+        },
+        {
+          "nums": [
+            10,
+            14
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          11
+        ],
+        "aite": [
+          10,
+          14
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020708": {
@@ -3149,6 +4424,68 @@
       },
       "race_volatility": 1.286,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 9,
+        "horse_name": "マイネルビスマルク",
+        "prob": 0.799,
+        "odds": 13.3
+      },
+      {
+        "horse_number": 8,
+        "horse_name": "ドルチェリターン",
+        "prob": 0.7462,
+        "odds": 4.2
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "ノラリクラリ",
+        "prob": 0.7368,
+        "odds": 2.8
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 9,
+          "name": "マイネルビスマルク"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            9,
+            8
+          ]
+        },
+        {
+          "nums": [
+            9,
+            4
+          ]
+        },
+        {
+          "nums": [
+            8,
+            4
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          9
+        ],
+        "aite": [
+          8,
+          4
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020709": {
@@ -3286,6 +4623,68 @@
       },
       "race_volatility": 3.679,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 14,
+        "horse_name": "クリノラピダス",
+        "prob": 0.4578,
+        "odds": 363.2
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "カルパ",
+        "prob": 0.4307,
+        "odds": 7.2
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "メイケイレイン",
+        "prob": 0.4257,
+        "odds": 4.1
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 14,
+          "name": "クリノラピダス"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            14,
+            13
+          ]
+        },
+        {
+          "nums": [
+            14,
+            3
+          ]
+        },
+        {
+          "nums": [
+            13,
+            3
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          14
+        ],
+        "aite": [
+          13,
+          3
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020710": {
@@ -3423,6 +4822,68 @@
       },
       "race_volatility": 1.098,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 4,
+        "horse_name": "サーナーティオン",
+        "prob": 0.9398,
+        "odds": 4.5
+      },
+      {
+        "horse_number": 1,
+        "horse_name": "ライラ",
+        "prob": 0.7505,
+        "odds": 1.8
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "アジュマン",
+        "prob": 0.4983,
+        "odds": 7.2
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 4,
+          "name": "サーナーティオン"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            4,
+            1
+          ]
+        },
+        {
+          "nums": [
+            4,
+            6
+          ]
+        },
+        {
+          "nums": [
+            1,
+            6
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          4
+        ],
+        "aite": [
+          1,
+          6
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020712": {
@@ -3560,6 +5021,68 @@
       },
       "race_volatility": 3.868,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 9,
+        "horse_name": "フェアリーメドウ",
+        "prob": 0.4995,
+        "odds": 52.8
+      },
+      {
+        "horse_number": 15,
+        "horse_name": "カネコメファミリー",
+        "prob": 0.4736,
+        "odds": 17.4
+      },
+      {
+        "horse_number": 8,
+        "horse_name": "メイショウハッブル",
+        "prob": 0.4482,
+        "odds": 20.6
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 9,
+          "name": "フェアリーメドウ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            9,
+            15
+          ]
+        },
+        {
+          "nums": [
+            9,
+            8
+          ]
+        },
+        {
+          "nums": [
+            15,
+            8
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          9
+        ],
+        "aite": [
+          15,
+          8
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202603010301": {
@@ -5512,6 +7035,68 @@
       },
       "race_volatility": 3.242,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 4,
+        "horse_name": "ギンケイ",
+        "prob": 0.6864,
+        "odds": null
+      },
+      {
+        "horse_number": 12,
+        "horse_name": "タートルインメイ",
+        "prob": 0.6287,
+        "odds": null
+      },
+      {
+        "horse_number": 11,
+        "horse_name": "マーゴットガイア",
+        "prob": 0.6272,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 4,
+          "name": "ギンケイ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            4,
+            12
+          ]
+        },
+        {
+          "nums": [
+            4,
+            11
+          ]
+        },
+        {
+          "nums": [
+            12,
+            11
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          4
+        ],
+        "aite": [
+          12,
+          11
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030802": {
@@ -5640,6 +7225,68 @@
       },
       "race_volatility": 2.084,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 12,
+        "horse_name": "フルールサシェ",
+        "prob": 0.8031,
+        "odds": null
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "カンノンミッキー",
+        "prob": 0.7971,
+        "odds": null
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "ソニックブレイカー",
+        "prob": 0.7515,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 12,
+          "name": "フルールサシェ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            12,
+            6
+          ]
+        },
+        {
+          "nums": [
+            12,
+            13
+          ]
+        },
+        {
+          "nums": [
+            6,
+            13
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          12
+        ],
+        "aite": [
+          6,
+          13
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030803": {
@@ -5768,6 +7415,68 @@
       },
       "race_volatility": 3.97,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 2,
+        "horse_name": "ガーディアンテイル",
+        "prob": 0.6599,
+        "odds": null
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "キョウエイシュバル",
+        "prob": 0.6466,
+        "odds": null
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "ニシノカーロ",
+        "prob": 0.6261,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 2,
+          "name": "ガーディアンテイル"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            2,
+            14
+          ]
+        },
+        {
+          "nums": [
+            2,
+            13
+          ]
+        },
+        {
+          "nums": [
+            14,
+            13
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          2
+        ],
+        "aite": [
+          14,
+          13
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030804": {
@@ -5896,6 +7605,68 @@
       },
       "race_volatility": 1.768,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 10,
+        "horse_name": "レッドレガリア",
+        "prob": 0.9461,
+        "odds": null
+      },
+      {
+        "horse_number": 5,
+        "horse_name": "インドミタビリティ",
+        "prob": 0.9255,
+        "odds": null
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "ミナヅキ",
+        "prob": 0.8471,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 10,
+          "name": "レッドレガリア"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            10,
+            5
+          ]
+        },
+        {
+          "nums": [
+            10,
+            9
+          ]
+        },
+        {
+          "nums": [
+            5,
+            9
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          10
+        ],
+        "aite": [
+          5,
+          9
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030805": {
@@ -6024,6 +7795,68 @@
       },
       "race_volatility": 2.534,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 10,
+        "horse_name": "ヘイマー",
+        "prob": 0.4421,
+        "odds": null
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "グリオンヴール",
+        "prob": 0.4398,
+        "odds": null
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "マーゴットブロー",
+        "prob": 0.4382,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 10,
+          "name": "ヘイマー"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            10,
+            9
+          ]
+        },
+        {
+          "nums": [
+            10,
+            7
+          ]
+        },
+        {
+          "nums": [
+            9,
+            7
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          10
+        ],
+        "aite": [
+          9,
+          7
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030806": {
@@ -6152,6 +7985,68 @@
       },
       "race_volatility": 1.699,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 6,
+        "horse_name": "ファイタージェット",
+        "prob": 0.6199,
+        "odds": null
+      },
+      {
+        "horse_number": 5,
+        "horse_name": "ルーナディサングエ",
+        "prob": 0.6061,
+        "odds": null
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "イッテラッシャイ",
+        "prob": 0.6012,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 6,
+          "name": "ファイタージェット"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            6,
+            5
+          ]
+        },
+        {
+          "nums": [
+            6,
+            4
+          ]
+        },
+        {
+          "nums": [
+            5,
+            4
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          6
+        ],
+        "aite": [
+          5,
+          4
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030807": {
@@ -6280,6 +8175,68 @@
       },
       "race_volatility": 3.587,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 10,
+        "horse_name": "ブリッツアロング",
+        "prob": 0.3838,
+        "odds": null
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "アースミューズ",
+        "prob": 0.3778,
+        "odds": null
+      },
+      {
+        "horse_number": 11,
+        "horse_name": "プルシャプラ",
+        "prob": 0.3582,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 10,
+          "name": "ブリッツアロング"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            10,
+            3
+          ]
+        },
+        {
+          "nums": [
+            10,
+            11
+          ]
+        },
+        {
+          "nums": [
+            3,
+            11
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          10
+        ],
+        "aite": [
+          3,
+          11
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030808": {
@@ -6408,6 +8365,68 @@
       },
       "race_volatility": 3.175,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 6,
+        "horse_name": "タイヨウフレア",
+        "prob": 0.5926,
+        "odds": null
+      },
+      {
+        "horse_number": 11,
+        "horse_name": "エーオーキング",
+        "prob": 0.5899,
+        "odds": null
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "ピコシー",
+        "prob": 0.5799,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 6,
+          "name": "タイヨウフレア"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            6,
+            11
+          ]
+        },
+        {
+          "nums": [
+            6,
+            2
+          ]
+        },
+        {
+          "nums": [
+            11,
+            2
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          6
+        ],
+        "aite": [
+          11,
+          2
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030809": {
@@ -6536,6 +8555,68 @@
       },
       "race_volatility": 3.295,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 10,
+        "horse_name": "ファミリーツリー",
+        "prob": 0.6104,
+        "odds": null
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "レッセパッセ",
+        "prob": 0.5987,
+        "odds": null
+      },
+      {
+        "horse_number": 11,
+        "horse_name": "イトカワサクラ",
+        "prob": 0.5637,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 10,
+          "name": "ファミリーツリー"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            10,
+            4
+          ]
+        },
+        {
+          "nums": [
+            10,
+            11
+          ]
+        },
+        {
+          "nums": [
+            4,
+            11
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          10
+        ],
+        "aite": [
+          4,
+          11
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030810": {
@@ -6664,6 +8745,68 @@
       },
       "race_volatility": 2.206,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 1,
+        "horse_name": "ポッドベイダー",
+        "prob": 0.7296,
+        "odds": null
+      },
+      {
+        "horse_number": 11,
+        "horse_name": "モンドプリューム",
+        "prob": 0.6885,
+        "odds": null
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "コンクイスタ",
+        "prob": 0.6838,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 1,
+          "name": "ポッドベイダー"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            1,
+            11
+          ]
+        },
+        {
+          "nums": [
+            1,
+            7
+          ]
+        },
+        {
+          "nums": [
+            11,
+            7
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          1
+        ],
+        "aite": [
+          11,
+          7
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202606030812": {
@@ -6792,6 +8935,68 @@
       },
       "race_volatility": 2.244,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 5,
+        "horse_name": "レッドテリオス",
+        "prob": 0.821,
+        "odds": null
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "リーティアコナル",
+        "prob": 0.8064,
+        "odds": null
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "ショウナンサムデイ",
+        "prob": 0.7849,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 5,
+          "name": "レッドテリオス"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            5,
+            9
+          ]
+        },
+        {
+          "nums": [
+            5,
+            3
+          ]
+        },
+        {
+          "nums": [
+            9,
+            3
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          5
+        ],
+        "aite": [
+          9,
+          3
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 2000,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020801": {
@@ -6920,6 +9125,68 @@
       },
       "race_volatility": 1.808,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 15,
+        "horse_name": "マーゴットバディ",
+        "prob": 0.9383,
+        "odds": null
+      },
+      {
+        "horse_number": 16,
+        "horse_name": "サンセバ",
+        "prob": 0.918,
+        "odds": null
+      },
+      {
+        "horse_number": 8,
+        "horse_name": "コスモブラック",
+        "prob": 0.8982,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 15,
+          "name": "マーゴットバディ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            15,
+            16
+          ]
+        },
+        {
+          "nums": [
+            15,
+            8
+          ]
+        },
+        {
+          "nums": [
+            16,
+            8
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          15
+        ],
+        "aite": [
+          16,
+          8
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020802": {
@@ -7048,6 +9315,68 @@
       },
       "race_volatility": 1.911,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 6,
+        "horse_name": "カトマンズゴールド",
+        "prob": 0.9269,
+        "odds": null
+      },
+      {
+        "horse_number": 5,
+        "horse_name": "ルクスキャンディ",
+        "prob": 0.8431,
+        "odds": null
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "クランズクラウン",
+        "prob": 0.8316,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 6,
+          "name": "カトマンズゴールド"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            6,
+            5
+          ]
+        },
+        {
+          "nums": [
+            6,
+            13
+          ]
+        },
+        {
+          "nums": [
+            5,
+            13
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          6
+        ],
+        "aite": [
+          5,
+          13
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020803": {
@@ -7176,6 +9505,68 @@
       },
       "race_volatility": 1.855,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 10,
+        "horse_name": "モズプリフォール",
+        "prob": 0.9049,
+        "odds": null
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "ニホンピロローカス",
+        "prob": 0.7366,
+        "odds": null
+      },
+      {
+        "horse_number": 12,
+        "horse_name": "ナブッコ",
+        "prob": 0.7313,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 10,
+          "name": "モズプリフォール"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            10,
+            2
+          ]
+        },
+        {
+          "nums": [
+            10,
+            12
+          ]
+        },
+        {
+          "nums": [
+            2,
+            12
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          10
+        ],
+        "aite": [
+          2,
+          12
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020804": {
@@ -7304,6 +9695,68 @@
       },
       "race_volatility": 3.719,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 6,
+        "horse_name": "アニージョ",
+        "prob": 0.2905,
+        "odds": null
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "モズクルードラゴン",
+        "prob": 0.2802,
+        "odds": null
+      },
+      {
+        "horse_number": 5,
+        "horse_name": "ネイチャーシップ",
+        "prob": 0.251,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 6,
+          "name": "アニージョ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            6,
+            3
+          ]
+        },
+        {
+          "nums": [
+            6,
+            5
+          ]
+        },
+        {
+          "nums": [
+            3,
+            5
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          6
+        ],
+        "aite": [
+          3,
+          5
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020805": {
@@ -7432,6 +9885,68 @@
       },
       "race_volatility": 3.729,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 3,
+        "horse_name": "ルクスユアン",
+        "prob": 0.6168,
+        "odds": null
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "ルクスディグニティ",
+        "prob": 0.6124,
+        "odds": null
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "ビースペシフィック",
+        "prob": 0.6123,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 3,
+          "name": "ルクスユアン"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            3,
+            4
+          ]
+        },
+        {
+          "nums": [
+            3,
+            2
+          ]
+        },
+        {
+          "nums": [
+            4,
+            2
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          3
+        ],
+        "aite": [
+          4,
+          2
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020806": {
@@ -7560,6 +10075,68 @@
       },
       "race_volatility": 2.107,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 3,
+        "horse_name": "カッタッパ",
+        "prob": 0.8384,
+        "odds": null
+      },
+      {
+        "horse_number": 1,
+        "horse_name": "ゼンノフォトン",
+        "prob": 0.7168,
+        "odds": null
+      },
+      {
+        "horse_number": 11,
+        "horse_name": "ランスオブキング",
+        "prob": 0.7119,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 3,
+          "name": "カッタッパ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            3,
+            1
+          ]
+        },
+        {
+          "nums": [
+            3,
+            11
+          ]
+        },
+        {
+          "nums": [
+            1,
+            11
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          3
+        ],
+        "aite": [
+          1,
+          11
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020807": {
@@ -7688,6 +10265,68 @@
       },
       "race_volatility": 2.282,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 8,
+        "horse_name": "レッドリガーレ",
+        "prob": 0.4398,
+        "odds": null
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "ケイアイクウガ",
+        "prob": 0.4382,
+        "odds": null
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "ルートサーティーン",
+        "prob": 0.4368,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 8,
+          "name": "レッドリガーレ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            8,
+            7
+          ]
+        },
+        {
+          "nums": [
+            8,
+            6
+          ]
+        },
+        {
+          "nums": [
+            7,
+            6
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          8
+        ],
+        "aite": [
+          7,
+          6
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020808": {
@@ -7816,6 +10455,68 @@
       },
       "race_volatility": 1.512,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 6,
+        "horse_name": "レッドイステル",
+        "prob": 0.9396,
+        "odds": null
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "レヴァンテシチー",
+        "prob": 0.9116,
+        "odds": null
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "ビルンバウム",
+        "prob": 0.8322,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 6,
+          "name": "レッドイステル"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            6,
+            10
+          ]
+        },
+        {
+          "nums": [
+            6,
+            7
+          ]
+        },
+        {
+          "nums": [
+            10,
+            7
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          6
+        ],
+        "aite": [
+          10,
+          7
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020809": {
@@ -7944,6 +10645,68 @@
       },
       "race_volatility": 2.523,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 6,
+        "horse_name": "ヤマニンループ",
+        "prob": 0.6536,
+        "odds": null
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "ズイウンゴサイ",
+        "prob": 0.6194,
+        "odds": null
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "ラビットアイ",
+        "prob": 0.6099,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 6,
+          "name": "ヤマニンループ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            6,
+            9
+          ]
+        },
+        {
+          "nums": [
+            6,
+            3
+          ]
+        },
+        {
+          "nums": [
+            9,
+            3
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          6
+        ],
+        "aite": [
+          9,
+          3
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020810": {
@@ -8072,6 +10835,68 @@
       },
       "race_volatility": 1.71,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 3,
+        "horse_name": "ゼットエール",
+        "prob": 0.8473,
+        "odds": null
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "ノボリショウリュウ",
+        "prob": 0.7373,
+        "odds": null
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "アンズアメ",
+        "prob": 0.6958,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 3,
+          "name": "ゼットエール"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            3,
+            13
+          ]
+        },
+        {
+          "nums": [
+            3,
+            10
+          ]
+        },
+        {
+          "nums": [
+            13,
+            10
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          3
+        ],
+        "aite": [
+          13,
+          10
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020811": {
@@ -8200,6 +11025,68 @@
       },
       "race_volatility": 1.916,
       "is_volatile_race": true
+    },
+    "predicted_top5": [
+      {
+        "horse_number": 4,
+        "horse_name": "インヴォーグ",
+        "prob": 0.7781,
+        "odds": null
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "ミッキージュエリー",
+        "prob": 0.7549,
+        "odds": null
+      },
+      {
+        "horse_number": 1,
+        "horse_name": "ラーンザロープス",
+        "prob": 0.696,
+        "odds": null
+      }
+    ],
+    "bet_strategy": {
+      "fukusho": [
+        {
+          "num": 4,
+          "name": "インヴォーグ"
+        }
+      ],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            4,
+            6
+          ]
+        },
+        {
+          "nums": [
+            4,
+            1
+          ]
+        },
+        {
+          "nums": [
+            6,
+            1
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          4
+        ],
+        "aite": [
+          6,
+          1
+        ]
+      },
+      "total_points": 5,
+      "total_cost": 3100,
+      "strategy_note": "複勝 + ワイド + 3連複◎軸x2",
+      "use_wide": true
     }
   },
   "202609020812": {
