@@ -2043,7 +2043,7 @@ def run_result_notify(
             _df_copy = actual_df.copy()
             _df_copy["_fp"] = pd.to_numeric(_df_copy["finish_position"], errors="coerce")
             _top3 = _df_copy[_df_copy["_fp"].isin([1, 2, 3])].sort_values("_fp").head(3)
-            actual_top3_nums = [int(r["horse_number"]) for _, r in _top3.iterrows() if pd.notna(r.get("horse_number"))]
+            actual_top3_nums = [int(float(r["horse_number"])) for _, r in _top3.iterrows() if pd.notna(r.get("horse_number")) and str(r["horse_number"]).strip() != ""]
             hits = check_hits_from_bet_strategy(pred, actual_top3_nums, payouts)
             any_hit = hits["fukusho_hit"] or hits["wide_hit"] or hits["sanren_hit"]
             parts = []
