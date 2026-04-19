@@ -566,10 +566,10 @@
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-top:16px;">
       <h3 style="color:var(--gold);margin-bottom:12px;">KEIBA EDGE について</h3>
       <p style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:12px;">
-        KEIBA EDGEは機械学習（XGBoost）とClaude AIを組み合わせた重賞予想システムです。
+        KEIBA EDGEは機械学習（XGBoost）とClaude AIを組み合わせた特別戦/重賞厳選予想システムです。
       </p>
       <p style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:12px;">
-        過去の出走データ・騎手成績・コース適性・馬場状態・脚質・血統（父馬/母父）など52の特徴量を学習した独自モデルで3着以内確率を算出。期待値（EV）スコアにより「オッズと確率のギャップ」がある馬を発見します。
+        過去の出走データ・騎手成績・コース適性・馬場状態・脚質・血統（父馬/母父）など52の特徴量を学習した独自モデルで3着以内確率を算出。期待値（EV）スコアにより「オッズと確率のギャップ」がある馬を発見します。予想対象は特別戦/重賞のみ（約6戦/日）、クラス戦・未勝利は見送り。
       </p>
       <p style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:12px;">
         モデル精度AUC 0.8645は競馬予想AIとして高水準（ランダム予測は0.5）。血統データ（53,712頭の父馬・母父DB）による芝/ダート・距離適性判定、1万回のモンテカルロシミュレーションで安定軸・展開依存馬を判定します。
@@ -931,7 +931,7 @@ function renderPredictions(cache) {
 
   _predHtmlMap = {};
   entries.forEach(([raceId, r]) => {
-    // 重賞も平場も同じ詳細カードで表示
+    // 特別戦/重賞ともに同じ詳細カードで表示
   });
 
   grid.innerHTML = entries.map(([raceId, r]) => {

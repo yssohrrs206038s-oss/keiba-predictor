@@ -332,7 +332,7 @@ _FLAT_EXCLUDE = {"未勝利", "新馬", "障害"}
 
 
 def scrape_flat_race_ids(session: requests.Session) -> list[dict]:
-    """今週末の平場レース（1勝クラス以上）を venue ごとに取得する。
+    """今週末の特別戦レース（1勝クラス以上の特別競走）を venue ごとに取得する。
 
     Returns:
         [{"race_id", "race_name", "race_date", "venue", "is_grade": False}, ...]
@@ -399,7 +399,7 @@ def scrape_flat_race_ids(session: requests.Session) -> list[dict]:
 
         _sleep()
 
-    logger.info(f"平場（1勝以上）: {len(found)} レース")
+    logger.info(f"特別戦（1勝以上）: {len(found)} レース")
     return found
 
 
@@ -1017,7 +1017,7 @@ def _fmt_result(race_name: str, race_date: str,
                 manual: Optional[dict] = None,
                 race_id: str = "",
                 is_grade: bool = False) -> str:
-    """結果メッセージを生成する。is_grade=True で重賞の詳細版、False で平場の簡易版。"""
+    """結果メッセージを生成する。is_grade=True で特別戦/重賞の詳細版、False で簡易版。"""
     RULE = "─" * 16
     venue = pred.get("venue", "")
     race_num = ""
@@ -1085,7 +1085,7 @@ def _fmt_result(race_name: str, race_date: str,
 
     lines.append(RULE)
 
-    # 平場はあっさり版（着順 + 的中/不的中 のみ）
+    # 特別戦/重賞以外はあっさり版（着順 + 的中/不的中 のみ）
     if not is_grade and not manual:
         hits = check_hits_from_bet_strategy(pred, actual_top3_nums, payouts)
         any_hit = hits["fukusho_hit"] or hits["wide_hit"] or hits["sanren_hit"]
@@ -1781,10 +1781,10 @@ def run_predict_notify(
     test_race_id: Optional[str] = None,
     use_live: bool = False,
 ) -> None:
-    """週末重賞+平場（1勝以上）を予想���てDiscordに送信する。
+    """週末特別戦/重賞を予想してDiscordに送信する。
 
-    重賞: Discord通知 + ダッシュボード表示
-    平場: ダッシュボード表示のみ（Discordには送らない）
+    特別戦/重賞: Discord通知 + ダッシュボード表示
+    クラス戦/未勝利: 見送り（買い目なし）
     """
     webhook_url = _resolve_webhook(webhook_url)
 
@@ -1871,16 +1871,16 @@ def run_predict_notify(
             except Exception as e:
                 logger.warning(f"  [X] 予想投稿エラー: {e}")
 
-    # ── 平場レース（芝・1勝以上） → ダッシュボード用にキャッシュのみ ──
+    # ── 特別戦レース → ダッシュボード用にキャッシュのみ（Discord通知なし） ──
     if not test_race_id:
         flat_count = 0
         cache = _load_cache()
         for rid, entry in cache.items():
             if isinstance(entry, dict) and entry.get("is_grade") is False and entry.get("race_date") == today_str:
                 flat_count += 1
-        logger.info(f"平場（1勝以上）: 当日 {flat_count} レースがキャッシュ済み")
+        logger.info(f"特別戦/重賞以外: 当日 {flat_count} レースがキャッシュ済み（ダッシュボードのみ）")
 
-    send_discord(webhook_url, f"✅ 重賞 {notified} レース送信完了（平場はダッシュボードで確認）")
+    send_discord(webhook_url, f"✅ 特別戦/重賞 {notified} レース送信完了")
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1908,7 +1908,7 @@ def run_result_notify(
         grade_races = [{"race_id": race_id, "race_name": race_name, "race_date": race_date}]
         logger.info(f"指定レースID: {race_id} ({race_name})")
     else:
-        # キャッシュ内の今週末レース（重賞+平場）を対象にする
+        # キャッシュ内の今週末レース（特別戦/重賞）を対象にする
         logger.info("キャッシュ内の今週末レースを結果照合対象にします...")
         weekend_set = set()
         for d in _weekend_dates():
@@ -1947,12 +1947,12 @@ def run_result_notify(
     except Exception as e:
         logger.warning(f"results_history.csv 読み込み失敗: {e}")
 
-    # 全レース通知済みなら何も送信せず終了
+    # 対象レース全通知済みなら何も送信せず終了
     pending = [r for r in grade_races
                if not cache.get(r["race_id"], {}).get("result_notified")
                and r["race_id"] not in history_ids]
     if not pending:
-        logger.info("全レース通知済み → スキップ")
+        logger.info("対象レース全通知済み → スキップ")
         return
 
     # 手動結果を読み込む
@@ -1964,7 +1964,7 @@ def run_result_notify(
             logger.warning(f"manual_results.json 読み込み失敗: {e}")
 
     notified = 0
-    flat_results: list[str] = []  # 平場まとめ用
+    flat_results: list[str] = []  # 特別戦まとめ用（将来拡張用に保持）
     seen_ids: set[str] = set()    # 重複チェック
     for race in grade_races:
         race_id   = race["race_id"]
@@ -2039,7 +2039,7 @@ def run_result_notify(
                 notified += 1
                 logger.info(f"  送信: {race_name}")
         else:
-            # 平場: まとめ用にデータを蓄積（後で一括送信）
+            # 特別戦/クラス戦: まとめ用にデータを蓄積（後で一括送信）
             _df_copy = actual_df.copy()
             _df_copy["_fp"] = pd.to_numeric(_df_copy["finish_position"], errors="coerce")
             _top3 = _df_copy[_df_copy["_fp"].isin([1, 2, 3])].sort_values("_fp").head(3)
@@ -2063,7 +2063,7 @@ def run_result_notify(
             hit_str = " ".join(parts) if parts else ""
             flat_results.append(f"{icon} {venue_r}{rn} {race_name} {hit_str}".strip())
             notified += 1
-            logger.info(f"  平場まとめ: {race_name} {'的中' if any_hit else '不的中'}")
+            logger.info(f"  特別戦まとめ: {race_name} {'的中' if any_hit else '不的中'}")
 
         # 結果通知済みフラグをキャッシュに保存
         if race_id in cache:
@@ -2090,10 +2090,10 @@ def run_result_notify(
             except Exception as e:
                 logger.warning(f"  [X] 結果投稿エラー: {e}")
 
-    # 平場まとめ送信（無効化: 重賞のみ通知）
+    # 特別戦まとめ送信（無効化: 特別戦/重賞のみ通知）
     # if flat_results:
     #     flat_hits = sum(1 for r in flat_results if r.startswith("✅"))
-    #     flat_msg = f"📋 **平場結果** {flat_hits}/{len(flat_results)}的中\n" + "\n".join(flat_results)
+    #     flat_msg = f"📋 **特別戦結果** {flat_hits}/{len(flat_results)}的中\n" + "\n".join(flat_results)
     #     send_discord(webhook_url, flat_msg)
 
     if notified > 0:

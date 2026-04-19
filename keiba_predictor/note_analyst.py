@@ -246,7 +246,7 @@ def generate_all_reports() -> list[Path]:
         if race_id.startswith("_"):
             continue
         if entry.get("is_grade") is False:
-            continue  # 平場はスキップ
+            continue  # クラス戦/特別戦以外はスキップ
 
         race_name = entry.get("race_name", race_id)
         logger.info(f"note記事生成中: {race_name}")

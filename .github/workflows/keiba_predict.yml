@@ -82,7 +82,7 @@ jobs:
             echo "⚠️ 過去成績なし — 予想精度が低下します"
           fi
 
-      - name: 重賞+平場（1勝以上）予想を生成
+      - name: 特別戦/重賞予想を生成
         if: inputs.mode != 'notify'
         continue-on-error: true
         run: |
@@ -156,7 +156,7 @@ jobs:
               except Exception as e:
                   print(f'  失敗: {name}: {e}')
 
-          # 平場（芝・1勝クラス以上）
+          # 特別戦（1勝クラス以上の特別競走）— ダッシュボード用キャッシュのみ
           flat_races = scrape_flat_race_ids(session)
           for race in flat_races:
               rid = race['race_id']
@@ -165,7 +165,7 @@ jobs:
                   print(f'  キャッシュ済みスキップ: {name}')
                   continue
               try:
-                  print(f'  平場予想: {name} ({rid})')
+                  print(f'  特別戦予想: {name} ({rid})')
                   predict_live(rid, notify=False, is_grade=False)
               except Exception as e:
                   print(f'  失敗: {name}: {e}')
