@@ -43,16 +43,14 @@
 
 | 条件 | 閾値 | 理由 |
 |---|---|---|
-| 川崎・高知・帯広（静的） | 見送り | 回収率43%・58%・別競技 |
-| **動的会場フィルタ** | **直近20戦ROI < 50%** | **不調会場を自動除外（min_sample=20戦）** |
-| **◎オッズ > 2.0倍** | **見送り** | **76,098Rで3連複ROI低下** |
-| **多頭数（9頭以上）** | **MAX_HORSES=8** | **≤8頭で的中率24%、9頭以上で14%に急落** |
-| ○確率 < 20% | MIN_TAI_PROB=0.20 | 対抗馬の信頼度不足 |
+| **帯広ばんえい** | 見送り | 別競技（モデル対象外） |
+| **◎オッズ > 2.0倍** | 見送り | 76,098Rで3連複ROI低下 |
+| **9頭以上** | MAX_HORSES=8 | ≤8頭で的中率24%、9頭以上で14%に急落 |
+| ○確率 < 20% | MIN_TAI_PROB=0.20 | 対抗馬信頼度不足 |
 | ◎○差 > 25% | MAX_PROB_DIFF=0.25 | 1強レースで妙味なし |
 
-**動的フィルタ**: `_get_dynamic_skip_venues(recent_n=20, roi_threshold=0.50, min_sample=20)` が results_history.csv を読み、会場別の直近20戦ROIが50%未満の会場を自動的に SKIP_VENUES に追加。プロセス内でキャッシュ。
-
-**シャドウ記録による自己復帰**: 動的フィルタで見送ったレースも、bet_strategy に付帯する `shadow_strategy`（会場フィルタを無視した本来の買い目）を元に `shadow_bet_total` / `shadow_return_total` を CSV に記録。動的フィルタは shadow 値でROIを集計するため、除外中の会場でも成績が追跡され、回復したら自動的に買い目再開する（永久除外を防ぐ）。
+- 川崎・高知等の会場除外は**廃止**（◎≤2.0×≤8頭のコアフィルタで十分）
+- 動的会場フィルタも**無効化**（コード残存、必要時に再有効化可能）
 
 ---
 
@@ -62,6 +60,5 @@
 |---|---|
 | JRA買い目ロジック | `keiba_predictor/model/predict.py` `_decide_bet_strategy()` |
 | NAR買い目ロジック | `keiba-nar/keiba_predictor/model/predict.py` `_decide_bet_strategy()` |
-| NAR動的会場フィルタ | `keiba-nar/keiba_predictor/model/predict.py` `_get_dynamic_skip_venues()` |
 
-最終更新: 2026-04-17（動的会場フィルタ追加）
+最終更新: 2026-04-19
