@@ -111,7 +111,7 @@ def generate_loss_comment(race_name: str, pred: dict, actual_result: list) -> st
 
 
 def analyze_week() -> str:
-    """今週のレース結果を集計し、的中率・回収率のみ返す。"""
+    """今週のレース結果を集計し、詳細なサマリーを返す。"""
     from datetime import date, timedelta
 
     if not HISTORY_PATH.exists():
@@ -133,31 +133,73 @@ def analyze_week() -> str:
     we_str = week_end.isoformat()
 
     mask = hist["date"].apply(lambda d: ws_str <= str(d)[:10] <= we_str if pd.notna(d) else False)
-    week = hist[mask]
+    week = hist[mask].copy()
+    if week.empty:
+        return ""
+
+    # 実買いレースのみ（シャドウ除外）
+    for c in ("bet_total", "return_total"):
+        week[c] = pd.to_numeric(week[c], errors="coerce").fillna(0).astype(int)
+    week = week[week["bet_total"] > 0]
     if week.empty:
         return ""
 
     n = len(week)
     f_hits = sum(1 for _, r in week.iterrows() if r.get("fukusho_hit") == "True")
-    u_hits = sum(1 for _, r in week.iterrows()
-                 if r.get("umaren_hit") == "True" or r.get("wide_hit") == "True")
+    w_hits = sum(1 for _, r in week.iterrows() if r.get("wide_hit") == "True")
     s_hits = sum(1 for _, r in week.iterrows() if r.get("sanrenpuku_hit") == "True")
 
-    total_bet = sum(int(r.get("bet_total") or 0) for _, r in week.iterrows())
-    total_ret = sum(int(r.get("return_total") or 0) for _, r in week.iterrows())
+    total_bet = week["bet_total"].sum()
+    total_ret = week["return_total"].sum()
     roi = (total_ret / total_bet * 100) if total_bet > 0 else 0
+    profit = total_ret - total_bet
+    profit_str = f"+{profit:,}" if profit >= 0 else f"{profit:,}"
+
+    VENUE_MAP = {
+        "01": "札幌", "02": "函館", "03": "福島", "04": "新潟",
+        "05": "東京", "06": "中山", "07": "中京", "08": "京都",
+        "09": "阪神", "10": "小倉",
+    }
 
     sep = "━" * 16
+
+    # ── サマリー ──
     lines = [
         "📊 **【KEIBA EDGE】今週の成績**",
         sep,
-        f"複勝的中率: {f_hits/n*100:.0f}%（{f_hits}/{n}）",
-        f"馬連的中率: {u_hits/n*100:.0f}%（{u_hits}/{n}）",
-        f"3連複的中率: {s_hits/n*100:.0f}%（{s_hits}/{n}）",
-        f"回収率: {roi:.0f}%",
+        f"対象: {n}戦（厳選特別戦/重賞）",
+        f"複勝: {f_hits}/{n}（{f_hits/n*100:.0f}%）| ワイド: {w_hits} | 3連複: {s_hits}",
+        f"投資: {total_bet:,}円 → 回収: {total_ret:,}円",
+        f"**回収率: {roi:.0f}% / 収支: {profit_str}円**",
         sep,
     ]
 
+    # ── 日別サマリー ──
+    lines.append("")
+    lines.append("📅 **日別成績**")
+    for d, g in week.groupby("date"):
+        d_str = str(d)[:10]
+        gn = len(g)
+        gb = g["bet_total"].sum()
+        gr = g["return_total"].sum()
+        gs = sum(1 for _, r in g.iterrows() if r.get("sanrenpuku_hit") == "True")
+        groi = gr / gb * 100 if gb > 0 else 0
+        icon = "🟢" if groi >= 100 else "🔴"
+        lines.append(f"{icon} {d_str}: {gn}戦 {gr:,}円/{gb:,}円 ROI{groi:.0f}%")
+
+    # ── 3連複的中ハイライト ──
+    san_rows = week[week.apply(lambda r: r.get("sanrenpuku_hit") == "True", axis=1)]
+    if not san_rows.empty:
+        lines.append("")
+        lines.append("🎯 **3連複的中ハイライト**")
+        for _, r in san_rows.sort_values("return_total", ascending=False).head(5).iterrows():
+            rid = str(r.get("race_id", ""))
+            venue = VENUE_MAP.get(rid[4:6], "") if len(rid) >= 6 else ""
+            rn = int(rid[10:12]) if len(rid) >= 12 else 0
+            ret = int(r["return_total"])
+            lines.append(f"🏆 {venue}{rn}R {r.get('race_name','')} → {ret:,}円")
+
+    lines.append(sep)
     return "\n".join(lines)
 
 
