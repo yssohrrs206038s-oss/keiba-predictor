@@ -1857,6 +1857,12 @@ def run_predict_notify(
                 send_discord(webhook_url, f"⚠️ {race_name} の予想生成に失敗: {e}")
                 continue
 
+        # 厳選（実買い）レースのみDiscord通知
+        _bs = cached_entry.get("bet_strategy", {}) or {}
+        if _bs.get("total_cost", 0) <= 0:
+            logger.info(f"  見送りレース（予想通知なし）: {race_name}")
+            continue
+
         msg = _format_simple_message(race_id, cached_entry)
         print(msg, flush=True)
         if send_discord(webhook_url, msg):
