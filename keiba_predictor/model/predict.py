@@ -430,9 +430,12 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     is_old_1win = not any(kw in race_name for kw in ("3歳", "2歳", "未勝利")) \
                   and "1勝クラス" in race_name
 
-    # 福島・古馬2勝以上・古馬1勝は完全見送り
-    if is_fukushima:
-        _SKIP["strategy_note"] = "見送り（福島: ROI 46%）"
+    # 福島（平場）・古馬2勝以上・古馬1勝は完全見送り
+    # 福島の重賞は残す（福島牝馬S等で大配当の実績あり）
+    is_fukushima_grade = is_fukushima and any(
+        kw in race_name for kw in ("(G", "（G"))
+    if is_fukushima and not is_fukushima_grade:
+        _SKIP["strategy_note"] = "見送り（福島平場: 本命的中率42%）"
         return _SKIP
     if is_old_upper:
         _SKIP["strategy_note"] = "見送り（古馬2勝以上: ROI 11%）"
