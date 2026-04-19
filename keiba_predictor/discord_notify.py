@@ -1953,10 +1953,13 @@ def run_result_notify(
     except Exception as e:
         logger.warning(f"results_history.csv 読み込み失敗: {e}")
 
-    # 対象レース全通知済みなら何も送信せず終了
-    pending = [r for r in grade_races
-               if not cache.get(r["race_id"], {}).get("result_notified")
-               and r["race_id"] not in history_ids]
+    # 対象レース全通知済みなら何も送信せず終了（race_id指定時はスキップしない）
+    if race_id:
+        pending = grade_races
+    else:
+        pending = [r for r in grade_races
+                   if not cache.get(r["race_id"], {}).get("result_notified")
+                   and r["race_id"] not in history_ids]
     if not pending:
         logger.info("対象レース全通知済み → スキップ")
         return
