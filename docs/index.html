@@ -435,6 +435,54 @@
       header { padding: 12px 16px; }
     }
 
+    /* ── 本日の成績バナー ───────────────────────────────────── */
+    #today-banner {
+      margin-bottom: 16px;
+    }
+    .today-banner-inner {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      font-size: 13px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--gold);
+    }
+    .today-banner-inner.profit {
+      border-left-color: var(--green);
+    }
+    .today-banner-inner.loss {
+      border-left-color: var(--red);
+    }
+    .today-banner-label {
+      font-weight: 700;
+      color: var(--gold);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .today-banner-inner.profit .today-banner-label { color: var(--green); }
+    .today-banner-inner.loss .today-banner-label   { color: var(--red); }
+    .today-banner-stat {
+      color: var(--text-muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .today-banner-stat strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+    .today-banner-roi {
+      font-size: 14px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .today-banner-roi.profit { color: var(--green); }
+    .today-banner-roi.loss   { color: var(--red); }
+
     /* ── フッター ────────────────────────────────────────────── */
     footer {
       text-align: center; padding: 32px 16px;
@@ -479,6 +527,7 @@
 
   <!-- タブ1: 今週の予想 -->
   <div class="tab-panel active" id="panel-predict">
+    <div id="today-banner"></div>
     <div id="venue-tabs" style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px;">
       <button class="tab-btn" data-venue="grade" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">🏆重賞</button>
     </div>
@@ -679,6 +728,46 @@ function parseCSV(text) {
     header.forEach((h, i) => { obj[h] = (vals[i] ?? '').trim(); });
     return obj;
   });
+}
+
+/* ════════════════════════════════════════════════════════════
+   本日の成績バナー
+════════════════════════════════════════════════════════════ */
+function renderTodayBanner(rows) {
+  const container = document.getElementById('today-banner');
+  if (!container) return;
+
+  // JST 今日の日付 (YYYY-MM-DD)
+  const todayJST = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+
+  // 今日 & bet_total > 0 の行のみ
+  const todayRows = rows.filter(r => {
+    const d = (r.date || '').slice(0, 10);
+    return d === todayJST && (+r.bet_total || 0) > 0;
+  });
+
+  if (!todayRows.length) { container.innerHTML = ''; return; }
+
+  const n      = todayRows.length;
+  const fHits  = todayRows.filter(r => r.fukusho_hit === 'True').length;
+  const sHits  = todayRows.filter(r => r.sanrenpuku_hit === 'True').length;
+  const bet    = todayRows.reduce((s, r) => s + (+r.bet_total   || 0), 0);
+  const ret    = todayRows.reduce((s, r) => s + (+r.return_total || 0), 0);
+  const roi    = bet > 0 ? (ret / bet * 100) : 0;
+  const diff   = ret - bet;
+  const isProfit = roi >= 100;
+  const cls    = isProfit ? 'profit' : 'loss';
+  const sign   = diff >= 0 ? '+' : '';
+
+  container.innerHTML = `
+    <div class="today-banner-inner ${cls}">
+      <span class="today-banner-label">📊 本日の成績</span>
+      <span class="today-banner-stat"><strong>${n}戦</strong></span>
+      <span class="today-banner-stat">複勝 <strong>${fHits}的中</strong></span>
+      <span class="today-banner-stat">3連複 <strong>${sHits}的中</strong></span>
+      <span class="today-banner-stat">投資 <strong>${bet.toLocaleString()}円</strong> → 回収 <strong>${ret.toLocaleString()}円</strong></span>
+      <span class="today-banner-roi ${cls}">ROI ${roi.toFixed(0)}% (${sign}${diff.toLocaleString()}円)</span>
+    </div>`;
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -1447,6 +1536,7 @@ async function main() {
       entries.forEach(([raceId, r]) => { _predHtmlMap[raceId] = ''; });  // reset
       renderPredictions(predCache);  // 結果付きで再描画
     }
+    renderTodayBanner(rows);
     renderStats(rows);
     renderChart(rows);
     renderWeeklyChart(rows);
