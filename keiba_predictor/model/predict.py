@@ -424,24 +424,23 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     hon_ev = float(hon_prob) * float(hon_odds) if pd.notna(hon_prob) and pd.notna(hon_odds) else None
     low_ev = hon_ev is not None and hon_ev < 1.0
 
-    # ── フィルタ: 開催場・クラスによる見送り ──
+    # ── フィルタ: 特別戦/重賞のみ（平均6戦/日、ROI 216%） ──
+    # 特別戦 = 9-12R付近の条件特別・リステッド・重賞
+    # 3歳未勝利(ROI100%)・3歳1勝(ROI74%)・古馬(ROI11-43%)は見送り
     is_fukushima = venue_code == "03"
-    is_old_upper = any(kw in race_name for kw in ("2勝クラス", "3勝クラス", "オープン"))
-    is_old_1win = not any(kw in race_name for kw in ("3歳", "2歳", "未勝利")) \
-                  and "1勝クラス" in race_name
+    is_grade = any(kw in race_name for kw in ("(G", "（G"))
+    is_tokubetsu = not any(kw in race_name for kw in (
+        "未勝利", "1勝クラス", "2勝クラス", "3勝クラス", "オープン",
+    ))
 
-    # 福島（平場）・古馬2勝以上・古馬1勝は完全見送り
-    # 福島の重賞は残す（福島牝馬S等で大配当の実績あり）
-    is_fukushima_grade = is_fukushima and any(
-        kw in race_name for kw in ("(G", "（G"))
-    if is_fukushima and not is_fukushima_grade:
+    # 福島は重賞のみ
+    if is_fukushima and not is_grade:
         _SKIP["strategy_note"] = "見送り（福島平場: 本命的中率42%）"
         return _SKIP
-    if is_old_upper:
-        _SKIP["strategy_note"] = "見送り（古馬2勝以上: ROI 11%）"
-        return _SKIP
-    if is_old_1win:
-        _SKIP["strategy_note"] = "見送り（古馬1勝: ROI 43%）"
+
+    # 未勝利・クラス戦は見送り（特別戦/重賞以外）
+    if not is_tokubetsu and not is_grade:
+        _SKIP["strategy_note"] = "見送り（クラス戦: 特別戦/重賞に厳選）"
         return _SKIP
 
     # EV < 1.0 → 複勝のみ
