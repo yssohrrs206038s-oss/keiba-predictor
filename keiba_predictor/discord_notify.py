@@ -2029,41 +2029,17 @@ def run_result_notify(
             if manual.get("predicted_top3_nums"):
                 pred["predicted_top3_nums"] = manual["predicted_top3_nums"]
 
-        is_grade = pred.get("is_grade", False) or any(
-            kw in race_name for kw in ("重賞", "特別", "記念", "杯", "賞", "ステークス", "(G"))
+        # Discord通知は厳選（実買い）レースのみ
+        bs = pred.get("bet_strategy", {}) or {}
+        is_betted = bs.get("total_cost", 0) > 0
 
-        if is_grade:
-            # 重賞: 個別に詳細送信
+        if is_betted:
             msg = _fmt_result(race_name, race_date, actual_df, pred, payouts, manual=manual, race_id=race_id, is_grade=True)
             if send_discord(webhook_url, msg):
                 notified += 1
                 logger.info(f"  送信: {race_name}")
         else:
-            # 特別戦/クラス戦: まとめ用にデータを蓄積（後で一括送信）
-            _df_copy = actual_df.copy()
-            _df_copy["_fp"] = pd.to_numeric(_df_copy["finish_position"], errors="coerce")
-            _top3 = _df_copy[_df_copy["_fp"].isin([1, 2, 3])].sort_values("_fp").head(3)
-            actual_top3_nums = [int(float(r["horse_number"])) for _, r in _top3.iterrows() if pd.notna(r.get("horse_number")) and str(r["horse_number"]).strip() != ""]
-            hits = check_hits_from_bet_strategy(pred, actual_top3_nums, payouts)
-            any_hit = hits["fukusho_hit"] or hits["wide_hit"] or hits["sanren_hit"]
-            parts = []
-            if hits["wide_hit"]:
-                parts.append(f"ワイド✅")
-            if hits["sanren_hit"]:
-                pay = hits["sanren_pay"]
-                parts.append(f"3連複✅{f'({pay})' if pay else ''}")
-            venue_r = pred.get("venue", "")
-            rn = ""
-            if race_id and len(race_id) >= 12:
-                try:
-                    rn = f"{int(race_id[10:12])}R"
-                except ValueError:
-                    pass
-            icon = "✅" if any_hit else "❌"
-            hit_str = " ".join(parts) if parts else ""
-            flat_results.append(f"{icon} {venue_r}{rn} {race_name} {hit_str}".strip())
-            notified += 1
-            logger.info(f"  特別戦まとめ: {race_name} {'的中' if any_hit else '不的中'}")
+            logger.info(f"  見送りレース（通知なし）: {race_name}")
 
         # 結果通知済みフラグをキャッシュに保存
         if race_id in cache:
