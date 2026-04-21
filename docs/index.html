@@ -749,7 +749,7 @@ function renderTodayBanner(rows) {
   if (!todayRows.length) { container.innerHTML = ''; return; }
 
   const n      = todayRows.length;
-  const fHits  = todayRows.filter(r => r.fukusho_hit === 'True').length;
+  const wHits  = todayRows.filter(r => r.wide_hit === 'True' || r.umaren_hit === 'True').length;
   const sHits  = todayRows.filter(r => r.sanrenpuku_hit === 'True').length;
   const bet    = todayRows.reduce((s, r) => s + (+r.bet_total   || 0), 0);
   const ret    = todayRows.reduce((s, r) => s + (+r.return_total || 0), 0);
@@ -763,7 +763,7 @@ function renderTodayBanner(rows) {
     <div class="today-banner-inner ${cls}">
       <span class="today-banner-label">📊 本日の成績</span>
       <span class="today-banner-stat"><strong>${n}戦</strong></span>
-      <span class="today-banner-stat">複勝 <strong>${fHits}的中</strong></span>
+      <span class="today-banner-stat">ワイド <strong>${wHits}的中</strong></span>
       <span class="today-banner-stat">3連複 <strong>${sHits}的中</strong></span>
       <span class="today-banner-stat">投資 <strong>${bet.toLocaleString()}円</strong> → 回収 <strong>${ret.toLocaleString()}円</strong></span>
       <span class="today-banner-roi ${cls}">ROI ${roi.toFixed(0)}% (${sign}${diff.toLocaleString()}円)</span>
@@ -1195,7 +1195,7 @@ function renderPredictions(cache) {
         </div>`;
     }
 
-    const anyHitClass = res ? ((res.fukusho_hit === 'True' || res.wide_hit === 'True' || res.umaren_hit === 'True' || res.sanrenpuku_hit === 'True') ? 'hit-card' : 'miss-card') : '';
+    const anyHitClass = res ? ((res.wide_hit === 'True' || res.umaren_hit === 'True' || res.sanrenpuku_hit === 'True') ? 'hit-card' : 'miss-card') : '';
     const isNext = raceId === _nextRaceId;
     const nextClass = isNext ? 'next-race' : '';
     const nextBadge = isNext ? '<span class="next-race-badge">⏭ 次のレース</span>' : '';
