@@ -529,6 +529,7 @@
   <div class="tab-panel active" id="panel-predict">
     <div id="today-banner"></div>
     <div id="venue-tabs" style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px;">
+      <button class="tab-btn active" data-venue="selected" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">🎯厳選</button>
       <button class="tab-btn" data-venue="grade" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">🏆重賞</button>
     </div>
     <div class="section-title">🏇 今週の予想</div>
@@ -542,16 +543,21 @@
     <div class="section-title">📊 累計実績</div>
     <div class="stats-grid" id="stats-grid">
       <div class="stat-card"><div class="stat-value" id="s-races">—</div><div class="stat-label">通算レース数</div></div>
-      <div class="stat-card green"><div class="stat-value" id="s-fukusho">—</div><div class="stat-label">複勝的中率</div></div>
+      <div class="stat-card green"><div class="stat-value" id="s-fukusho">—</div><div class="stat-label">ワイド的中率</div></div>
       <div class="stat-card blue"><div class="stat-value" id="s-umaren">—</div><div class="stat-label">連対的中率</div></div>
       <div class="stat-card blue"><div class="stat-value" id="s-sanren">—</div><div class="stat-label">3連複的中率</div></div>
       <div class="stat-card"><div class="stat-value" id="s-roi">—</div><div class="stat-label">累計回収率</div></div>
-      <div class="stat-card green"><div class="stat-value" id="s-streak">—</div><div class="stat-label">直近10戦 複勝</div></div>
+      <div class="stat-card green"><div class="stat-value" id="s-streak">—</div><div class="stat-label">直近10戦 ワイド</div></div>
     </div>
 
     <div class="section-title">📈 回収率推移</div>
     <div class="chart-wrap">
       <canvas id="roi-chart"></canvas>
+    </div>
+
+    <div class="section-title">💹 累計損益推移</div>
+    <div class="chart-wrap">
+      <canvas id="pnl-chart"></canvas>
     </div>
 
     <div class="section-title">📊 週別成績推移（直近4週）</div>
@@ -563,7 +569,7 @@
     <div style="overflow-x:auto;">
       <table class="history-table">
         <thead>
-          <tr><th>日付</th><th>レース名</th><th>単勝</th><th>複勝</th><th>連対</th><th>3連複</th><th>3連単</th><th>回収率</th></tr>
+          <tr><th>日付</th><th>レース名</th><th>ワイド</th><th>3連複</th><th>回収率</th></tr>
         </thead>
         <tbody id="history-tbody">
           <tr><td colspan="8" class="no-data">履歴データを読み込んでいます…</td></tr>
@@ -775,23 +781,29 @@ function renderTodayBanner(rows) {
 ════════════════════════════════════════════════════════════ */
 function pct(v) { return isNaN(v) ? '—' : (v * 100).toFixed(0) + '%'; }
 
+// 見送り行を除外するフィルタ（bet_total > 0 の行のみ）
+function isBetted(r) { return (+r.bet_total || 0) > 0; }
+
 function renderStats(rows) {
   if (!rows.length) return;
 
-  const n     = rows.length;
-  const fHits = rows.filter(r => r.fukusho_hit === 'True').length;
-  const uHits = rows.filter(r => r.umaren_hit === 'True' || r.wide_hit === 'True').length;
-  const sHits = rows.filter(r => r.sanrenpuku_hit === 'True').length;
-  const bet   = rows.reduce((s, r) => s + (+r.bet_total   || 0), 0);
-  const ret   = rows.reduce((s, r) => s + (+r.return_total || 0), 0);
+  const betRows = rows.filter(isBetted);
+  const n       = betRows.length;
+  if (!n) return;
+
+  const wHits = betRows.filter(r => r.wide_hit === 'True' || r.umaren_hit === 'True').length;
+  const uHits = betRows.filter(r => r.umaren_hit === 'True' || r.wide_hit === 'True').length;
+  const sHits = betRows.filter(r => r.sanrenpuku_hit === 'True').length;
+  const bet   = betRows.reduce((s, r) => s + (+r.bet_total   || 0), 0);
+  const ret   = betRows.reduce((s, r) => s + (+r.return_total || 0), 0);
   const roi   = bet > 0 ? ret / bet : 0;
 
-  // 直近10戦の複勝的中数
-  const recent10 = rows.slice(-10);
-  const recent10Hits = recent10.filter(r => r.fukusho_hit === 'True').length;
+  // 直近10戦のワイド的中数
+  const recent10 = betRows.slice(-10);
+  const recent10Hits = recent10.filter(r => r.wide_hit === 'True' || r.umaren_hit === 'True').length;
 
   document.getElementById('s-races').textContent   = n + ' 戦';
-  document.getElementById('s-fukusho').textContent = pct(fHits / n);
+  document.getElementById('s-fukusho').textContent = pct(wHits / n);
   document.getElementById('s-umaren').textContent  = pct(uHits / n);
   document.getElementById('s-sanren').textContent  = pct(sHits / n);
   document.getElementById('s-roi').textContent     = pct(roi);
@@ -804,11 +816,12 @@ function renderStats(rows) {
 function renderChart(rows) {
   if (!rows.length) return;
 
+  const betRows = rows.filter(isBetted);
   const labels = [];
   const roiData = [];
   let cumBet = 0, cumRet = 0;
 
-  rows.forEach(r => {
+  betRows.forEach(r => {
     cumBet += +r.bet_total    || 0;
     cumRet += +r.return_total || 0;
     const roi = cumBet > 0 ? (cumRet / cumBet * 100) : 0;
@@ -874,6 +887,105 @@ function renderChart(rows) {
 }
 
 /* ════════════════════════════════════════════════════════════
+   累計損益推移グラフ
+════════════════════════════════════════════════════════════ */
+function renderPnlChart(rows) {
+  if (!rows.length) return;
+
+  const betRows = rows.filter(isBetted);
+  if (!betRows.length) return;
+
+  const labels = [];
+  const pnlData = [];
+  let cumPnl = 0;
+
+  betRows.forEach(r => {
+    const bet = +r.bet_total    || 0;
+    const ret = +r.return_total || 0;
+    cumPnl += ret - bet;
+    const d = (r.date || '').slice(0, 10);
+    labels.push(d);
+    pnlData.push(cumPnl);
+  });
+
+  // 点ごとに色を変える（正→緑、負→赤）
+  const pointColors = pnlData.map(v => v >= 0 ? '#2ecc71' : '#e74c3c');
+
+  const ctx = document.getElementById('pnl-chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '累計損益 (円)',
+          data: pnlData,
+          borderColor: ctx2 => {
+            // gradient: green if latest positive, red if negative
+            const last = pnlData[pnlData.length - 1] || 0;
+            return last >= 0 ? '#2ecc71' : '#e74c3c';
+          },
+          backgroundColor: pnlData[pnlData.length - 1] >= 0
+            ? 'rgba(46,204,113,.08)'
+            : 'rgba(231,76,60,.08)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: pointColors,
+          tension: 0.3,
+          fill: true,
+          segment: {
+            borderColor: ctx2 => ctx2.p1.parsed.y >= 0 ? '#2ecc71' : '#e74c3c',
+          },
+        },
+        {
+          label: '損益ゼロライン',
+          data: pnlData.map(() => 0),
+          borderColor: 'rgba(255,255,255,.2)',
+          borderWidth: 1,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#8888aa', font: { size: 12 } } },
+        tooltip: {
+          backgroundColor: '#13131e',
+          borderColor: '#2a2a40',
+          borderWidth: 1,
+          titleColor: '#d4af37',
+          bodyColor: '#e8e8f0',
+          callbacks: {
+            label: ctx2 => {
+              const v = ctx2.parsed.y;
+              const sign = v >= 0 ? '+' : '';
+              return `累計損益: ${sign}${v.toLocaleString()}円`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8888aa', maxRotation: 45, font: { size: 10 } },
+          grid:  { color: 'rgba(255,255,255,.04)' },
+        },
+        y: {
+          ticks: {
+            color: '#8888aa',
+            font: { size: 11 },
+            callback: v => (v >= 0 ? '+' : '') + v.toLocaleString() + '円'
+          },
+          grid: { color: 'rgba(255,255,255,.04)' },
+        }
+      }
+    }
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
    週別成績推移（直近4週）
 ════════════════════════════════════════════════════════════ */
 function renderWeeklyChart(rows) {
@@ -896,11 +1008,11 @@ function renderWeeklyChart(rows) {
   const weeks = Object.keys(weekMap).slice(-4);
   if (!weeks.length) return;
 
-  const fukushoRates = [], umarenRates = [], sanrenRates = [];
+  const wideRates = [], umarenRates = [], sanrenRates = [];
   weeks.forEach(wk => {
     const wr = weekMap[wk];
     const n = wr.length;
-    fukushoRates.push(n ? +(wr.filter(r => r.fukusho_hit === 'True').length / n * 100).toFixed(0) : 0);
+    wideRates.push(n ? +(wr.filter(r => r.wide_hit === 'True' || r.umaren_hit === 'True').length / n * 100).toFixed(0) : 0);
     umarenRates.push(n ? +(wr.filter(r => r.umaren_hit === 'True' || r.wide_hit === 'True').length / n * 100).toFixed(0) : 0);
     sanrenRates.push(n ? +(wr.filter(r => r.sanrenpuku_hit === 'True').length / n * 100).toFixed(0) : 0);
   });
@@ -911,7 +1023,7 @@ function renderWeeklyChart(rows) {
     data: {
       labels: weeks,
       datasets: [
-        { label: '複勝的中率', data: fukushoRates, backgroundColor: 'rgba(46,204,113,.7)', borderRadius: 4 },
+        { label: 'ワイド的中率', data: wideRates, backgroundColor: 'rgba(46,204,113,.7)', borderRadius: 4 },
         { label: '連対的中率', data: umarenRates, backgroundColor: 'rgba(52,152,219,.7)', borderRadius: 4 },
         { label: '3連複的中率', data: sanrenRates, backgroundColor: 'rgba(243,156,18,.7)', borderRadius: 4 },
       ]
@@ -946,7 +1058,7 @@ function renderWeeklyChart(rows) {
 ════════════════════════════════════════════════════════════ */
 let _predHtmlMap = {};  // raceId → html
 let _allPredEntries = [];
-let _currentVenue = 'grade';  // 初期値、renderPredictions内で最新日付に更新
+let _currentVenue = 'selected';  // デフォルト: 厳選レースのみ（bet_strategy.total_cost > 0）
 let _resultMap = {};
 
 function renderPredictions(cache) {
@@ -972,17 +1084,13 @@ function renderPredictions(cache) {
     entries.forEach(([, r]) => { if (r.race_date) dates.add(r.race_date); });
     const sortedDates = [...dates].sort();
 
-    let btns = '<button class="tab-btn" data-venue="grade" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">🏆重賞</button>';
+    let btns = '<button class="tab-btn active" data-venue="selected" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">🎯厳選</button>';
+    btns += '<button class="tab-btn" data-venue="grade" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">🏆重賞</button>';
     for (const d of sortedDates) {
       const label = d.slice(5).replace('-', '/');  // "04/12"
-      const isActive = d === sortedDates[sortedDates.length - 1] ? ' active' : '';
-      btns += `<button class="tab-btn${isActive}" data-venue="date:${d}" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">📅${label}</button>`;
+      btns += `<button class="tab-btn" data-venue="date:${d}" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">📅${label}</button>`;
     }
-    if (!sortedDates.length) {
-      _currentVenue = 'grade';
-    } else {
-      _currentVenue = 'date:' + sortedDates[sortedDates.length - 1];
-    }
+    _currentVenue = 'selected';
     for (const v of [...venues].sort()) {
       btns += `<button class="tab-btn" data-venue="${esc(v)}" style="flex:none;font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);">${esc(v)}</button>`;
     }
@@ -1264,6 +1372,11 @@ function _renderFlatCard(raceId, r) {
 function _renderFilteredPredictions() {
   const grid = document.getElementById('race-grid');
   const filtered = _allPredEntries.filter(([, r]) => {
+    if (_currentVenue === 'selected') {
+      // 厳選: bet_strategy.total_cost > 0 のレースのみ
+      const bs = r.bet_strategy || {};
+      return (bs.total_cost || bs.total_points * 100 || 0) > 0;
+    }
     if (_currentVenue === 'all') return true;
     if (_currentVenue === 'grade') return r.is_grade !== false;
     if (_currentVenue.startsWith('date:')) return r.race_date === _currentVenue.slice(5);
@@ -1281,18 +1394,15 @@ function _renderFilteredPredictions() {
 ════════════════════════════════════════════════════════════ */
 function renderHistory(rows) {
   const tbody = document.getElementById('history-tbody');
-  const recent = rows.slice(-10).reverse();
+  const recent = rows.filter(isBetted).slice(-10).reverse();
   if (!recent.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="no-data">履歴データがありません</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="no-data">履歴データがありません</td></tr>';
     return;
   }
 
   tbody.innerHTML = recent.map(r => {
-    const tHit = r.tansho_hit === 'True';
-    const fHit = r.fukusho_hit === 'True';
-    const uHit = r.umaren_hit === 'True' || r.wide_hit === 'True';
+    const wHit = r.wide_hit === 'True' || r.umaren_hit === 'True';
     const sHit = r.sanrenpuku_hit === 'True';
-    const stHit = r.sanrentan_hit === 'True';
     const bet  = +r.bet_total    || 0;
     const ret  = +r.return_total || 0;
     const roi  = bet > 0 ? (ret / bet * 100).toFixed(0) + '%' : '—';
@@ -1305,9 +1415,6 @@ function renderHistory(rows) {
     const hVenue = rid.length >= 12 ? (VENUE_MAP[rid.slice(8, 10)] || '') : '';
     const hRaceNum = rid.length >= 12 ? parseInt(rid.slice(10, 12), 10) + 'R' : '';
     const hPrefix = hVenue && hRaceNum ? hVenue + hRaceNum + ' ' : '';
-    // 単勝・3連単は買っていない場合「-」表示
-    const tIcon = r.tansho_hit == null && !r.tansho_payout ? '—' : (tHit ? '✅' : '❌');
-    const stIcon = r.sanrentan_hit == null && !r.sanrentan_payout ? '—' : (stHit ? '✅' : '❌');
     return `
       <tr>
         <td style="color:var(--text-muted);white-space:nowrap">${esc(date)}</td>
@@ -1315,11 +1422,8 @@ function renderHistory(rows) {
           ${esc(hPrefix + shortName)}
           ${gClass ? `<span class="grade-tag ${gClass}" style="margin-left:6px;">${esc(gLabel)}</span>` : ''}
         </td>
-        <td class="hit-icon">${tIcon}</td>
-        <td class="hit-icon">${fHit ? '✅' : '❌'}</td>
-        <td class="hit-icon">${uHit ? '✅' : '❌'}</td>
+        <td class="hit-icon">${wHit ? '✅' : '❌'}</td>
         <td class="hit-icon">${sHit ? '✅' : '❌'}</td>
-        <td class="hit-icon">${stIcon}</td>
         <td style="${roiColor};font-weight:700;">${esc(roi)}</td>
       </tr>`;
   }).join('');
@@ -1534,6 +1638,7 @@ async function main() {
     renderTodayBanner(rows);
     renderStats(rows);
     renderChart(rows);
+    renderPnlChart(rows);
     renderWeeklyChart(rows);
     renderHistory(rows);
     renderRankings(rows);
