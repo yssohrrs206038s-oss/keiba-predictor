@@ -47,15 +47,21 @@ python -m keiba_predictor.main notify --mode result
 - アルゴリズム: XGBoost（距離帯別モデルあり）
 - 特徴量数: 52
 - 主要特徴量: オッズ・人気・脚質・馬場状態・前走成績・騎手適性・血統（父馬/母父）など
-- AUC: 0.8645 / 複勝的中率: 61.1%
+- AUC: 0.8645 / ワイド的中率重視（複勝購入廃止）
 - 血統DB: 53,712頭（pedigree_db.csv）
 - モデル再学習: ローカルPCで実行（Actionsでは行わない）
+- 買い目戦略: 特別戦/重賞のみ（平均6戦/日）、ワイド各1,000円×3＋3連複各100円×10点＝4,000円/R（複勝廃止）
+  - 福島: 重賞のみ（平場見送り）
+  - 古馬1勝以上: 見送り
+  - 得意ゾーン増額: 廃止
 
 ## 開発ルール
 - モデル学習は必ずローカルPCで実行（Actions環境はデータ不足）
 - git pushは必ずgit pull --rebaseしてから
 - Discord Webhookはダミーを使わない（本番URLはSecretsに登録済み）
 - X投稿はENABLE_X_POST=falseで停止中（アカウント凍結）
+- Discord通知は厳選（実買い）レースのみ送信
+- 週次サマリーは日曜18:00に自動送信（Actions）
 
 ## 未実装リスト
 - LINE公式アカウント連携
@@ -63,5 +69,7 @@ python -m keiba_predictor.main notify --mode result
 - 競馬新聞本命集計
 - WIN5予想
 - 独自サイト構築
+- NAR 4頭ボックス戦略
+- JRAモデルの特別戦特化チューニング
 
 あなたの作業が完了したら、Codexが出力をレビューします。

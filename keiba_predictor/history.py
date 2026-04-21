@@ -35,10 +35,10 @@ HISTORY_PATH  = DATA_DIR / "results_history.csv"
 REPORTS_DIR   = DATA_DIR / "reports"
 
 # 1レースあたりの投資額
-# 複勝1000円 + ワイド/馬連300円 + 3連複600円 = 1900円（最大）
-UNIT_BET          = 100   # 馬連・ワイド・3連複の1口単価
-FUKUSHO_BET       = 1000  # 複勝の1口単価
-BETS_PER_RACE_TOTAL = 2500  # bet_strategy.total_cost がない場合のフォールバック
+# ワイド各1,000円×3 + 3連複各100円×10点 = 4,000円/R（複勝廃止）
+UNIT_BET          = 100   # 馬連・3連複の1口単価
+WIDE_BET          = 1000  # ワイドの1口単価
+BETS_PER_RACE_TOTAL = 4000  # bet_strategy.total_cost がない場合のフォールバック
 
 HISTORY_COLS = [
     "date", "race_id", "race_name", "race_grade",
@@ -221,19 +221,11 @@ def record_result(
     sanrentan_payout = _payout_str_to_int(hits.get("sanrentan_pay", ""))
 
     bet_total    = hits["bet_total"] if hits["bet_total"] > 0 else BETS_PER_RACE_TOTAL
-    # 複勝配当は1000円購入なので10倍換算（100円ベースの配当×10）
-    fukusho_payout = 0
+    # 複勝は統計追跡のみ（購入しないため回収額に含めない）
     honmei_num = hits["fukusho_num"]
-    if fukusho_hit and honmei_num:
-        for entry in payouts.get("複勝", []):
-            combo_nums = set(re.findall(r"\d+", str(entry.get("combo", ""))))
-            if str(honmei_num) in combo_nums:
-                fukusho_payout = entry.get("amount") or 0
-                break
-    fukusho_return = fukusho_payout * (FUKUSHO_BET // 100) if fukusho_payout else 0
     # 単勝は100円単位
     tansho_return = tansho_payout if tansho_hit else 0
-    return_total = tansho_return + fukusho_return + umaren_payout + wide_payout + sanren_payout + sanrentan_payout
+    return_total = tansho_return + umaren_payout + wide_payout + sanren_payout + sanrentan_payout
 
     row = {
         "date":       race_date,
@@ -344,13 +336,14 @@ def cumulative_summary(df: pd.DataFrame) -> dict:
 
 
 def hit_streak(df: pd.DataFrame) -> int:
-    """複勝的中した連続週数（最新から遡る）を返す。"""
+    """ワイド的中した連続週数（最新から遡る）を返す。"""
     if df.empty:
         return 0
-    # 週ごとに複勝的中があったかをチェック
+    # 週ごとにワイド的中があったかをチェック
     df = df.copy()
     df["week"] = df["date"].dt.to_period("W")
-    weekly = df.groupby("week")["fukusho_hit"].any().sort_index(ascending=False)
+    hit_col = "wide_hit" if "wide_hit" in df.columns else "fukusho_hit"
+    weekly = df.groupby("week")[hit_col].any().sort_index(ascending=False)
     streak = 0
     for hit in weekly:
         if hit:
@@ -370,17 +363,17 @@ def format_summary_message(
     w = week_stats
     c = cum_stats
 
-    # 今週の複勝的中数
-    week_wins = int(round(w["fukusho_rate"] * w["n_races"]))
+    # 今週のワイド的中数
+    week_wins = int(round(w["wide_rate"] * w["n_races"]))
 
     lines = [
         RULE,
         f"📊 今週成績  {w['n_races']}戦{week_wins}勝",
-        f"📈 累計複勝的中率  {c['fukusho_rate'] * 100:.0f}%",
+        f"📈 累計ワイド的中率  {c['wide_rate'] * 100:.0f}%",
         f"💰 累計回収率  {c['roi'] * 100:.0f}%",
     ]
     if streak >= 2:
-        lines.append(f"🔥 {streak}週連続複勝的中中！")
+        lines.append(f"🔥 {streak}週連続ワイド的中中！")
     return "\n".join(lines)
 
 
@@ -732,10 +725,10 @@ def build_weekly_report(week_date: str, output_path: Optional[Path] = None) -> s
         f"| 項目 | 値 |",
         f"|:-----|:--|",
         f"| レース数 | {w_stats['n_races']}レース |",
-        f"| 複勝的中率 | {w_stats['fukusho_rate']*100:.1f}% |",
-        f"| 馬連的中率 | {w_stats['umaren_rate']*100:.1f}% |",
         f"| ワイド的中率 | {w_stats['wide_rate']*100:.1f}% |",
         f"| 3連複的中率 | {w_stats['sanrenpuku_rate']*100:.1f}% |",
+        f"| 複勝的中率(参考) | {w_stats['fukusho_rate']*100:.1f}% |",
+        f"| 馬連的中率 | {w_stats['umaren_rate']*100:.1f}% |",
         f"| 投資合計 | ¥{w_stats['bet_total']:,} |",
         f"| 回収合計 | ¥{w_stats['return_total']:,} |",
         f"| 回収率 | {w_stats['roi']*100:.1f}% |",
@@ -747,10 +740,10 @@ def build_weekly_report(week_date: str, output_path: Optional[Path] = None) -> s
         f"| 項目 | 値 |",
         f"|:-----|:--|",
         f"| 通算レース数 | {c_stats['n_races']}レース |",
-        f"| 複勝的中率 | {c_stats['fukusho_rate']*100:.1f}% |",
-        f"| 馬連的中率 | {c_stats['umaren_rate']*100:.1f}% |",
         f"| ワイド的中率 | {c_stats['wide_rate']*100:.1f}% |",
         f"| 3連複的中率 | {c_stats['sanrenpuku_rate']*100:.1f}% |",
+        f"| 複勝的中率(参考) | {c_stats['fukusho_rate']*100:.1f}% |",
+        f"| 馬連的中率 | {c_stats['umaren_rate']*100:.1f}% |",
         f"| 累計投資 | ¥{c_stats['bet_total']:,} |",
         f"| 累計回収 | ¥{c_stats['return_total']:,} |",
         f"| 累計回収率 | {c_stats['roi']*100:.1f}% |",

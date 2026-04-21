@@ -1121,15 +1121,10 @@ function renderPredictions(cache) {
     if (bs && bs.total_points > 0) {
       const rows = [];
 
-      // 複勝
-      if (bs.fukusho && bs.fukusho.length) {
-        rows.push(`<div class="bet-row"><span class="bet-label">複勝</span>${bs.fukusho[0].num}番 ${esc(bs.fukusho[0].name || '')}<span style="color:var(--text-muted);margin-left:auto;font-size:11px;">1,000円</span></div>`);
-      }
-
-      // ワイド or 馬連
+      // ワイド or 馬連（複勝廃止: ワイド各1,000円が主軸）
       if (bs.use_wide && bs.wide && bs.wide.length) {
         const wideStr = bs.wide.map(w => `${w.nums[0]}-${w.nums[1]}`).join(' / ');
-        rows.push(`<div class="bet-row"><span class="bet-label">ワイド</span>${wideStr}<span style="color:var(--text-muted);margin-left:auto;font-size:11px;">各300円</span></div>`);
+        rows.push(`<div class="bet-row"><span class="bet-label">ワイド</span>${wideStr}<span style="color:var(--text-muted);margin-left:auto;font-size:11px;">各1,000円</span></div>`);
       }
       if (bs.umaren && bs.umaren.length) {
         const umarenStr = bs.umaren.map(u => `${u.nums[0]}-${u.nums[1]}`).join(' / ');
@@ -1174,7 +1169,8 @@ function renderPredictions(cache) {
       const roi = bet > 0 ? (ret / bet * 100).toFixed(0) + '%' : '—';
       const roiColor = ret >= bet ? 'color:var(--green)' : 'color:var(--red)';
       const hitParts = [];
-      hitParts.push(`複勝${fHit ? '✅' : '❌'}`);
+      // 複勝は購入なし（参考表示のみ）
+      if (fHit) hitParts.push(`複勝参考✅（購入なし）`);
       const hasWide = r.bet_strategy && r.bet_strategy.use_wide && r.bet_strategy.wide && r.bet_strategy.wide.length;
       if (res.wide_hit === 'True') {
         hitParts.push(`ワイド✅${wPay ? ' ' + wPay.toLocaleString() + '円' : ''}`);
@@ -1184,7 +1180,7 @@ function renderPredictions(cache) {
         hitParts.push(hasWide ? `ワイド❌` : `馬連❌`);
       }
       hitParts.push(`3連複${sHit ? '✅' : '❌'}${sPay ? ' ' + sPay.toLocaleString() + '円' : ''}`);
-      const anyHit = fHit || uHit || sHit;
+      const anyHit = uHit || sHit;
       const hitBanner = anyHit
         ? `<span class="hit-banner win">🎯 的中！ +${ret.toLocaleString()}円</span>`
         : `<span class="hit-banner loss">❌ 不的中</span>`;
@@ -1249,7 +1245,6 @@ function _renderFlatCard(raceId, r) {
   let betLine = '';
   if (bs.total_points) {
     const parts = [];
-    if (bs.fukusho && bs.fukusho.length) parts.push(`複勝:${bs.fukusho[0].num}番`);
     if (bs.tansho && bs.tansho.length) parts.push(`単勝:${bs.tansho[0].num}番`);
     if (bs.umaren && bs.umaren.length) parts.push(`馬連:${bs.umaren.map(u=>u.nums.join('-')).join('/')}`);
     if (bs.use_wide && bs.wide && bs.wide.length) parts.push(`ワイド:${bs.wide.map(w=>w.nums.join('-')).join('/')}`);

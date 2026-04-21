@@ -973,9 +973,9 @@ def _record_manual_result(race_id: str, race_name: str, race_date: str,
     fukusho_payout  = manual_pay.get("fukusho", 0)
     umaren_payout   = manual_pay.get("umaren", 0)
     sanren_payout   = manual_pay.get("sanrenpuku", 0)
-    # 投資: 複勝1点 + 馬連3点 + 3連複10点 = 14点 × 100円
-    bet_total       = 1400
-    return_total    = fukusho_payout + umaren_payout + sanren_payout
+    # 投資: ワイド3点×1,000円 + 3連複10点×100円 = 4,000円
+    bet_total       = 4000
+    return_total    = umaren_payout + sanren_payout
 
     def _a(i):
         return {"name": "", "num": result_nums[i] if i < len(result_nums) else 0}
@@ -1088,10 +1088,8 @@ def _fmt_result(race_name: str, race_date: str,
     # 特別戦/重賞以外はあっさり版（着順 + 的中/不的中 のみ）
     if not is_grade and not manual:
         hits = check_hits_from_bet_strategy(pred, actual_top3_nums, payouts)
-        any_hit = hits["fukusho_hit"] or hits["wide_hit"] or hits["sanren_hit"]
+        any_hit = hits["wide_hit"] or hits["sanren_hit"]
         parts = []
-        if hits["fukusho_hit"]:
-            parts.append("複勝✅")
         if hits["wide_hit"]:
             pay = hits["wide_pay"]
             parts.append(f"ワイド✅{f'({pay})' if pay else ''}")
@@ -1145,23 +1143,9 @@ def _fmt_result(race_name: str, race_date: str,
             tansho_line += f"（{re.sub(r'[¥,]', '', str(tansho_pay))}円）"
         lines.append(tansho_line)
 
-    # 複勝配当を取得
-    fukusho_pay_str = ""
-    if fukusho_hit and honmei_num:
-        if manual and manual.get("payouts", {}).get("fukusho"):
-            fukusho_pay_str = f"{manual['payouts']['fukusho']:,}"
-        else:
-            for _entry in payouts.get("複勝", []):
-                _cnums = set(re.findall(r"\d+", str(_entry.get("combo", ""))))
-                if str(honmei_num) in _cnums:
-                    _amt = _entry.get("amount")
-                    if _amt:
-                        fukusho_pay_str = f"{_amt:,}" if isinstance(_amt, int) else re.sub(r"[¥￥,円\s]", "", str(_amt))
-                    break
-    if fukusho_hit and fukusho_pay_str:
-        lines.append(f"複勝 ✅（◎{honmei_num}番 {honmei_name} 配当{fukusho_pay_str}円）")
-    else:
-        lines.append(f"複勝 {'✅' if fukusho_hit else '❌'}（◎{honmei_num}番 {honmei_name}）")
+    # 複勝は統計参考表示のみ（購入なし）
+    if honmei_num:
+        lines.append(f"複勝参考 {'✅' if fukusho_hit else '❌'}（◎{honmei_num}番 {honmei_name} ※購入なし）")
 
     if use_wide:
         wide_line = f"ワイド {'✅' if wide_hit else '❌'}"
@@ -1363,12 +1347,9 @@ def _format_simple_message(race_id: str, entry: dict) -> str:
     if bs and bs.get("total_points", 0) > 0:
         lines.append("")
         lines.append("💰 買い目")
-        if bs.get("fukusho"):
-            f = bs["fukusho"][0]
-            lines.append(f"複勝 {f['num']}番 {f.get('name', '')}  1,000円")
         if bs.get("use_wide") and bs.get("wide"):
             wide_str = " / ".join(f"{w['nums'][0]}-{w['nums'][1]}" for w in bs["wide"])
-            lines.append(f"ワイド {wide_str}  各300円")
+            lines.append(f"ワイド {wide_str}  各1,000円")
         if bs.get("umaren"):
             umaren_str = " / ".join(f"{u['nums'][0]}-{u['nums'][1]}" for u in bs["umaren"])
             lines.append(f"馬連 {umaren_str}  各100円")
@@ -1649,10 +1630,7 @@ def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = ""
             t = bs["tansho"][0]
             lines2.append(f"■ 単勝: {t['num']}番 {t.get('name', '')}")
 
-        # 複勝
-        if bs.get("fukusho"):
-            f = bs["fukusho"][0]
-            lines2.append(f"■ 複勝: {f['num']}番 {f.get('name', '')}")
+        # 複勝は廃止（統計追跡のみ）
 
         # 馬連 or ワイド
         if bs.get("use_wide") and bs.get("wide"):
@@ -1700,10 +1678,12 @@ def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = ""
         is_old_upper = any(kw in race_name for kw in ("2勝クラス", "3勝クラス", "オープン"))
         if is_fukushima or is_old_upper:
             filter_label = "福島" if is_fukushima else "古馬上級"
+            wide_pairs = list(combinations(nums[:3], 2))
+            wide_str = " / ".join(f"{a}-{b}" for a, b in wide_pairs)
             lines2 = [
                 _SEP, header, _SEP,
-                "■ 複勝（1点）", f"  {hon}番 {hon_name}",
-                _SEP, f"合計 1点（{filter_label}フィルタ: 複勝のみ）",
+                f"■ ワイド（{len(wide_pairs)}点）", f"  {wide_str}  各1,000円",
+                _SEP, f"合計 {len(wide_pairs)}点（{filter_label}フィルタ）",
             ]
         else:
             wide_pairs = list(combinations(nums[:3], 2))
@@ -1714,12 +1694,11 @@ def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = ""
                 partners = partners + [ana_buy]
             sanren_pt = len(list(combinations(partners, 2)))
             partners_str = "/".join(str(n) for n in partners)
-            total = 1 + len(wide_pairs) + sanren_pt
+            total = len(wide_pairs) + sanren_pt
             lines2 = [
                 _SEP, header, _SEP,
-                "■ 複勝（1点）", f"  {hon}番 {hon_name}",
-                f"■ ワイド（{len(wide_pairs)}点）", f"  {wide_str}",
-                f"■ 3連複（{sanren_pt}点）", f"  軸{hon}番 x {partners_str}",
+                f"■ ワイド（{len(wide_pairs)}点）", f"  {wide_str}  各1,000円",
+                f"■ 3連複（{sanren_pt}点）", f"  軸{hon}番 x {partners_str}  各100円",
                 _SEP, f"合計 {total}点",
             ]
 
