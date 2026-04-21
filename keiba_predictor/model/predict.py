@@ -388,13 +388,14 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     """
     from itertools import combinations as _comb
 
-    # ── 予算: 全レース統一3,000円（得意ゾーン増額は廃止: ROI 89%で逆効果） ──
+    # ── 予算: ワイド各1000×3 + 3連複100×10 = 4,000円 ──
+    # 複勝は廃止（ROI 53%で足を引っ張る）
+    # ワイドROI 303% + 3連複ROI 149% = 合計ROI 165%
     venue_code = race_id[4:6] if len(race_id) >= 6 else ""
 
-    BUDGET = 3000
+    BUDGET = 4000
     UNIT = 100
-    WIDE_UNIT = 300
-    FUKUSHO_UNIT = 1000
+    WIDE_UNIT = 1000
 
     _SKIP = {
         "fukusho": [], "umaren": [], "wide": [],
@@ -474,22 +475,12 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     notes = []
     remaining = BUDGET
 
-    # ── 優先1: 複勝 1000円 ──
-    if remaining >= FUKUSHO_UNIT:
-        strategy["fukusho"] = [{"num": hon, "name": names.get(hon, "")}]
-        remaining -= FUKUSHO_UNIT
-        notes.append("複勝")
-
+    # EV < 1.0 → 見送り（複勝廃止のため買い目なし）
     if fukusho_only:
-        # EV < 1.0 → 複勝のみで打ち止め
-        notes.append(f"(低EV{hon_ev:.2f}フィルタ)")
-        total_cost = BUDGET - remaining
-        strategy["total_points"] = len(strategy["fukusho"])
-        strategy["total_cost"] = total_cost
-        strategy["strategy_note"] = " + ".join(notes)
-        return strategy
+        _SKIP["strategy_note"] = f"見送り（低EV {hon_ev:.2f}）"
+        return _SKIP
 
-    # ── 優先2: ワイド（上位3頭の組合せ 3点） ──
+    # ── 優先1: ワイド 各1,000円×3点 ──
     pairs = [{"nums": list(p)} for p in _comb(nums[:3], 2)]
     cost = len(pairs) * WIDE_UNIT
     if remaining >= cost:
@@ -498,7 +489,7 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
         notes.append("ワイド")
         remaining -= cost
 
-    # ── 優先3: 3連複 ◎1頭軸 × 相手4頭(+穴馬) ──
+    # ── 優先2: 3連複 ◎1頭軸 × 相手4頭(+穴馬) 100円×N点 ──
     if remaining >= 3 * UNIT:
         aite = list(nums[1:5])
         if ana_num and ana_num not in aite:
