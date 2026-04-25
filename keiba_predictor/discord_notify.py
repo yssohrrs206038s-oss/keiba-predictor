@@ -1398,7 +1398,7 @@ def check_hits_from_bet_strategy(
             predicted_nums, actual_top3_nums, payouts, ana_horse_num, pred=pred)
         wide_pairs = _check_wide_pairs_raw(predicted_nums, actual_top3_nums, payouts)
         wide_hit = any(h for _, h, _ in wide_pairs)
-        wide_pay_total = sum(_payout_str_to_int(p) for _, h, p in wide_pairs if h)
+        wide_pay_total = sum(_payout_str_to_int(p) * 10 for _, h, p in wide_pairs if h)  # ワイド1,000円賭け
         return {
             "tansho_hit": False, "tansho_num": None, "tansho_pay": "",
             "fukusho_hit": fukusho_hit, "fukusho_num": honmei_num,
@@ -1448,7 +1448,7 @@ def check_hits_from_bet_strategy(
             if a in actual_top3_set and b in actual_top3_set:
                 combo = f"{a}-{b}"
                 pay_str = _get_payout(payouts, "ワイド", combo)
-                wide_pay_total += _payout_str_to_int(pay_str)
+                wide_pay_total += _payout_str_to_int(pay_str) * 10  # ワイド1,000円賭け
                 wide_hit = True
 
     # 3連複
