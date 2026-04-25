@@ -430,9 +430,15 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     # 3歳未勝利(ROI100%)・3歳1勝(ROI74%)・古馬(ROI11-43%)は見送り
     is_fukushima = venue_code == "03"
     is_grade = any(kw in race_name for kw in ("(G", "（G"))
+    is_shogai = "障害" in race_name  # 障害レースはモデル対象外
     is_tokubetsu = not any(kw in race_name for kw in (
-        "未勝利", "1勝クラス", "2勝クラス", "3勝クラス", "オープン",
+        "未勝利", "1勝クラス", "2勝クラス", "3勝クラス", "オープン", "OP",
     ))
+
+    # 障害レースは見送り（モデルは平地で学習）
+    if is_shogai:
+        _SKIP["strategy_note"] = "見送り（障害レース: 平地モデル対象外）"
+        return _SKIP
 
     # 福島は重賞のみ
     if is_fukushima and not is_grade:

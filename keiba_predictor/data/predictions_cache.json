@@ -2696,41 +2696,11 @@
     "bet_strategy": {
       "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            7,
-            8
-          ]
-        },
-        {
-          "nums": [
-            7,
-            5
-          ]
-        },
-        {
-          "nums": [
-            8,
-            5
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          7
-        ],
-        "aite": [
-          8,
-          5,
-          2,
-          4,
-          3
-        ]
-      },
-      "total_points": 13,
-      "total_cost": 4000,
-      "strategy_note": "ワイド + 3連複◎軸x5+穴",
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（障害レース: 平地モデル対象外）",
       "use_wide": true
     },
     "simulation": {
