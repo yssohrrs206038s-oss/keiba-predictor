@@ -781,8 +781,8 @@ function renderTodayBanner(rows) {
 ════════════════════════════════════════════════════════════ */
 function pct(v) { return isNaN(v) ? '—' : (v * 100).toFixed(0) + '%'; }
 
-// 見送り行を除外するフィルタ（bet_total > 0 の行のみ）
-function isBetted(r) { return (+r.bet_total || 0) > 0; }
+// 見送り行を除外するフィルタ（bet_total > 0 かつ障害レースは除外）
+function isBetted(r) { return (+r.bet_total || 0) > 0 && !(r.race_name || '').includes('障害'); }
 
 function renderStats(rows) {
   if (!rows.length) return;
