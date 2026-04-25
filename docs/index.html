@@ -1358,7 +1358,8 @@ function _renderFlatCard(raceId, r) {
     if (bs.use_wide && bs.wide && bs.wide.length) parts.push(`ワイド:${bs.wide.map(w=>w.nums.join('-')).join('/')}`);
     if (bs.sanrenpuku && bs.sanrenpuku.jiku) parts.push(`3連複`);
     if (bs.sanrentan && bs.sanrentan.first) parts.push(`3連単`);
-    betLine = `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${parts.join(' / ')} 計${bs.total_points}点</div>`;
+    const totalCost = bs.total_cost || bs.total_points * 100;
+    betLine = `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${parts.join(' / ')} 計${totalCost.toLocaleString()}円</div>`;
   }
   return `<div class="race-card" style="padding:12px 16px;">
     <div style="font-size:13px;font-weight:700;margin-bottom:4px;">
