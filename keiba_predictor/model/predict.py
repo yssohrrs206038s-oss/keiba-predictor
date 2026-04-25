@@ -434,6 +434,9 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     is_tokubetsu = not any(kw in race_name for kw in (
         "未勝利", "1勝クラス", "2勝クラス", "3勝クラス", "オープン", "OP",
     ))
+    # 出走馬の年齢から3歳限定戦か古馬戦かを判定
+    _ages = pd.to_numeric(result_df.get("age", pd.Series(dtype=float)), errors="coerce").dropna()
+    is_3yo_race = len(_ages) > 0 and _ages.max() <= 3  # 全馬3歳 → 3歳特別
 
     # 障害レースは見送り（モデルは平地で学習）
     if is_shogai:
@@ -448,6 +451,11 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     # 未勝利・クラス戦は見送り（特別戦/重賞以外）
     if not is_tokubetsu and not is_grade:
         _SKIP["strategy_note"] = "見送り（クラス戦: 特別戦/重賞に厳選）"
+        return _SKIP
+
+    # 古馬特別は見送り（名前付き特別でも4歳以上馬が出走 → 古馬2〜3勝クラス相当）
+    if is_tokubetsu and not is_grade and not is_3yo_race:
+        _SKIP["strategy_note"] = "見送り（古馬特別: 重賞/3歳特別に厳選）"
         return _SKIP
 
     # EV < 1.0 → 複勝のみ

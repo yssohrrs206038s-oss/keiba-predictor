@@ -1763,41 +1763,11 @@
     "bet_strategy": {
       "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            9,
-            7
-          ]
-        },
-        {
-          "nums": [
-            9,
-            6
-          ]
-        },
-        {
-          "nums": [
-            7,
-            6
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          9
-        ],
-        "aite": [
-          7,
-          6,
-          2,
-          4,
-          8
-        ]
-      },
-      "total_points": 40,
-      "total_cost": 4000,
-      "strategy_note": "ワイド + 3連複◎軸x5+穴",
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
       "use_wide": true
     },
     "simulation": {
@@ -1940,41 +1910,11 @@
     "bet_strategy": {
       "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            4,
-            6
-          ]
-        },
-        {
-          "nums": [
-            4,
-            15
-          ]
-        },
-        {
-          "nums": [
-            6,
-            15
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          4
-        ],
-        "aite": [
-          6,
-          15,
-          8,
-          13,
-          9
-        ]
-      },
-      "total_points": 40,
-      "total_cost": 4000,
-      "strategy_note": "ワイド + 3連複◎軸x5+穴",
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
       "use_wide": true
     },
     "simulation": {
@@ -3599,41 +3539,11 @@
     "bet_strategy": {
       "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            10,
-            1
-          ]
-        },
-        {
-          "nums": [
-            10,
-            9
-          ]
-        },
-        {
-          "nums": [
-            1,
-            9
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          10
-        ],
-        "aite": [
-          1,
-          9,
-          5,
-          2,
-          6
-        ]
-      },
-      "total_points": 40,
-      "total_cost": 4000,
-      "strategy_note": "ワイド + 3連複◎軸x5+穴",
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
       "use_wide": true
     },
     "simulation": {
@@ -3776,41 +3686,11 @@
     "bet_strategy": {
       "fukusho": [],
       "umaren": [],
-      "wide": [
-        {
-          "nums": [
-            10,
-            12
-          ]
-        },
-        {
-          "nums": [
-            10,
-            5
-          ]
-        },
-        {
-          "nums": [
-            12,
-            5
-          ]
-        }
-      ],
-      "sanrenpuku": {
-        "jiku": [
-          10
-        ],
-        "aite": [
-          12,
-          5,
-          11,
-          4,
-          2
-        ]
-      },
-      "total_points": 40,
-      "total_cost": 4000,
-      "strategy_note": "ワイド + 3連複◎軸x5+穴",
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
       "use_wide": true
     },
     "simulation": {
