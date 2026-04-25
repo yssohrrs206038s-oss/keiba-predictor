@@ -1660,7 +1660,11 @@ def _format_prediction_from_cache(race_name: str, entry: dict, race_id: str = ""
             lines2.append(f"■ 3連単({st_pt}点): 1着{st['first']}番 x {'/'.join(str(n) for n in st['aite'])}")
 
         total_cost = bs.get('total_cost', bs['total_points'] * 100)
-        lines2 += [_SEP, f"合計 {bs['total_points']}点 / {total_cost:,}円"]
+        _w = len(bs.get('wide', [])); _u = len(bs.get('umaren', []))
+        _sr = bs.get('sanrenpuku', {}); _sa = _sr.get('aite', [])
+        _sp = len(list(combinations(_sa, 2))) if len(_sr.get('jiku', [])) == 1 else len(_sa)
+        display_pts = _w + _u + _sp
+        lines2 += [_SEP, f"合計 {display_pts}点 / {total_cost:,}円"]
         if bs.get("strategy_note"):
             lines2.append(f"💡 {bs['strategy_note']}")
     else:
