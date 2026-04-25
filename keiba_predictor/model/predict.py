@@ -510,10 +510,11 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
                 break
             aite = aite[:-1]
 
-    # 合計
+    # 合計（total_points は 100円 単位換算: ワイド1点=1000円=10単位）
     total_cost = BUDGET - remaining
     total_points = len(strategy["fukusho"])
-    total_points += len(strategy["umaren"]) + len(strategy["wide"])
+    total_points += len(strategy["umaren"])
+    total_points += len(strategy["wide"]) * (WIDE_UNIT // UNIT)  # ワイド1点=1000円=10単位
     sr = strategy["sanrenpuku"]
     if sr:
         total_points += len(list(_comb(sr.get("aite", []), 2)))
