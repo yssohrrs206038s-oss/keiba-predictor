@@ -220,12 +220,12 @@ def record_result(
     sanren_payout   = _payout_str_to_int(hits["sanren_pay"])
     sanrentan_payout = _payout_str_to_int(hits.get("sanrentan_pay", ""))
 
-    bet_total    = hits["bet_total"] if hits["bet_total"] > 0 else BETS_PER_RACE_TOTAL
+    bet_total    = hits["bet_total"]  # 見送りレースは0のまま（フォールバックしない）
     # 複勝は統計追跡のみ（購入しないため回収額に含めない）
     honmei_num = hits["fukusho_num"]
     # 単勝は100円単位
     tansho_return = tansho_payout if tansho_hit else 0
-    return_total = tansho_return + umaren_payout + wide_payout + sanren_payout + sanrentan_payout
+    return_total = (tansho_return + umaren_payout + wide_payout + sanren_payout + sanrentan_payout) if bet_total > 0 else 0
 
     row = {
         "date":       race_date,
@@ -292,7 +292,7 @@ def weekly_summary(df: pd.DataFrame, week_end: date) -> dict:
     ws = pd.Timestamp(week_start)
     we = pd.Timestamp(week_end)
     mask = (df["date"] >= ws) & (df["date"] <= we + pd.Timedelta(days=1) - pd.Timedelta(seconds=1))
-    wdf = df[mask]
+    wdf = df[mask & (df["bet_total"] > 0)]  # 実買いレースのみ
 
     if wdf.empty:
         return {"n_races": 0, "fukusho_rate": 0.0, "umaren_rate": 0.0,
@@ -316,6 +316,7 @@ def weekly_summary(df: pd.DataFrame, week_end: date) -> dict:
 
 def cumulative_summary(df: pd.DataFrame) -> dict:
     """全期間の累計集計 dict を返す。"""
+    df = df[df["bet_total"] > 0]  # 実買いレースのみ
     if df.empty:
         return {"n_races": 0, "fukusho_rate": 0.0, "umaren_rate": 0.0,
                 "wide_rate": 0.0, "sanrenpuku_rate": 0.0,
