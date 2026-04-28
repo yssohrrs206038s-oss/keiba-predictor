@@ -2019,7 +2019,11 @@ def run_result_notify(
             payouts = scrape_payouts(race_id, session) if actual_df is not None else {}
 
         if actual_df is None or actual_df.empty:
-            send_discord(webhook_url, f"⚠️ **{race_name}** の結果が取得できませんでした。")
+            # 当日以外（土曜分を日曜に再試行等）はログのみでスキップ
+            if race_date and race_date != today_str:
+                logger.info(f"  結果取得失敗（過去日スキップ）: {race_name} ({race_id})")
+            else:
+                send_discord(webhook_url, f"⚠️ **{race_name}** の結果が取得できませんでした。")
             continue
 
         # 予想キャッシュ取得
