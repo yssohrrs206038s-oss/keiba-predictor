@@ -1135,6 +1135,7 @@ def _fmt_result(race_name: str, race_date: str,
         use_wide = hits["use_wide"]
         wide_hit = hits["wide_hit"]
         wide_pay = hits["wide_pay"]
+        wide_combos = hits.get("wide_combos", [])
 
     # 単勝（買っていた場合のみ表示）
     if hits.get("tansho_num") if not manual else False:
@@ -1143,15 +1144,19 @@ def _fmt_result(race_name: str, race_date: str,
             tansho_line += f"（{re.sub(r'[¥,]', '', str(tansho_pay))}円）"
         lines.append(tansho_line)
 
-    # 複勝は統計参考表示のみ（購入なし）
-    if honmei_num:
-        lines.append(f"複勝参考 {'✅' if fukusho_hit else '❌'}（◎{honmei_num}番 {honmei_name} ※購入なし）")
-
     if use_wide:
-        wide_line = f"ワイド {'✅' if wide_hit else '❌'}"
-        if wide_hit and wide_pay:
-            wide_line += f"（{_payout_str_to_int(wide_pay) if isinstance(wide_pay, str) else wide_pay}円）"
-        lines.append(wide_line)
+        if wide_combos:
+            for combo, hit, pay_int in wide_combos:
+                icon = "✅" if hit else "❌"
+                combo_line = f"ワイド {combo} {icon}"
+                if hit and pay_int:
+                    combo_line += f"（{pay_int:,}円）"
+                lines.append(combo_line)
+        else:
+            wide_line = f"ワイド {'✅' if wide_hit else '❌'}"
+            if wide_hit and wide_pay:
+                wide_line += f"（{_payout_str_to_int(wide_pay) if isinstance(wide_pay, str) else wide_pay}円）"
+            lines.append(wide_line)
     else:
         umaren_line = f"馬連 {'✅' if umaren_hit else '❌'}"
         if umaren_hit and umaren_pay:
@@ -1399,11 +1404,12 @@ def check_hits_from_bet_strategy(
         wide_pairs = _check_wide_pairs_raw(predicted_nums, actual_top3_nums, payouts)
         wide_hit = any(h for _, h, _ in wide_pairs)
         wide_pay_total = sum(_payout_str_to_int(p) * 10 for _, h, p in wide_pairs if h)  # ワイド1,000円賭け
+        wide_combos = [(c, h, _payout_str_to_int(p) * 10) for c, h, p in wide_pairs]
         return {
             "tansho_hit": False, "tansho_num": None, "tansho_pay": "",
             "fukusho_hit": fukusho_hit, "fukusho_num": honmei_num,
             "umaren_hit": umaren_hit, "umaren_pay": umaren_pay,
-            "wide_hit": wide_hit, "wide_pay": wide_pay_total,
+            "wide_hit": wide_hit, "wide_pay": wide_pay_total, "wide_combos": wide_combos,
             "sanren_hit": sanren_hit, "sanren_pay": sanren_pay,
             "sanrentan_hit": False, "sanrentan_pay": "",
             "use_wide": False, "bet_total": 2300,
@@ -1440,15 +1446,19 @@ def check_hits_from_bet_strategy(
     # ワイド
     wide_hit = False
     wide_pay_total = 0
+    wide_combos: list = []
     use_wide = bs.get("use_wide", False)
     if use_wide and bs.get("wide"):
         actual_top3_set = set(actual_top3_nums[:3]) if len(actual_top3_nums) >= 3 else set()
         for w in bs["wide"]:
             a, b = w["nums"]
-            if a in actual_top3_set and b in actual_top3_set:
-                combo = f"{a}-{b}"
-                pay_str = _get_payout(payouts, "ワイド", combo)
-                wide_pay_total += _payout_str_to_int(pay_str) * 10  # ワイド1,000円賭け
+            combo = f"{a}-{b}"
+            hit = a in actual_top3_set and b in actual_top3_set
+            pay_str = _get_payout(payouts, "ワイド", combo) if hit else ""
+            pay_int = _payout_str_to_int(pay_str) * 10 if hit else 0  # ワイド1,000円賭け
+            wide_combos.append((combo, hit, pay_int))
+            if hit:
+                wide_pay_total += pay_int
                 wide_hit = True
 
     # 3連複
@@ -1495,7 +1505,7 @@ def check_hits_from_bet_strategy(
         "tansho_hit": tansho_hit, "tansho_num": tansho_num, "tansho_pay": tansho_pay,
         "fukusho_hit": fukusho_hit, "fukusho_num": fukusho_num,
         "umaren_hit": umaren_hit, "umaren_pay": umaren_pay,
-        "wide_hit": wide_hit, "wide_pay": wide_pay_total,
+        "wide_hit": wide_hit, "wide_pay": wide_pay_total, "wide_combos": wide_combos,
         "sanren_hit": sanren_hit, "sanren_pay": sanren_pay,
         "sanrentan_hit": sanrentan_hit, "sanrentan_pay": sanrentan_pay,
         "use_wide": use_wide, "bet_total": bs.get("total_cost", bs.get("total_points", 0) * 100),
@@ -2070,8 +2080,10 @@ def run_result_notify(
 
     # 週次サマリーを Discord に送信（日曜のみ）
     try:
-        today = _date.today()
-        if today.weekday() == 6:  # 日曜日
+        from datetime import datetime as _dt_jst, timezone as _tz_jst, timedelta as _td_jst
+        _jst = _tz_jst(_td_jst(hours=9))
+        today = _dt_jst.now(_jst).date()
+        if today.weekday() == 6:  # 日曜日（JST）
             from keiba_predictor.analysis.loss_analysis import analyze_week
             summary_msg = analyze_week()
             if summary_msg:
@@ -2082,8 +2094,8 @@ def run_result_notify(
     # 日曜日に週次サマリーを X に投稿
     if os.environ.get("ENABLE_X_POST", "false").lower() == "true":
         try:
-            today = _date.today()
-            if today.weekday() == 6:  # 日曜日
+            today = _dt_jst.now(_jst).date()
+            if today.weekday() == 6:  # 日曜日（JST）
                 from datetime import timedelta
                 hist_df = load_history()
                 week_start = today - timedelta(days=today.weekday())  # 月曜
