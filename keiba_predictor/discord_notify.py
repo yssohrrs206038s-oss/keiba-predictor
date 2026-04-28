@@ -1978,6 +1978,12 @@ def run_result_notify(
         race_name = cached_name or race.get("race_name", race_id)
         race_date = race.get("race_date", "")
 
+        # 見送り（shadow bet）レースは結果通知しない
+        _bs = cache.get(race_id, {}).get("bet_strategy", {})
+        if _bs and _bs.get("total_cost", 0) == 0:
+            logger.info(f"  見送りレースのためスキップ: {race_name} ({race_id})")
+            continue
+
         # 結果通知済みならスキップ（--race-id指定時は強制再送）
         _forced = len(grade_races) == 1 and grade_races[0].get("race_id") == race_id
         if not _forced and (cache.get(race_id, {}).get("result_notified") or race_id in history_ids):
