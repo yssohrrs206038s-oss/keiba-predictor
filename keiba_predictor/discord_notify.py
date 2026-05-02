@@ -1896,6 +1896,10 @@ def run_result_notify(
     result_url = os.environ.get("DISCORD_RESULT_WEBHOOK_URL", "")
     webhook_url = result_url if result_url else _resolve_webhook(webhook_url)
 
+    from datetime import datetime as _dt, timezone as _tz, timedelta as _td2
+    _jst = _tz(_td2(hours=9))
+    today_str = _dt.now(_jst).date().isoformat()
+
     session = requests.Session()
     cache   = _load_cache_for_result()  # 結果照合は13時スナップショット優先（後出し防止）
 
