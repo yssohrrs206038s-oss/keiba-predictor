@@ -75,9 +75,7 @@ jobs:
 
       - name: Playwright Chromium をインストール
         run: |
-          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
-            python -m playwright install chromium
-          fi
+          python -m playwright install chromium
           python -m playwright install-deps chromium
 
       # ── Discord 結果通知（デバッグモード有効）────────────────
