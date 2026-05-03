@@ -373,7 +373,8 @@ def _calc_confidence(pred: dict) -> tuple[int, str]:
 
 def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False,
                          confidence: int = 0, ana_horse_num: int | None = None,
-                         race_id: str = "", race_name: str = "") -> dict:
+                         race_id: str = "", race_name: str = "",
+                         is_grade_override: bool | None = None) -> dict:
     """
     予測結果DataFrameから予算3000円以内で最適な買い目を自動決定する。
 
@@ -430,6 +431,8 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     # 3歳未勝利(ROI100%)・3歳1勝(ROI74%)・古馬(ROI11-43%)は見送り
     is_fukushima = venue_code == "03"
     is_grade = any(kw in race_name for kw in ("(G", "（G"))
+    if is_grade_override is not None:
+        is_grade = is_grade_override
     is_shogai = "障害" in race_name  # 障害レースはモデル対象外
     is_tokubetsu = not any(kw in race_name for kw in (
         "未勝利", "1勝クラス", "2勝クラス", "3勝クラス", "オープン", "OP",

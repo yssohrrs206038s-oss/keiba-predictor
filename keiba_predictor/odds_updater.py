@@ -324,7 +324,8 @@ def _check_bet_strategy_changes(cache: dict) -> list[str]:
             _ana = entry.get("ana_horse_num")
             _rname = entry.get("race_name", "")
             new_bs = _decide_bet_strategy(df, ana_horse_num=_ana,
-                                          race_id=race_id, race_name=_rname)
+                                          race_id=race_id, race_name=_rname,
+                                          is_grade_override=entry.get("is_grade"))
         except Exception:
             continue
 

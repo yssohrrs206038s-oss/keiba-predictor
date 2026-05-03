@@ -371,12 +371,42 @@
     "bet_strategy": {
       "fukusho": [],
       "umaren": [],
-      "wide": [],
-      "sanrenpuku": {},
-      "total_points": 0,
-      "total_cost": 0,
-      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
-      "use_wide": false
+      "wide": [
+        {
+          "nums": [
+            3,
+            9
+          ]
+        },
+        {
+          "nums": [
+            3,
+            2
+          ]
+        },
+        {
+          "nums": [
+            9,
+            2
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          3
+        ],
+        "aite": [
+          9,
+          2,
+          8,
+          7,
+          13
+        ]
+      },
+      "total_points": 40,
+      "total_cost": 4000,
+      "strategy_note": "ワイド + 3連複◎軸x5+穴",
+      "use_wide": true
     },
     "simulation": {
       "3": {
