@@ -10659,5 +10659,39 @@
       "race_volatility": 2.297,
       "is_volatile_race": true
     }
+  },
+  "202604010511": {
+    "race_name": "��井��紊ц�����",
+    "race_date": "2026-05-16",
+    "start_time": "",
+    "venue": "新潟",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202605020811": {
+    "race_name": "��眼�ｃ�����������",
+    "race_date": "2026-05-16",
+    "start_time": "",
+    "venue": "東京",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
