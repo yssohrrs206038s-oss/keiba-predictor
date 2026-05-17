@@ -6260,19 +6260,19 @@
       "horse_number": 5,
       "horse_name": "バルボアパーク",
       "prob": 0.9612,
-      "odds": 2.5
+      "odds": 2.9
     },
     "taikou": {
       "horse_number": 1,
       "horse_name": "ヴンダーバール",
       "prob": 0.9533,
-      "odds": 2.7
+      "odds": 3.0
     },
     "ana": {
       "horse_number": 4,
       "horse_name": "ルージュカルデア",
       "prob": 0.898,
-      "odds": 15.4
+      "odds": 16.7
     },
     "predicted_top3_nums": [
       5,
@@ -6291,26 +6291,26 @@
       {
         "horse_number": 8,
         "horse_name": "オウケンサクラコ",
-        "ev_score": 43.974,
+        "ev_score": 92.42,
         "prob": 0.418,
-        "odds": 105.2,
+        "odds": 221.1,
         "popularity": 8
       },
       {
         "horse_number": 3,
         "horse_name": "ファンシーズ",
-        "ev_score": 26.158,
+        "ev_score": 39.492,
         "prob": 0.638,
-        "odds": 41.0,
+        "odds": 61.9,
         "popularity": 7
       },
       {
         "horse_number": 2,
         "horse_name": "フィアーブル",
-        "ev_score": 16.804,
+        "ev_score": 13.292,
         "prob": 0.836,
-        "odds": 20.1,
-        "popularity": 6
+        "odds": 15.9,
+        "popularity": 5
       }
     ],
     "ana_horse_num": 8,
@@ -6407,19 +6407,19 @@
       "horse_number": 6,
       "horse_name": "タイセイフレッサ",
       "prob": 0.6777,
-      "odds": 14.5
+      "odds": 9.2
     },
     "taikou": {
       "horse_number": 7,
       "horse_name": "リアライズリバティ",
       "prob": 0.6753,
-      "odds": 6.2
+      "odds": 5.4
     },
     "ana": {
       "horse_number": 8,
       "horse_name": "デアトゥノウ",
       "prob": 0.6753,
-      "odds": 71.4
+      "odds": 138.8
     },
     "predicted_top3_nums": [
       6,
@@ -6438,25 +6438,25 @@
       {
         "horse_number": 8,
         "horse_name": "デアトゥノウ",
-        "ev_score": 48.216,
+        "ev_score": 93.732,
         "prob": 0.6753,
-        "odds": 71.4,
+        "odds": 138.8,
         "popularity": 7
       },
       {
         "horse_number": 6,
         "horse_name": "タイセイフレッサ",
-        "ev_score": 9.827,
+        "ev_score": 6.235,
         "prob": 0.6777,
-        "odds": 14.5,
+        "odds": 9.2,
         "popularity": 6
       },
       {
         "horse_number": 7,
         "horse_name": "リアライズリバティ",
-        "ev_score": 4.187,
+        "ev_score": 3.647,
         "prob": 0.6753,
-        "odds": 6.2,
+        "odds": 5.4,
         "popularity": 5
       }
     ],
@@ -6839,19 +6839,19 @@
       "horse_number": 11,
       "horse_name": "グレイスザクラウン",
       "prob": 0.746,
-      "odds": 12.6
+      "odds": 12.8
     },
     "taikou": {
       "horse_number": 8,
       "horse_name": "キングツェッペリン",
       "prob": 0.7116,
-      "odds": 32.3
+      "odds": 34.2
     },
     "ana": {
       "horse_number": 12,
       "horse_name": "コパノエビータ",
       "prob": 0.6933,
-      "odds": 94.5
+      "odds": 95.9
     },
     "predicted_top3_nums": [
       11,
@@ -6870,25 +6870,25 @@
       {
         "horse_number": 12,
         "horse_name": "コパノエビータ",
-        "ev_score": 65.517,
+        "ev_score": 66.487,
         "prob": 0.6933,
-        "odds": 94.5,
+        "odds": 95.9,
         "popularity": 15
       },
       {
         "horse_number": 8,
         "horse_name": "キングツェッペリン",
-        "ev_score": 22.985,
+        "ev_score": 24.337,
         "prob": 0.7116,
-        "odds": 32.3,
+        "odds": 34.2,
         "popularity": 11
       },
       {
         "horse_number": 11,
         "horse_name": "グレイスザクラウン",
-        "ev_score": 9.4,
+        "ev_score": 9.549,
         "prob": 0.746,
-        "odds": 12.6,
+        "odds": 12.8,
         "popularity": 5
       }
     ],
@@ -8309,19 +8309,19 @@
       "horse_number": 6,
       "horse_name": "アスクデッドヒート",
       "prob": 0.4961,
-      "odds": 6.4
+      "odds": 7.7
     },
     "taikou": {
       "horse_number": 3,
       "horse_name": "ベイラム",
       "prob": 0.4828,
-      "odds": 10.0
+      "odds": 7.9
     },
     "ana": {
       "horse_number": 4,
       "horse_name": "パープルクラウド",
       "prob": 0.4811,
-      "odds": 35.5
+      "odds": 130.6
     },
     "predicted_top3_nums": [
       6,
@@ -8340,26 +8340,26 @@
       {
         "horse_number": 4,
         "horse_name": "パープルクラウド",
-        "ev_score": 17.079,
+        "ev_score": 62.832,
         "prob": 0.4811,
-        "odds": 35.5,
-        "popularity": 8
-      },
-      {
-        "horse_number": 3,
-        "horse_name": "ベイラム",
-        "ev_score": 4.828,
-        "prob": 0.4828,
-        "odds": 10.0,
-        "popularity": 5
+        "odds": 130.6,
+        "popularity": 9
       },
       {
         "horse_number": 6,
         "horse_name": "アスクデッドヒート",
-        "ev_score": 3.175,
+        "ev_score": 3.82,
         "prob": 0.4961,
-        "odds": 6.4,
-        "popularity": 2
+        "odds": 7.7,
+        "popularity": 3
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "ベイラム",
+        "ev_score": 3.814,
+        "prob": 0.4828,
+        "odds": 7.9,
+        "popularity": 4
       }
     ],
     "ana_horse_num": 8,
@@ -10367,19 +10367,19 @@
       "horse_number": 9,
       "horse_name": "ワイドアラジン",
       "prob": 0.7362,
-      "odds": 71.3
+      "odds": 72.4
     },
     "taikou": {
       "horse_number": 7,
       "horse_name": "マイエレメント",
       "prob": 0.7337,
-      "odds": 8.4
+      "odds": 8.1
     },
     "ana": {
       "horse_number": 14,
       "horse_name": "ミエスペランサ",
       "prob": 0.7115,
-      "odds": 16.0
+      "odds": 14.8
     },
     "predicted_top3_nums": [
       9,
@@ -10398,25 +10398,25 @@
       {
         "horse_number": 9,
         "horse_name": "ワイドアラジン",
-        "ev_score": 52.491,
+        "ev_score": 53.301,
         "prob": 0.7362,
-        "odds": 71.3,
+        "odds": 72.4,
         "popularity": 16
       },
       {
         "horse_number": 14,
         "horse_name": "ミエスペランサ",
-        "ev_score": 11.384,
+        "ev_score": 10.53,
         "prob": 0.7115,
-        "odds": 16.0,
+        "odds": 14.8,
         "popularity": 7
       },
       {
         "horse_number": 7,
         "horse_name": "マイエレメント",
-        "ev_score": 6.163,
+        "ev_score": 5.943,
         "prob": 0.7337,
-        "odds": 8.4,
+        "odds": 8.1,
         "popularity": 3
       }
     ],
