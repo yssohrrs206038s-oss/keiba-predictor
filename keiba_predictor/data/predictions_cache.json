@@ -7182,5 +7182,22 @@
       "race_volatility": 3.266,
       "is_volatile_race": true
     }
+  },
+  "202605030211": {
+    "race_name": "絎���域��綽�",
+    "race_date": "2026-06-06",
+    "start_time": "",
+    "venue": "東京",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
