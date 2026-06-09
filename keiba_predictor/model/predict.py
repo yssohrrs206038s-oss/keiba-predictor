@@ -376,16 +376,18 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
                          race_id: str = "", race_name: str = "",
                          is_grade_override: bool | None = None) -> dict:
     """
-    予測結果DataFrameから予算3000円以内で最適な買い目を自動決定する。
+    予測結果DataFrameから予算4,000円以内で最適な買い目を自動決定する。
 
-    固定構成（上から順に予算配分）:
-    1. 複勝 1000円（◎の1頭）
-    2. ワイド 300円×3点（上位3頭の組合せ）
-    3. 3連複 ◎1頭軸 × 相手4頭(+穴馬) 100円×N点（残り予算で）
+    固定構成（ワイド優先→3連複）:
+    1. ワイド 1,000円×3点（上位3頭の組合せ）= 3,000円
+    2. 3連複 ◎1頭軸 × 相手4-5頭 100円×N点（残り1,000円以内）
 
-    フィルタ（成績分析に基づく見送り条件）:
-    - 福島開催: 複勝のみ（回収率55%→ワイド・3連複を見送り）
-    - 古馬2勝クラス以上: 複勝のみ（回収率11%→多点買い見送り）
+    フィルタ（完全見送り条件）:
+    - 未勝利・クラス戦: 見送り
+    - 古馬特別（4歳以上出走の名前付き特別）: 見送り
+    - 福島平場: 重賞のみ
+    - 障害レース: 見送り
+    - ◎EV < 1.2: 見送り（◎確率×オッズ<1.2のマイナス見込みレース）
     """
     from itertools import combinations as _comb
 
@@ -420,11 +422,12 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
 
     hon = nums[0]
 
-    # ◎のEV（期待値）チェック: prob × odds < 1.0 なら期待値マイナス → 複勝のみ
+    # ◎のEV（期待値）チェック: prob × odds < 1.2 なら期待値不足 → 完全見送り
     hon_prob = pd.to_numeric(result_df.iloc[0].get("prob_top3"), errors="coerce")
     hon_odds = pd.to_numeric(result_df.iloc[0].get("odds"), errors="coerce")
     hon_ev = float(hon_prob) * float(hon_odds) if pd.notna(hon_prob) and pd.notna(hon_odds) else None
-    low_ev = hon_ev is not None and hon_ev < 1.0
+    # EV閾値1.2: 1.0→1.2に引上げ（実績ROI 37%/8戦、アウトライヤー除外後58.8%の改善目的）
+    low_ev = hon_ev is not None and hon_ev < 1.2
 
     # ── フィルタ: 特別戦/重賞のみ（平均6戦/日、ROI 216%） ──
     # 特別戦 = 9-12R付近の条件特別・リステッド・重賞
@@ -461,9 +464,6 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
         _SKIP["strategy_note"] = "見送り（古馬特別: 重賞/3歳特別に厳選）"
         return _SKIP
 
-    # EV < 1.0 → 複勝のみ
-    fukusho_only = low_ev
-
     probs = [float(result_df.iloc[i]["prob_top3"]) for i in range(min(3, len(result_df)))]
     prob_spread = max(probs) - min(probs) if len(probs) >= 3 else 1.0
     is_tight = prob_spread < 0.05
@@ -492,8 +492,8 @@ def _decide_bet_strategy(result_df: pd.DataFrame, is_volatile_race: bool = False
     notes = []
     remaining = BUDGET
 
-    # EV < 1.0 → 見送り（複勝廃止のため買い目なし）
-    if fukusho_only:
+    # EV < 1.2 → 見送り（期待値不足）
+    if low_ev:
         _SKIP["strategy_note"] = f"見送り（低EV {hon_ev:.2f}）"
         return _SKIP
 
