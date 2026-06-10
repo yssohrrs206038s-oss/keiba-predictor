@@ -7202,5 +7202,39 @@
       "race_volatility": 1.943,
       "is_volatile_race": true
     }
+  },
+  "202602010111": {
+    "race_name": "��初えSS",
+    "race_date": "2026-06-13",
+    "start_time": "",
+    "venue": "函館",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202609030411": {
+    "race_name": "絎�紂�荐�綽�",
+    "race_date": "2026-06-13",
+    "start_time": "",
+    "venue": "阪神",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
