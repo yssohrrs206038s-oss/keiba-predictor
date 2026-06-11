@@ -406,12 +406,23 @@ def jockey_stats(df: pd.DataFrame) -> list[dict]:
         n = len(g)
         if n < 3 or not name:
             continue
-        rentai = (g["umaren_hit"] | g["wide_hit"]).sum() if "wide_hit" in g.columns else g["umaren_hit"].sum()
+        # 連対率(馬連/ワイド的中)は実購入レースのみで算出する。
+        # 見送り行は umaren_hit/wide_hit が常にFalseのため、全行を母数にすると
+        # 見送りの多い競馬場/馬ほど連対率が不当に低く表示される(希釈)。
+        # 複勝率(◎が3着以内)は予測精度の指標なので従来通り全行で算出する。
+        _bought = g[pd.to_numeric(g["bet_total"], errors="coerce").fillna(0) > 0]
+        if len(_bought):
+            _hits = ((_bought["umaren_hit"] | _bought["wide_hit"]).sum()
+                     if "wide_hit" in _bought.columns else _bought["umaren_hit"].sum())
+            rentai_rate = float(_hits / len(_bought))
+        else:
+            rentai_rate = 0.0
         results.append({
             "name": str(name),
             "fukusho_rate": float(g["fukusho_hit"].sum() / n),
-            "rentai_rate": float(rentai / n),
+            "rentai_rate": rentai_rate,
             "n": n,
+            "n_bought": len(_bought),  # 連対率の母数(実購入レース数)
         })
     return sorted(results, key=lambda x: -x["fukusho_rate"])
 
@@ -433,12 +444,23 @@ def course_stats(df: pd.DataFrame) -> list[dict]:
         n = len(g)
         if n < 1 or venue == "不明":
             continue
-        rentai = (g["umaren_hit"] | g["wide_hit"]).sum() if "wide_hit" in g.columns else g["umaren_hit"].sum()
+        # 連対率(馬連/ワイド的中)は実購入レースのみで算出する。
+        # 見送り行は umaren_hit/wide_hit が常にFalseのため、全行を母数にすると
+        # 見送りの多い競馬場/馬ほど連対率が不当に低く表示される(希釈)。
+        # 複勝率(◎が3着以内)は予測精度の指標なので従来通り全行で算出する。
+        _bought = g[pd.to_numeric(g["bet_total"], errors="coerce").fillna(0) > 0]
+        if len(_bought):
+            _hits = ((_bought["umaren_hit"] | _bought["wide_hit"]).sum()
+                     if "wide_hit" in _bought.columns else _bought["umaren_hit"].sum())
+            rentai_rate = float(_hits / len(_bought))
+        else:
+            rentai_rate = 0.0
         results.append({
             "course": str(venue),
             "fukusho_rate": float(g["fukusho_hit"].sum() / n),
-            "rentai_rate": float(rentai / n),
+            "rentai_rate": rentai_rate,
             "n": n,
+            "n_bought": len(_bought),  # 連対率の母数(実購入レース数)
         })
     return sorted(results, key=lambda x: -x["fukusho_rate"])
 
