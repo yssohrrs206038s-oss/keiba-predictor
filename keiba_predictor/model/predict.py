@@ -137,6 +137,9 @@ def calc_ev_and_flags(result_df: pd.DataFrame) -> pd.DataFrame:
     # 期待値: 3着以内確率 × 複勝オッズ（単勝オッズで近似）
     odds_num = pd.to_numeric(df["odds"], errors="coerce")
     df["ev_score"] = df["prob_top3"] * odds_num
+    # 補正後確率ベースのEV(分析・閾値再調整用。既存ロジックでは未使用)
+    if "prob_top3_cal" in df.columns:
+        df["ev_score_cal"] = df["prob_top3_cal"] * odds_num
 
     def _reasons(row: pd.Series) -> list[str]:
         pop   = pd.to_numeric(row.get("popularity"),      errors="coerce")
@@ -303,8 +306,16 @@ def predict_race(
     X = race_df[feature_cols].astype(float)
     probs = model.predict_proba(X)[:, 1]
 
+    # 確率キャリブレーション: 補正値は別列 prob_top3_cal に格納する。
+    # 買い目フィルタ・自信度・穴馬選定の閾値は生確率スケールで調整済みのため、
+    # prob_top3 は従来通り生確率を維持する(既存挙動を一切変えない)。
+    # 閾値を補正後スケールで再調整したら prob_top3_cal に切り替えること。
+    from keiba_predictor.model.calibration import apply_calibration
+    probs_cal = apply_calibration(probs, MODEL_DIR / "calibrator.pkl")
+
     result = race_df.copy()
     result["prob_top3"] = probs
+    result["prob_top3_cal"] = probs_cal
 
     # 同レース内相対評価
     result["same_day_rank"] = result["prob_top3"].rank(ascending=False, method="first")
