@@ -128,35 +128,73 @@ def _get_result_html_with_playwright(url: str) -> Optional[str]:
         return None
 
 
+def _best_encoding_decode(content: bytes, hint: str = "") -> tuple[str, str]:
+    """
+    bytes を最も置換文字(U+FFFD)の少ないエンコーディングでデコードして返す。
+
+    試行順:
+      1. Content-Type charset（hint として渡す）
+      2. utf-8
+      3. euc-jp
+      4. cp932
+
+    置換文字ゼロの候補が見つかった時点で即採用。
+    Returns: (decoded_text, chosen_encoding)
+    """
+    REPLACEMENT = "�"
+    candidates: list[str] = []
+    if hint:
+        candidates.append(hint.lower())
+    for enc in ("utf-8", "euc-jp", "cp932"):
+        if enc not in candidates:
+            candidates.append(enc)
+
+    best_text = ""
+    best_enc = candidates[0]
+    best_count = None
+
+    for enc in candidates:
+        try:
+            text = content.decode(enc, errors="replace")
+        except (UnicodeDecodeError, LookupError):
+            continue
+        count = text.count(REPLACEMENT)
+        if best_count is None or count < best_count:
+            best_text = text
+            best_enc = enc
+            best_count = count
+        if count == 0:
+            break
+
+    return best_text, best_enc
+
+
 def _get(url: str, session: requests.Session, encoding: str = "EUC-JP") -> Optional[BeautifulSoup]:
     """
     GETリクエストを送り BeautifulSoup を返す。失敗時はNone。
 
-    エンコーディング検出順:
-      1. Content-Type ヘッダーの charset
-      2. 引数 encoding（デフォルト EUC-JP）
-      3. HTML内の <meta charset> タグ（BS4が自動検出）
-    resp.content (bytes) + from_encoding を使うことで BS4 に正しく検出させる。
+    エンコーディングは自己修復方式で決定する:
+      候補: Content-Type charset → 呼び出し側指定 → utf-8 → euc-jp → cp932
+      置換文字(U+FFFD)が最少の結果を採用。ゼロなら即採用。
+      採用エンコーディングが呼び出し側指定と異なる場合はINFOログ出力。
     """
     try:
         resp = session.get(url, headers=HEADERS, timeout=20)
         resp.raise_for_status()
-        # エンコーディング検出
+
         ct = resp.headers.get("Content-Type", "")
         m = re.search(r"charset=([^\s;,]+)", ct, re.I)
-        ct_charset = m.group(1).strip().lower() if m else ""
-        # 明示的にエンコーディングが指定されている場合はそれを優先
-        if encoding.lower() not in ("utf-8",):
-            detected = encoding
-        elif ct_charset and not ct_charset.startswith("iso-8859"):
-            detected = ct_charset
-        else:
-            detected = encoding
-        # bytesを明示的にデコードしてからBS4に渡す（from_encodingが無視されるケースの対策）
-        try:
-            html_text = resp.content.decode(detected, errors="replace")
-        except (UnicodeDecodeError, LookupError):
-            html_text = resp.content.decode("utf-8", errors="replace")
+        ct_charset = m.group(1).strip() if m else ""
+
+        # Content-Type charset を第1候補、呼び出し側指定を第2候補にして自己修復デコード
+        hint = ct_charset if ct_charset and not ct_charset.lower().startswith("iso-8859") else encoding
+        html_text, chosen = _best_encoding_decode(resp.content, hint=hint)
+
+        if chosen.lower() != encoding.lower():
+            logger.info(
+                f"encoding auto-corrected: caller={encoding} chosen={chosen} url={url}"
+            )
+
         return BeautifulSoup(html_text, "html.parser")
     except requests.RequestException as e:
         logger.warning(f"Request failed: {url} -> {e}")
