@@ -7,6 +7,7 @@
 過去成績がない馬はデータセット全体の中央値で補完する。
 """
 
+import json
 import logging
 from datetime import date
 from pathlib import Path
@@ -15,7 +16,11 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from keiba_predictor.features.feature_engineering import FEATURE_COLS
+from keiba_predictor.features.feature_engineering import (
+    FEATURE_COLS,
+    ELO_TABLE_PATH,
+    parse_race_class_jra,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +152,19 @@ def _horse_hist_features(
         feats["horse_dist_fukusho_rate"] = float(top3_dist.mean()) if len(top3_dist) >= 1 else np.nan
     else:
         feats["horse_dist_fukusho_rate"] = np.nan
+
+    # 前走クラスレベル（クラス昇降特徴量用）
+    prev_race_name = last.get("race_name")
+    feats["prev_class_level"] = (
+        parse_race_class_jra(str(prev_race_name))
+        if pd.notna(prev_race_name) else np.nan
+    )
+
+    # 前走騎手ID（乗り替わりフラグ用・内部用）
+    feats["_prev_jockey_id"] = (
+        str(last.get("jockey_id", ""))
+        if pd.notna(last.get("jockey_id")) else ""
+    )
 
     return feats
 
@@ -377,6 +395,19 @@ def _sire_dist_rate(
     return float(top3.mean()) if len(top3) >= 1 else np.nan
 
 
+def _load_elo_table() -> dict:
+    """elo_table.jsonを読み込んで {horse_id: elo} を返す。存在しなければ空dictを返す。"""
+    if not ELO_TABLE_PATH.exists():
+        logger.warning(f"elo_table.json が見つかりません: {ELO_TABLE_PATH}")
+        return {}
+    try:
+        with open(ELO_TABLE_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"elo_table.json 読み込み失敗: {e}")
+        return {}
+
+
 def _bms_course_rate(
     bms: str,
     history: pd.DataFrame,
@@ -457,6 +488,9 @@ def build_live_features(
 
     # 血統DBを読み込む
     ped_db = _load_pedigree_db()
+
+    # Eloテーブルを読み込む
+    elo_table = _load_elo_table()
 
     if horses_df.empty:
         logger.warning("出馬表が空のため特徴量を生成できません")
@@ -547,8 +581,43 @@ def build_live_features(
         if pd.notna(cur_wc) and pd.notna(prev_wc):
             row["weight_carried_diff"] = float(cur_wc - prev_wc)
             row["is_weight_increase"] = 1.0 if cur_wc > prev_wc else 0.0
-        # _prev_weight_carried は内部用なので削除
         row.pop("_prev_weight_carried", None)
+
+        # 騎手乗り替わり
+        prev_jid = hist_feats.get("_prev_jockey_id", "")
+        if prev_jid and jockey_id:
+            row["is_jockey_change"] = 1.0 if str(jockey_id) != str(prev_jid) else 0.0
+        elif prev_jid == "" and not horse_hist.empty:
+            row["is_jockey_change"] = np.nan  # 前走なし
+        else:
+            row["is_jockey_change"] = np.nan
+        row.pop("_prev_jockey_id", None)
+
+        # Eloレーティング（horse_elo はライブでelo_tableから取得、field_avgは後段で計算）
+        row["horse_elo"] = float(elo_table.get(str(horse_id), 1500.0)) if elo_table else 1500.0
+
+        # prev_race_opp_elo: 前走相手の現在Eloの平均（近似値）
+        if elo_table and not horse_hist.empty and "race_date" in horse_hist.columns:
+            past_h = horse_hist[horse_hist["race_date"] < race_date].sort_values("race_date")
+            if not past_h.empty and "race_id" in past_h.columns:
+                prev_rid = str(past_h.iloc[-1].get("race_id", ""))
+                if prev_rid and not history.empty and "race_id" in history.columns:
+                    prev_race_horses = (
+                        history[history["race_id"].astype(str) == prev_rid]["horse_id"]
+                        .astype(str).tolist()
+                    )
+                    opp_elos = [
+                        elo_table.get(hid, 1500.0)
+                        for hid in prev_race_horses
+                        if hid != str(horse_id)
+                    ]
+                    row["prev_race_opp_elo"] = float(np.mean(opp_elos)) if opp_elos else np.nan
+                else:
+                    row["prev_race_opp_elo"] = np.nan
+            else:
+                row["prev_race_opp_elo"] = np.nan
+        else:
+            row["prev_race_opp_elo"] = np.nan
 
         # FEATURE_COLS に含まれる列が NaN なら中央値で補完
         for col in FEATURE_COLS:
@@ -566,6 +635,28 @@ def build_live_features(
         result_df["pace_pressure"] = float((rs <= 1).sum())
     else:
         result_df["pace_pressure"] = np.nan
+
+    # クラス昇降特徴量（race_class_levelは全馬共通、class_diffは馬ごと）
+    race_class_level_val = parse_race_class_jra(race_name) if isinstance(race_name, str) else np.nan
+    result_df["race_class_level"] = race_class_level_val
+    if "prev_class_level" in result_df.columns:
+        prev_cl = pd.to_numeric(result_df["prev_class_level"], errors="coerce")
+        result_df["class_diff"] = race_class_level_val - prev_cl
+        has_diff = result_df["class_diff"].notna()
+        result_df["is_class_up"]   = np.where(has_diff, (result_df["class_diff"] > 0).astype(float), np.nan)
+        result_df["is_class_down"] = np.where(has_diff, (result_df["class_diff"] < 0).astype(float), np.nan)
+    else:
+        result_df["class_diff"] = np.nan
+        result_df["is_class_up"] = np.nan
+        result_df["is_class_down"] = np.nan
+
+    # Elo field_avg（同レース全馬平均との差）
+    if "horse_elo" in result_df.columns:
+        elo_vals = pd.to_numeric(result_df["horse_elo"], errors="coerce")
+        field_avg = float(elo_vals.mean()) if elo_vals.notna().any() else 1500.0
+        result_df["elo_minus_field_avg"] = elo_vals - field_avg
+    else:
+        result_df["elo_minus_field_avg"] = np.nan
 
     # FEATURE_COLS の列を数値型に統一
     for col in FEATURE_COLS:
