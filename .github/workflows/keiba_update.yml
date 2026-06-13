@@ -60,20 +60,64 @@ jobs:
           echo "📅 スクレイピング期間: $PREV_MONTH ～ $END"
           python -m keiba_predictor.main scrape --start "$PREV_MONTH" --end "$END"
 
-      - name: データクリーニング
+      - name: 過去 cleaned_races.csv.gz を解凍（マージ用）
         if: ${{ !inputs.skip_scrape }}
         run: |
-          python -m keiba_predictor.main clean
-          if [ -f keiba_predictor/data/cleaned_races.csv ]; then
-            LINES=$(wc -l < keiba_predictor/data/cleaned_races.csv)
-            echo "✅ クリーニング完了 (${LINES} 行)"
-            # gzip圧縮（LFS不要化）
-            gzip -f keiba_predictor/data/cleaned_races.csv
-            SIZE=$(du -h keiba_predictor/data/cleaned_races.csv.gz | cut -f1)
-            echo "✅ gzip圧縮完了: ${SIZE}"
+          if [ -f keiba_predictor/data/cleaned_races.csv.gz ]; then
+            gunzip -k -f keiba_predictor/data/cleaned_races.csv.gz
+            OLD_ROWS=$(wc -l < keiba_predictor/data/cleaned_races.csv)
+            echo "✅ 過去データ解凍完了: ${OLD_ROWS} 行"
+            echo "OLD_ROWS=${OLD_ROWS}" >> "$GITHUB_ENV"
           else
+            echo "ℹ️ 過去 cleaned_races.csv.gz なし → 新規作成"
+            echo "OLD_ROWS=0" >> "$GITHUB_ENV"
+          fi
+
+      - name: データクリーニング（過去データとマージ）
+        if: ${{ !inputs.skip_scrape }}
+        run: |
+          # 過去 cleaned_races.csv を退避
+          if [ -f keiba_predictor/data/cleaned_races.csv ]; then
+            mv keiba_predictor/data/cleaned_races.csv keiba_predictor/data/cleaned_races_old.csv
+          fi
+          python -m keiba_predictor.main clean
+          if [ ! -f keiba_predictor/data/cleaned_races.csv ]; then
             echo "::error::cleaned_races.csv が生成されませんでした"
             exit 1
+          fi
+          # 新旧マージ（race_id+horse_number重複は新しい方を優先）
+          if [ -f keiba_predictor/data/cleaned_races_old.csv ]; then
+            python -c "
+import pandas as pd
+old = pd.read_csv('keiba_predictor/data/cleaned_races_old.csv', encoding='utf-8-sig', dtype=str)
+new = pd.read_csv('keiba_predictor/data/cleaned_races.csv', encoding='utf-8-sig', dtype=str)
+merged = pd.concat([old, new], ignore_index=True).drop_duplicates(subset=['race_id', 'horse_number'], keep='last')
+merged.to_csv('keiba_predictor/data/cleaned_races.csv', index=False, encoding='utf-8-sig')
+print(f'マージ完了: 旧{len(old)} + 新{len(new)} → {len(merged)} 行')
+"
+            rm keiba_predictor/data/cleaned_races_old.csv
+          fi
+          MERGED_ROWS=$(wc -l < keiba_predictor/data/cleaned_races.csv)
+          echo "✅ クリーニング+マージ完了 (${MERGED_ROWS} 行)"
+          echo "MERGED_ROWS=${MERGED_ROWS}" >> "$GITHUB_ENV"
+          # gzip 再生成
+          gzip -k -9 -f keiba_predictor/data/cleaned_races.csv
+          SIZE=$(du -h keiba_predictor/data/cleaned_races.csv.gz | cut -f1)
+          echo "✅ gzip圧縮完了: ${SIZE}"
+
+      - name: データ縮小サニティチェック
+        if: ${{ !inputs.skip_scrape }}
+        run: |
+          # マージ後行数が旧データの80%未満ならデータ縮小事故として停止
+          if [ "${OLD_ROWS:-0}" -gt 0 ]; then
+            THRESHOLD=$(( OLD_ROWS * 80 / 100 ))
+            if [ "${MERGED_ROWS:-0}" -lt "$THRESHOLD" ]; then
+              echo "::error::データ縮小事故の疑い: マージ後 ${MERGED_ROWS} 行 < 旧データ ${OLD_ROWS} 行の80% (${THRESHOLD} 行)"
+              exit 1
+            fi
+            echo "✅ サニティチェック通過: ${MERGED_ROWS} 行 >= ${THRESHOLD} 行 (旧${OLD_ROWS}行×80%)"
+          else
+            echo "ℹ️ 旧データなし → チェックスキップ"
           fi
 
       # ── 再学習モード: 既存データを使って特徴量 + 学習 ───────────
