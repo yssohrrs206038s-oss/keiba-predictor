@@ -67,6 +67,46 @@ jobs:
             exit 1
           fi
 
+      # ── モデル再学習 ─────────────────────────────────────────
+      - name: モデル再学習
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🤖 XGBoost モデル再学習開始..."
+          python -m keiba_predictor.main train 2>&1 | tee /tmp/train_log.txt
+          AUC=$(grep -oP "AUC: \K[0-9.]+" /tmp/train_log.txt | tail -1 || echo "N/A")
+          echo "📊 学習後 AUC: ${AUC}"
+          echo "TRAIN_AUC=${AUC}" >> "$GITHUB_ENV"
+
+      - name: モデルを GitHub Releases にアップロード
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PKL_FILES=$(ls keiba_predictor/model/*.pkl 2>/dev/null)
+          if [ -z "$PKL_FILES" ]; then
+            echo "::warning::アップロード対象の .pkl ファイルが見つかりません"
+            exit 0
+          fi
+          # model-latest タグが存在しなければ作成
+          if ! gh release view model-latest --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "model-latest タグを新規作成"
+            gh release create model-latest \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Model latest (JRA)" \
+              --notes "XGBoost モデル自動更新 (JRA)" \
+              --prerelease
+          fi
+          # 各 .pkl をアップロード（既存ファイルは上書き）
+          for PKL in $PKL_FILES; do
+            echo "  アップロード: $PKL"
+            gh release upload model-latest "$PKL" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          done
+          echo "✅ モデルアップロード完了 (AUC: ${TRAIN_AUC})"
+
       # ── 今週末重賞をキャッシュに保存 ─────────────────────────
       - name: 今週末重賞をキャッシュに保存
         continue-on-error: true

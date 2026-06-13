@@ -63,12 +63,16 @@ jobs:
           python -m playwright install chromium
           python -m playwright install-deps chromium
 
-      - name: モデルファイルを確認
+      - name: モデルファイルを確認・ダウンロード
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ ! -f keiba_predictor/model/xgb_model.pkl ]; then
-            echo "::error::モデルファイルが見つかりません"
-            exit 1
+            echo "⬇️ モデルファイルが見つかりません — GitHub Releases からダウンロードします"
+            python keiba_predictor/scripts/download_model.py
           fi
+          SIZE=$(du -h keiba_predictor/model/xgb_model.pkl | cut -f1)
+          echo "✅ モデルファイル確認: xgb_model.pkl (${SIZE})"
 
       - name: 過去成績データを確認
         if: inputs.mode != 'notify'
