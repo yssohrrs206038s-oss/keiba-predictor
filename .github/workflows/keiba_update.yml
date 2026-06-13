@@ -3,6 +3,12 @@ name: 水曜データ更新
 on:
   # スケジュールは外部cron-jobで管理
   workflow_dispatch:
+    inputs:
+      skip_scrape:
+        description: 'スクレイピング・クリーニングをスキップして再学習のみ実行（cleaned_races.csv.gz が最新の場合）'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -39,12 +45,14 @@ jobs:
           echo "✅ pip install 完了"
 
       - name: Playwright Chromium をインストール
+        if: ${{ !inputs.skip_scrape }}
         run: |
           python -m playwright install chromium
           python -m playwright install-deps chromium
 
       # ── データ収集（先週土日分） ─────────────────────────────
       - name: スクレイピング（先週土日の結果）
+        if: ${{ !inputs.skip_scrape }}
         run: |
           # 先週分 + 今月分を取得（YYYY-MM形式）
           PREV_MONTH=$(python3 -c "from datetime import date,timedelta;print((date.today()-timedelta(days=14)).strftime('%Y-%m'))")
@@ -53,6 +61,7 @@ jobs:
           python -m keiba_predictor.main scrape --start "$PREV_MONTH" --end "$END"
 
       - name: データクリーニング
+        if: ${{ !inputs.skip_scrape }}
         run: |
           python -m keiba_predictor.main clean
           if [ -f keiba_predictor/data/cleaned_races.csv ]; then
@@ -67,7 +76,26 @@ jobs:
             exit 1
           fi
 
-      # ── モデル再学習 ─────────────────────────────────────────
+      # ── 再学習モード: 既存データを使って特徴量 + 学習 ───────────
+      - name: cleaned_races.csv.gz を解凍
+        if: ${{ inputs.skip_scrape }}
+        run: |
+          if [ -f keiba_predictor/data/cleaned_races.csv.gz ]; then
+            gunzip -k keiba_predictor/data/cleaned_races.csv.gz
+            LINES=$(wc -l < keiba_predictor/data/cleaned_races.csv)
+            echo "✅ 解凍完了 (${LINES} 行)"
+          else
+            echo "::error::cleaned_races.csv.gz が見つかりません"
+            exit 1
+          fi
+
+      - name: 特徴量エンジニアリング
+        if: ${{ inputs.skip_scrape }}
+        run: |
+          python -m keiba_predictor.main features
+          echo "✅ 特徴量エンジニアリング完了"
+
+      # ── モデル再学習（両モード共通） ────────────────────────────
       - name: モデル再学習
         continue-on-error: true
         env:
@@ -113,7 +141,8 @@ jobs:
         run: python -m keiba_predictor.main update-featured --save-cache
 
       # ── 成果物をリポジトリにコミット ──────────────────────────
-      - name: データをコミット
+      - name: データをコミット（通常モード）
+        if: ${{ !inputs.skip_scrape }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -133,8 +162,26 @@ jobs:
             echo "✅ コミット・プッシュ完了（cleaned_races.csv.gz含む）"
           fi
 
+      - name: モデルをコミット（再学習モード）
+        if: ${{ inputs.skip_scrape }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config pull.rebase true
+          git config rebase.autoStash true
+          git add keiba_predictor/model/best_params.json 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "ℹ️ 変更なし（コミットスキップ）"
+          else
+            git commit -m "chore: モデル再学習 — best_params.json 更新 [skip ci]"
+            git pull --rebase -X theirs origin ${{ github.ref_name }} || true
+            git push
+            echo "✅ コミット・プッシュ完了"
+          fi
+
       # ── Discord に完了通知 ────────────────────────────────────
-      - name: ✅ 完了を Discord に通知
+      - name: ✅ 完了を Discord に通知（通常モード）
+        if: ${{ !inputs.skip_scrape }}
         run: |
           PAYLOAD=$(python3 -c "
           import json
@@ -143,6 +190,27 @@ jobs:
               '✅ KEIBA EDGE データ更新完了\n'
               '新規データ取得完了（直近2週間）\n'
               'モデルはローカルPCで再学習してください\n'
+              '次回予想: 土曜9時\n'
+              '\`\`\`'
+          )
+          print(json.dumps({'content': msg}))
+          ")
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            && echo "✅ Discord 通知送信完了" \
+            || echo "::warning::Discord 通知の送信に失敗しました"
+
+      - name: ✅ 完了を Discord に通知（再学習モード）
+        if: ${{ inputs.skip_scrape }}
+        run: |
+          PAYLOAD=$(python3 -c "
+          import json
+          msg = (
+              '\`\`\`\n'
+              '✅ KEIBA EDGE モデル再学習完了\n'
+              'features → train 実行済み / AUC: ${{ env.TRAIN_AUC }}\n'
+              'モデルは GitHub Releases (model-latest) に保存しました\n'
               '次回予想: 土曜9時\n'
               '\`\`\`'
           )
