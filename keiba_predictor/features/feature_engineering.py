@@ -102,6 +102,12 @@ FEATURE_COLS = [
     "prev_race_opp_elo",         # 前走相手の平均Elo
     # [騎手乗り替わり]
     "is_jockey_change",          # 騎手乗り替わりフラグ（前走比較）
+    # [調教特徴量] — live予測時のみ実値。学習データはNaN（XGBoostがNaN処理）
+    "training_days_last",        # 最終追い切りからレース当日までの日数
+    "training_count_2w",         # 直近2週間の追い切り本数
+    "training_intensity_max",    # 最大強度（一杯=3/強め=2/馬なり=1）
+    "training_speed_3f_best",    # 最速3Fタイム（小さいほど速い）
+    "training_course_last",      # 最終追い切りコース（坂路=1/ウッド=2/ポリ=3/芝=4/ダ=5）
 ]
 
 
@@ -746,6 +752,69 @@ def add_pedigree_features(df: pd.DataFrame) -> pd.DataFrame:
     # ただし文字列列は学習時に除外されるので問題ない
 
     logger.info("血統特徴量追加完了")
+    return df
+
+
+def add_training_features(df: pd.DataFrame, training_cache: dict) -> pd.DataFrame:
+    """
+    調教特徴量を付与する。
+
+    training_cache: {horse_id: [{training_date, course_type, intensity, time_3f}...]}
+    race_date × horse_id で直近2週間を集計して特徴量化する。
+    キャッシュが空・該当なしの馬は全特徴量 NaN（XGBoostが処理）。
+    """
+    _COLS = [
+        "training_days_last", "training_count_2w", "training_intensity_max",
+        "training_speed_3f_best", "training_course_last",
+    ]
+
+    if not training_cache:
+        for col in _COLS:
+            df[col] = np.nan
+        return df
+
+    records = []
+    for idx, row in df.iterrows():
+        horse_id = str(row.get("horse_id", ""))
+        race_date = pd.to_datetime(row.get("race_date"), errors="coerce")
+        sessions = training_cache.get(horse_id, [])
+
+        if not sessions or pd.isna(race_date):
+            records.append(dict.fromkeys(_COLS, np.nan))
+            continue
+
+        cutoff_2w = race_date - pd.Timedelta(weeks=2)
+        recent = [
+            s for s in sessions
+            if pd.notna(pd.to_datetime(s.get("training_date"), errors="coerce"))
+            and cutoff_2w <= pd.to_datetime(s["training_date"]) < race_date
+        ]
+
+        if not recent:
+            rec = dict.fromkeys(_COLS, np.nan)
+            rec["training_count_2w"] = 0.0
+            records.append(rec)
+            continue
+
+        latest = max(recent, key=lambda s: s["training_date"])
+        days_last = (race_date - pd.to_datetime(latest["training_date"])).days
+
+        intensities = [float(s["intensity"]) for s in recent
+                       if s.get("intensity") == s.get("intensity")]  # not NaN
+        times = [float(s["time_3f"]) for s in recent
+                 if s.get("time_3f") == s.get("time_3f")]
+
+        records.append({
+            "training_days_last":     float(days_last),
+            "training_count_2w":      float(len(recent)),
+            "training_intensity_max": max(intensities) if intensities else np.nan,
+            "training_speed_3f_best": min(times) if times else np.nan,
+            "training_course_last":   latest.get("course_type", np.nan),
+        })
+
+    feat_df = pd.DataFrame(records, index=df.index)
+    for col in _COLS:
+        df[col] = feat_df[col]
     return df
 
 

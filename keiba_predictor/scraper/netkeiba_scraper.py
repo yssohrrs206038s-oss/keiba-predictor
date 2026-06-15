@@ -1274,6 +1274,120 @@ def scrape_nar_races(
     return combined
 
 
+# ── 調教データ取得 ────────────────────────────────────────────────
+TRAINING_URL = RACE_TOP_URL + "/horse/training.html"
+
+_INTENSITY_MAP: dict[str, float] = {
+    "一杯": 3.0, "強め": 2.0, "仕掛け": 2.0, "馬なり": 1.0,
+}
+_COURSE_MAP: dict[str, float] = {
+    "坂路": 1.0, "ウッド": 2.0, "CW": 2.0, "南W": 2.0, "北W": 2.0,
+    "ポリ": 3.0, "芝": 4.0, "ダ": 5.0, "ダート": 5.0,
+}
+
+
+def scrape_horse_training(horse_id: str, session: requests.Session) -> list[dict]:
+    """指定馬の調教データを取得する（直近4週間分）。失敗時は空リスト。"""
+    url = f"{TRAINING_URL}?horse_id={horse_id}"
+    soup = _get(url, session, encoding="UTF-8")
+    if soup is None:
+        return []
+
+    # テーブル探索: 複数のセレクタを試す
+    table = None
+    for selector in [
+        "table.training_table", "table.TrainingTable",
+        "div.training_data table", "div#contents table",
+        "table",
+    ]:
+        for t in soup.select(selector):
+            th_texts = " ".join(th.get_text(strip=True) for th in t.select("th"))
+            if any(k in th_texts for k in ["日付", "コース", "調教", "タイム"]):
+                table = t
+                break
+        if table:
+            break
+
+    if table is None:
+        logger.debug(f"調教テーブル見つからず: horse_id={horse_id}")
+        return []
+
+    headers = [th.get_text(strip=True) for th in table.select("tr:first-child th")]
+    if not headers:
+        headers = [td.get_text(strip=True) for td in table.select("tr:first-child td")]
+
+    cutoff = pd.Timestamp.now() - pd.Timedelta(weeks=4)
+    rows: list[dict] = []
+
+    for tr in table.select("tr")[1:]:
+        cells = [td.get_text(strip=True) for td in tr.select("td")]
+        if not cells:
+            continue
+
+        # ヘッダ対応 or インデックス fallback
+        if headers and len(headers) == len(cells):
+            rd = dict(zip(headers, cells))
+        else:
+            rd = {}
+            for i, key in enumerate(["日付", "コース", "強度", "3F"]):
+                if i < len(cells):
+                    rd[key] = cells[i]
+
+        # 日付
+        date_raw = rd.get("日付", "").strip()
+        training_date = pd.to_datetime(date_raw, errors="coerce")
+        if pd.isna(training_date) or training_date < cutoff:
+            continue
+
+        # コース
+        course_raw = rd.get("コース", "")
+        course_enc = next(
+            (v for k, v in _COURSE_MAP.items() if k in course_raw),
+            float("nan"),
+        )
+
+        # 強度
+        intensity_raw = rd.get("強度", "")
+        intensity = next(
+            (v for k, v in _INTENSITY_MAP.items() if k in intensity_raw),
+            float("nan"),
+        )
+
+        # 3Fタイム（複数列名を試す）
+        time_3f = float("nan")
+        for col_key in ["3F", "3ハロン", "上がり", "タイム"]:
+            val = rd.get(col_key, "").strip()
+            if val:
+                try:
+                    time_3f = float(val)
+                    break
+                except ValueError:
+                    pass
+
+        rows.append({
+            "training_date": training_date.isoformat(),
+            "course_type": course_enc,
+            "intensity": intensity,
+            "time_3f": time_3f,
+        })
+
+    return rows
+
+
+def scrape_race_training(horse_ids: list[str], session: requests.Session) -> dict:
+    """horse_id → 調教リストの辞書を返す。失敗した馬はスキップ（空リスト）。"""
+    result: dict[str, list[dict]] = {}
+    for hid in horse_ids:
+        try:
+            result[hid] = scrape_horse_training(str(hid), session)
+            logger.debug(f"  調教取得: horse_id={hid} → {len(result[hid])}件")
+        except Exception as e:
+            logger.warning(f"  調教取得失敗 horse_id={hid}: {e}")
+            result[hid] = []
+        time.sleep(2)
+    return result
+
+
 if __name__ == "__main__":
     # 動作確認: 直近1ヶ月を試験取得
     today = datetime.today()

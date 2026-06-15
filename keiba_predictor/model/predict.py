@@ -857,6 +857,36 @@ def predict_live(
     if race_df.empty:
         raise ValueError("特徴量の生成に失敗しました")
 
+    # JRA向け: 調教データ取得・特徴量付与（失敗時は全NaNで続行）
+    try:
+        import json
+        import requests as _req
+        from keiba_predictor.scraper.netkeiba_scraper import scrape_race_training
+        from keiba_predictor.features.feature_engineering import add_training_features
+
+        horse_ids = race_df["horse_id"].dropna().astype(str).tolist()
+        if horse_ids:
+            with _req.Session() as _sess:
+                training_cache = scrape_race_training(horse_ids, _sess)
+
+            # race_id キーでキャッシュに追記保存
+            cache_path = DATA_DIR / "training_cache.json"
+            try:
+                all_cache: dict = {}
+                if cache_path.exists():
+                    with open(cache_path, "r", encoding="utf-8") as _f:
+                        all_cache = json.load(_f)
+                all_cache[race_id] = training_cache
+                with open(cache_path, "w", encoding="utf-8") as _f:
+                    json.dump(all_cache, _f, ensure_ascii=False, default=str)
+            except Exception as _e:
+                logger.warning(f"調教キャッシュ保存失敗: {_e}")
+
+            race_df = add_training_features(race_df, training_cache)
+            logger.info(f"調教特徴量付与完了: {len(horse_ids)} 頭")
+    except Exception as _e:
+        logger.warning(f"調教特徴量取得失敗（NaNで続行）: {_e}")
+
     # 予測（距離帯別モデルを優先使用）
     band_bundle = None
     distance = shutuba_info.get("distance")
