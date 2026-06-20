@@ -350,19 +350,19 @@
       "horse_number": 5,
       "horse_name": "タッセルノット",
       "prob": 0.6269,
-      "odds": 6.7
+      "odds": 6.5
     },
     "taikou": {
       "horse_number": 11,
       "horse_name": "ダーリングハースト",
       "prob": 0.5985,
-      "odds": 10.0
+      "odds": 8.0
     },
     "ana": {
       "horse_number": 3,
       "horse_name": "ダノンファンスター",
       "prob": 0.5749,
-      "odds": 2.0
+      "odds": 1.8
     },
     "predicted_top3_nums": [
       5,
@@ -381,26 +381,26 @@
       {
         "horse_number": 8,
         "horse_name": "シークレットイスラ",
-        "ev_score": 11.254,
+        "ev_score": 21.882,
         "prob": 0.0696,
-        "odds": 161.7,
-        "popularity": 15
-      },
-      {
-        "horse_number": 13,
-        "horse_name": "オメガディコン",
-        "ev_score": 6.237,
-        "prob": 0.1155,
-        "odds": 54.0,
-        "popularity": 12
+        "odds": 314.4,
+        "popularity": 16
       },
       {
         "horse_number": 2,
         "horse_name": "スペードギニー",
-        "ev_score": 5.942,
+        "ev_score": 9.696,
         "prob": 0.1478,
-        "odds": 40.2,
-        "popularity": 11
+        "odds": 65.6,
+        "popularity": 10
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "オメガディコン",
+        "ev_score": 3.604,
+        "prob": 0.1155,
+        "odds": 31.2,
+        "popularity": 7
       }
     ],
     "ana_horse_num": 2,
@@ -497,19 +497,19 @@
       "horse_number": 7,
       "horse_name": "チャリングクロス",
       "prob": 0.8885,
-      "odds": 2.4
+      "odds": 2.3
     },
     "taikou": {
       "horse_number": 3,
       "horse_name": "ピックデムッシュ",
       "prob": 0.8738,
-      "odds": 2.4
+      "odds": 2.0
     },
     "ana": {
       "horse_number": 6,
       "horse_name": "ランツフート",
       "prob": 0.5641,
-      "odds": 11.4
+      "odds": 13.5
     },
     "predicted_top3_nums": [
       7,
@@ -528,25 +528,25 @@
       {
         "horse_number": 4,
         "horse_name": "バンフィエルド",
-        "ev_score": 13.31,
+        "ev_score": 23.487,
         "prob": 0.1888,
-        "odds": 70.5,
+        "odds": 124.4,
         "popularity": 9
       },
       {
         "horse_number": 6,
         "horse_name": "ランツフート",
-        "ev_score": 6.431,
+        "ev_score": 7.615,
         "prob": 0.5641,
-        "odds": 11.4,
+        "odds": 13.5,
         "popularity": 4
       },
       {
         "horse_number": 1,
         "horse_name": "フルレゾン",
-        "ev_score": 5.484,
+        "ev_score": 7.335,
         "prob": 0.3493,
-        "odds": 15.7,
+        "odds": 21.0,
         "popularity": 5
       }
     ],
@@ -650,13 +650,13 @@
       "horse_number": 8,
       "horse_name": "チムグクル",
       "prob": 0.3267,
-      "odds": 8.1
+      "odds": 8.6
     },
     "ana": {
       "horse_number": 3,
       "horse_name": "ダガーリング",
       "prob": 0.3176,
-      "odds": 8.0
+      "odds": 5.0
     },
     "predicted_top3_nums": [
       7,
@@ -675,25 +675,25 @@
       {
         "horse_number": 4,
         "horse_name": "カラヴァジェスティ",
-        "ev_score": 7.431,
+        "ev_score": 9.024,
         "prob": 0.1853,
-        "odds": 40.1,
+        "odds": 48.7,
         "popularity": 11
       },
       {
         "horse_number": 13,
         "horse_name": "コンテネレッツア",
-        "ev_score": 7.184,
+        "ev_score": 8.457,
         "prob": 0.2651,
-        "odds": 27.1,
+        "odds": 31.9,
         "popularity": 8
       },
       {
         "horse_number": 14,
         "horse_name": "ラージギャラリー",
-        "ev_score": 1.214,
+        "ev_score": 1.63,
         "prob": 0.1156,
-        "odds": 10.5,
+        "odds": 14.1,
         "popularity": 4
       }
     ],
@@ -791,7 +791,7 @@
       "horse_number": 2,
       "horse_name": "クールミラボー",
       "prob": 0.7282,
-      "odds": 4.8
+      "odds": 4.9
     },
     "taikou": {
       "horse_number": 11,
@@ -803,7 +803,7 @@
       "horse_number": 6,
       "horse_name": "タガノバビロン",
       "prob": 0.6582,
-      "odds": 4.2
+      "odds": 4.0
     },
     "predicted_top3_nums": [
       2,
@@ -822,25 +822,25 @@
       {
         "horse_number": 5,
         "horse_name": "フタイテンロック",
-        "ev_score": 23.311,
+        "ev_score": 23.959,
         "prob": 0.2947,
-        "odds": 79.1,
+        "odds": 81.3,
         "popularity": 14
       },
       {
         "horse_number": 8,
         "horse_name": "タイセイドレフォン",
-        "ev_score": 12.139,
+        "ev_score": 12.008,
         "prob": 0.1196,
-        "odds": 101.5,
+        "odds": 100.4,
         "popularity": 15
       },
       {
         "horse_number": 3,
         "horse_name": "レヴォントゥレット",
-        "ev_score": 6.308,
+        "ev_score": 6.277,
         "prob": 0.3077,
-        "odds": 20.5,
+        "odds": 20.4,
         "popularity": 8
       }
     ],
@@ -938,19 +938,19 @@
       "horse_number": 3,
       "horse_name": "フルミネブル",
       "prob": 0.7147,
-      "odds": 6.0
+      "odds": 5.1
     },
     "taikou": {
       "horse_number": 9,
       "horse_name": "パラダイスフェイス",
       "prob": 0.5405,
-      "odds": 2.5
+      "odds": 2.6
     },
     "ana": {
       "horse_number": 10,
       "horse_name": "アトミックブレス",
       "prob": 0.4915,
-      "odds": 10.4
+      "odds": 11.0
     },
     "predicted_top3_nums": [
       3,
@@ -969,25 +969,25 @@
       {
         "horse_number": 4,
         "horse_name": "アイランドピーク",
-        "ev_score": 21.027,
+        "ev_score": 24.972,
         "prob": 0.1785,
-        "odds": 117.8,
+        "odds": 139.9,
         "popularity": 16
       },
       {
         "horse_number": 16,
         "horse_name": "サムワンライクユー",
-        "ev_score": 10.198,
+        "ev_score": 10.568,
         "prob": 0.1611,
-        "odds": 63.3,
-        "popularity": 15
+        "odds": 65.6,
+        "popularity": 14
       },
       {
         "horse_number": 13,
         "horse_name": "カーマンライン",
-        "ev_score": 6.91,
+        "ev_score": 7.591,
         "prob": 0.1745,
-        "odds": 39.6,
+        "odds": 43.5,
         "popularity": 12
       }
     ],
@@ -1232,19 +1232,19 @@
       "horse_number": 12,
       "horse_name": "ショウナンバンライ",
       "prob": 0.613,
-      "odds": 6.4
+      "odds": 9.3
     },
     "taikou": {
       "horse_number": 13,
       "horse_name": "アメリカンコール",
       "prob": 0.6,
-      "odds": 9.9
+      "odds": 8.8
     },
     "ana": {
       "horse_number": 9,
       "horse_name": "ジーティーアメリカ",
       "prob": 0.4303,
-      "odds": 23.6
+      "odds": 18.0
     },
     "predicted_top3_nums": [
       12,
@@ -1263,18 +1263,18 @@
       {
         "horse_number": 2,
         "horse_name": "マテンロウミラクル",
-        "ev_score": 9.298,
+        "ev_score": 15.78,
         "prob": 0.1706,
-        "odds": 54.5,
+        "odds": 92.5,
         "popularity": 15
       },
       {
         "horse_number": 16,
         "horse_name": "ユキノクラウン",
-        "ev_score": 4.959,
+        "ev_score": 4.339,
         "prob": 0.1937,
-        "odds": 25.6,
-        "popularity": 14
+        "odds": 22.4,
+        "popularity": 11
       },
       {
         "horse_number": 10,
@@ -1282,7 +1282,7 @@
         "ev_score": 2.359,
         "prob": 0.1421,
         "odds": 16.6,
-        "popularity": 9
+        "popularity": 7
       }
     ],
     "ana_horse_num": 10,
@@ -1379,19 +1379,19 @@
       "horse_number": 6,
       "horse_name": "アヴィオン",
       "prob": 0.9132,
-      "odds": 2.1
+      "odds": 1.3
     },
     "taikou": {
       "horse_number": 1,
       "horse_name": "ワンモアスマイル",
       "prob": 0.4354,
-      "odds": 17.0
+      "odds": 29.1
     },
     "ana": {
       "horse_number": 7,
       "horse_name": "ショウナンバルドル",
       "prob": 0.3978,
-      "odds": 8.4
+      "odds": 4.7
     },
     "predicted_top3_nums": [
       6,
@@ -1410,26 +1410,26 @@
       {
         "horse_number": 2,
         "horse_name": "サヴァビアン",
-        "ev_score": 7.116,
+        "ev_score": 14.367,
         "prob": 0.0706,
-        "odds": 100.8,
-        "popularity": 10
+        "odds": 203.5,
+        "popularity": 9
       },
       {
         "horse_number": 3,
         "horse_name": "メイショウカイト",
-        "ev_score": 6.106,
+        "ev_score": 9.713,
         "prob": 0.3571,
-        "odds": 17.1,
-        "popularity": 7
+        "odds": 27.2,
+        "popularity": 5
       },
       {
         "horse_number": 8,
         "horse_name": "テーオーシュタイン",
-        "ev_score": 5.883,
+        "ev_score": 5.602,
         "prob": 0.3523,
-        "odds": 16.7,
-        "popularity": 5
+        "odds": 15.9,
+        "popularity": 4
       }
     ],
     "ana_horse_num": 2,
@@ -1526,19 +1526,19 @@
       "horse_number": 16,
       "horse_name": "キーパフォーマー",
       "prob": 0.5768,
-      "odds": 16.5
+      "odds": 17.3
     },
     "taikou": {
       "horse_number": 18,
       "horse_name": "ファームツエンティ",
       "prob": 0.5382,
-      "odds": 8.1
+      "odds": 7.8
     },
     "ana": {
       "horse_number": 9,
       "horse_name": "サークルオブジョイ",
       "prob": 0.4944,
-      "odds": 10.6
+      "odds": 11.3
     },
     "predicted_top3_nums": [
       16,
@@ -1557,26 +1557,26 @@
       {
         "horse_number": 1,
         "horse_name": "シャルクハフト",
-        "ev_score": 20.753,
+        "ev_score": 21.427,
         "prob": 0.3369,
-        "odds": 61.6,
+        "odds": 63.6,
         "popularity": 18
       },
       {
         "horse_number": 7,
         "horse_name": "ドットクルー",
-        "ev_score": 5.723,
+        "ev_score": 6.59,
         "prob": 0.1522,
-        "odds": 37.6,
+        "odds": 43.3,
         "popularity": 16
       },
       {
         "horse_number": 4,
         "horse_name": "メイショウソウタ",
-        "ev_score": 3.51,
+        "ev_score": 3.723,
         "prob": 0.164,
-        "odds": 21.4,
-        "popularity": 10
+        "odds": 22.7,
+        "popularity": 11
       }
     ],
     "ana_horse_num": 1,
@@ -1673,19 +1673,19 @@
       "horse_number": 3,
       "horse_name": "ベルジュロネット",
       "prob": 0.6254,
-      "odds": 2.9
+      "odds": 3.0
     },
     "taikou": {
       "horse_number": 11,
       "horse_name": "ノーブルロジャー",
       "prob": 0.5023,
-      "odds": 12.5
+      "odds": 12.1
     },
     "ana": {
       "horse_number": 14,
       "horse_name": "ルークススペイ",
       "prob": 0.4712,
-      "odds": 4.7
+      "odds": 3.9
     },
     "predicted_top3_nums": [
       3,
@@ -1704,25 +1704,25 @@
       {
         "horse_number": 5,
         "horse_name": "イスラアネーロ",
-        "ev_score": 16.364,
+        "ev_score": 18.495,
         "prob": 0.1511,
-        "odds": 108.3,
+        "odds": 122.4,
         "popularity": 14
       },
       {
         "horse_number": 15,
         "horse_name": "エティエンヌ",
-        "ev_score": 9.51,
+        "ev_score": 10.436,
         "prob": 0.1493,
-        "odds": 63.7,
+        "odds": 69.9,
         "popularity": 12
       },
       {
         "horse_number": 7,
         "horse_name": "タイセイブレイズ",
-        "ev_score": 4.074,
+        "ev_score": 4.343,
         "prob": 0.0549,
-        "odds": 74.2,
+        "odds": 79.1,
         "popularity": 13
       }
     ],
@@ -1820,19 +1820,19 @@
       "horse_number": 11,
       "horse_name": "パスコード",
       "prob": 0.4676,
-      "odds": 13.0
+      "odds": 12.1
     },
     "taikou": {
       "horse_number": 16,
       "horse_name": "サーディンラン",
       "prob": 0.4323,
-      "odds": 3.8
+      "odds": 4.2
     },
     "ana": {
       "horse_number": 3,
       "horse_name": "ランスオブヒーロー",
       "prob": 0.4086,
-      "odds": 8.7
+      "odds": 7.8
     },
     "predicted_top3_nums": [
       11,
@@ -1851,25 +1851,25 @@
       {
         "horse_number": 14,
         "horse_name": "スターペスショウマ",
-        "ev_score": 11.434,
+        "ev_score": 12.968,
         "prob": 0.0996,
-        "odds": 114.8,
+        "odds": 130.2,
         "popularity": 18
       },
       {
         "horse_number": 2,
         "horse_name": "ギルトエッジ",
-        "ev_score": 10.236,
+        "ev_score": 11.054,
         "prob": 0.1387,
-        "odds": 73.8,
+        "odds": 79.7,
         "popularity": 16
       },
       {
         "horse_number": 7,
         "horse_name": "ソルオーブ",
-        "ev_score": 5.303,
+        "ev_score": 4.922,
         "prob": 0.056,
-        "odds": 94.7,
+        "odds": 87.9,
         "popularity": 17
       }
     ],
@@ -1967,19 +1967,19 @@
       "horse_number": 7,
       "horse_name": "クイーンレグナント",
       "prob": 0.4285,
-      "odds": 19.0
+      "odds": 11.2
     },
     "taikou": {
       "horse_number": 4,
       "horse_name": "キャンドルマス",
       "prob": 0.4257,
-      "odds": 17.3
+      "odds": 15.6
     },
     "ana": {
       "horse_number": 3,
       "horse_name": "セイルロケット",
       "prob": 0.4076,
-      "odds": 22.4
+      "odds": 30.6
     },
     "predicted_top3_nums": [
       7,
@@ -1998,25 +1998,25 @@
       {
         "horse_number": 3,
         "horse_name": "セイルロケット",
-        "ev_score": 9.13,
+        "ev_score": 12.473,
         "prob": 0.4076,
-        "odds": 22.4,
+        "odds": 30.6,
         "popularity": 7
-      },
-      {
-        "horse_number": 7,
-        "horse_name": "クイーンレグナント",
-        "ev_score": 8.142,
-        "prob": 0.4285,
-        "odds": 19.0,
-        "popularity": 6
       },
       {
         "horse_number": 4,
         "horse_name": "キャンドルマス",
-        "ev_score": 7.365,
+        "ev_score": 6.641,
         "prob": 0.4257,
-        "odds": 17.3,
+        "odds": 15.6,
+        "popularity": 6
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "クイーンレグナント",
+        "ev_score": 4.799,
+        "prob": 0.4285,
+        "odds": 11.2,
         "popularity": 5
       }
     ],
@@ -2114,19 +2114,19 @@
       "horse_number": 7,
       "horse_name": "ウォーターサグラダ",
       "prob": 0.8364,
-      "odds": 8.4
+      "odds": 23.9
     },
     "taikou": {
       "horse_number": 6,
       "horse_name": "プリンセスモコ",
       "prob": 0.5213,
-      "odds": 4.7
+      "odds": 3.6
     },
     "ana": {
       "horse_number": 2,
       "horse_name": "デルマリシリ",
       "prob": 0.426,
-      "odds": 2.7
+      "odds": 2.2
     },
     "predicted_top3_nums": [
       7,
@@ -2145,26 +2145,26 @@
       {
         "horse_number": 10,
         "horse_name": "トーアサジタリウス",
-        "ev_score": 8.544,
+        "ev_score": 30.438,
         "prob": 0.1068,
-        "odds": 80.0,
-        "popularity": 10
+        "odds": 285.0,
+        "popularity": 12
       },
       {
         "horse_number": 8,
         "horse_name": "マイオウンウェイ",
-        "ev_score": 5.955,
+        "ev_score": 19.528,
         "prob": 0.1278,
-        "odds": 46.6,
+        "odds": 152.8,
         "popularity": 8
       },
       {
         "horse_number": 6,
         "horse_name": "プリンセスモコ",
-        "ev_score": 2.45,
+        "ev_score": 1.877,
         "prob": 0.5213,
-        "odds": 4.7,
-        "popularity": 3
+        "odds": 3.6,
+        "popularity": 2
       }
     ],
     "ana_horse_num": 10,
@@ -2414,13 +2414,13 @@
       "horse_number": 12,
       "horse_name": "モンサンゴールデン",
       "prob": 0.4977,
-      "odds": 7.2
+      "odds": 6.9
     },
     "ana": {
       "horse_number": 8,
       "horse_name": "フードマン",
       "prob": 0.4133,
-      "odds": 5.8
+      "odds": 5.4
     },
     "predicted_top3_nums": [
       16,
@@ -2439,26 +2439,26 @@
       {
         "horse_number": 11,
         "horse_name": "ビーコング",
-        "ev_score": 12.581,
+        "ev_score": 12.69,
         "prob": 0.1818,
-        "odds": 69.2,
+        "odds": 69.8,
         "popularity": 16
       },
       {
         "horse_number": 15,
         "horse_name": "モズアンタレス",
-        "ev_score": 9.475,
+        "ev_score": 9.781,
         "prob": 0.2042,
-        "odds": 46.4,
+        "odds": 47.9,
         "popularity": 13
       },
       {
         "horse_number": 9,
         "horse_name": "スムースベルベット",
-        "ev_score": 6.272,
+        "ev_score": 6.329,
         "prob": 0.1155,
-        "odds": 54.3,
-        "popularity": 15
+        "odds": 54.8,
+        "popularity": 14
       }
     ],
     "ana_horse_num": 15,
@@ -2561,13 +2561,13 @@
       "horse_number": 10,
       "horse_name": "エンダードラゴン",
       "prob": 0.7171,
-      "odds": 5.0
+      "odds": 5.1
     },
     "ana": {
       "horse_number": 7,
       "horse_name": "ゴールドブレイズ",
       "prob": 0.5194,
-      "odds": 6.5
+      "odds": 6.0
     },
     "predicted_top3_nums": [
       4,
@@ -2586,25 +2586,25 @@
       {
         "horse_number": 2,
         "horse_name": "ブレイジングスター",
-        "ev_score": 14.434,
+        "ev_score": 16.165,
         "prob": 0.2164,
-        "odds": 66.7,
+        "odds": 74.7,
         "popularity": 11
       },
       {
         "horse_number": 1,
         "horse_name": "コムルヴァン",
-        "ev_score": 6.494,
+        "ev_score": 7.679,
         "prob": 0.158,
-        "odds": 41.1,
+        "odds": 48.6,
         "popularity": 10
       },
       {
         "horse_number": 8,
         "horse_name": "カージオイド",
-        "ev_score": 2.841,
+        "ev_score": 3.29,
         "prob": 0.1123,
-        "odds": 25.3,
+        "odds": 29.3,
         "popularity": 8
       }
     ],
