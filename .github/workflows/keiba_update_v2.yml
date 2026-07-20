@@ -4,11 +4,10 @@ on:
   # スケジュールは外部cron-jobで管理
   workflow_dispatch:
     inputs:
-      skip_scrape:
-        description: 'スクレイピング・クリーニングをスキップして再学習のみ実行（cleaned_races.csv.gz が最新の場合）'
+skip_scrape:
+        description: 'スクレイピング・クリーニングをスキップして再学習のみ実行（trueで有効）'
         required: false
-        type: boolean
-        default: false
+        default: 'false'
 
 permissions:
   contents: write
