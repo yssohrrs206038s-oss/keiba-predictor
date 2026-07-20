@@ -284,3 +284,5 @@ print(f'マージ完了: 旧{len(old)} + 新{len(new)} → {len(merged)} 行')
           curl -s -X POST "$DISCORD_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "{\"content\": \"⚠️ **水曜データ更新ワークフローが失敗しました**\nログ: ${RUN_URL}\"}" || true
+
+
