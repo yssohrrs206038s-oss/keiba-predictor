@@ -1,0 +1,281 @@
+name: 水曜データ更新
+
+on:
+  # スケジュールは外部cron-jobで管理
+  workflow_dispatch:
+    inputs:
+      skip_scrape:
+        description: 'スクレイピング・クリーニングをスキップして再学習のみ実行（cleaned_races.csv.gz が最新の場合）'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_UPDATE }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Discord Webhook URL を確認
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "::error::DISCORD_WEBHOOK_URL が設定されていません。"
+            exit 1
+          fi
+          echo "✅ DISCORD_WEBHOOK_URL: 設定済み"
+
+      - name: Python 3.11 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存パッケージをインストール
+        run: |
+          pip install -r requirements.txt
+          echo "✅ pip install 完了"
+
+      - name: Playwright Chromium をインストール
+        if: ${{ !inputs.skip_scrape }}
+        run: |
+          python -m playwright install chromium
+          python -m playwright install-deps chromium
+
+      # ── データ収集（先週土日分） ─────────────────────────────
+      - name: スクレイピング（先週土日の結果）
+        if: ${{ !inputs.skip_scrape }}
+        run: |
+          # 先週分 + 今月分を取得（YYYY-MM形式）
+          PREV_MONTH=$(python3 -c "from datetime import date,timedelta;print((date.today()-timedelta(days=14)).strftime('%Y-%m'))")
+          END=$(date +%Y-%m)
+          echo "📅 スクレイピング期間: $PREV_MONTH ～ $END"
+          python -m keiba_predictor.main scrape --start "$PREV_MONTH" --end "$END"
+
+      - name: 過去 cleaned_races.csv.gz を解凍（マージ用）
+        if: ${{ !inputs.skip_scrape }}
+        run: |
+          if [ -f keiba_predictor/data/cleaned_races.csv.gz ]; then
+            gunzip -k -f keiba_predictor/data/cleaned_races.csv.gz
+            OLD_ROWS=$(wc -l < keiba_predictor/data/cleaned_races.csv)
+            echo "✅ 過去データ解凍完了: ${OLD_ROWS} 行"
+            echo "OLD_ROWS=${OLD_ROWS}" >> "$GITHUB_ENV"
+          else
+            echo "ℹ️ 過去 cleaned_races.csv.gz なし → 新規作成"
+            echo "OLD_ROWS=0" >> "$GITHUB_ENV"
+          fi
+
+      - name: データクリーニング（過去データとマージ）
+        if: ${{ !inputs.skip_scrape }}
+        run: |
+          # 過去 cleaned_races.csv を退避
+          if [ -f keiba_predictor/data/cleaned_races.csv ]; then
+            mv keiba_predictor/data/cleaned_races.csv keiba_predictor/data/cleaned_races_old.csv
+          fi
+          python -m keiba_predictor.main clean
+          if [ ! -f keiba_predictor/data/cleaned_races.csv ]; then
+            echo "::error::cleaned_races.csv が生成されませんでした"
+            exit 1
+          fi
+          # 新旧マージ（race_id+horse_number重複は新しい方を優先）
+          if [ -f keiba_predictor/data/cleaned_races_old.csv ]; then
+            python -c "import pandas as pd; old=pd.read_csv('keiba_predictor/data/cleaned_races_old.csv',encoding='utf-8-sig',dtype=str); new=pd.read_csv('keiba_predictor/data/cleaned_races.csv',encoding='utf-8-sig',dtype=str); m=pd.concat([old,new],ignore_index=True).drop_duplicates(subset=['race_id','horse_number'],keep='last'); m.to_csv('keiba_predictor/data/cleaned_races.csv',index=False,encoding='utf-8-sig'); print('マージ完了: 旧'+str(len(old))+' + 新'+str(len(new))+' → '+str(len(m))+' 行')"
+            rm keiba_predictor/data/cleaned_races_old.csv
+          fi
+          MERGED_ROWS=$(wc -l < keiba_predictor/data/cleaned_races.csv)
+          echo "✅ クリーニング+マージ完了 (${MERGED_ROWS} 行)"
+          echo "MERGED_ROWS=${MERGED_ROWS}" >> "$GITHUB_ENV"
+          # gzip 再生成
+          gzip -k -9 -f keiba_predictor/data/cleaned_races.csv
+          SIZE=$(du -h keiba_predictor/data/cleaned_races.csv.gz | cut -f1)
+          echo "✅ gzip圧縮完了: ${SIZE}"
+
+      - name: データ縮小サニティチェック
+        if: ${{ !inputs.skip_scrape }}
+        run: |
+          # マージ後行数が旧データの80%未満ならデータ縮小事故として停止
+          if [ "${OLD_ROWS:-0}" -gt 0 ]; then
+            THRESHOLD=$(( OLD_ROWS * 80 / 100 ))
+            if [ "${MERGED_ROWS:-0}" -lt "$THRESHOLD" ]; then
+              echo "::error::データ縮小事故の疑い: マージ後 ${MERGED_ROWS} 行 < 旧データ ${OLD_ROWS} 行の80% (${THRESHOLD} 行)"
+              exit 1
+            fi
+            echo "✅ サニティチェック通過: ${MERGED_ROWS} 行 >= ${THRESHOLD} 行 (旧${OLD_ROWS}行×80%)"
+          else
+            echo "ℹ️ 旧データなし → チェックスキップ"
+          fi
+
+      # ── 再学習モード: 既存データを使って特徴量 + 学習 ───────────
+      - name: cleaned_races.csv.gz を解凍
+        if: ${{ inputs.skip_scrape }}
+        run: |
+          if [ -f keiba_predictor/data/cleaned_races.csv.gz ]; then
+            gunzip -k keiba_predictor/data/cleaned_races.csv.gz
+            LINES=$(wc -l < keiba_predictor/data/cleaned_races.csv)
+            echo "✅ 解凍完了 (${LINES} 行)"
+          else
+            echo "::error::cleaned_races.csv.gz が見つかりません"
+            exit 1
+          fi
+
+      - name: 特徴量エンジニアリング
+        if: ${{ inputs.skip_scrape }}
+        run: |
+          python -m keiba_predictor.main features
+          echo "✅ 特徴量エンジニアリング完了"
+
+      # ── モデル再学習（両モード共通） ────────────────────────────
+      - name: モデル再学習
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🤖 XGBoost モデル再学習開始..."
+          python -m keiba_predictor.main train 2>&1 | tee /tmp/train_log.txt
+          AUC=$(grep -oP "AUC: \K[0-9.]+" /tmp/train_log.txt | tail -1 || echo "N/A")
+          echo "📊 学習後 AUC: ${AUC}"
+          echo "TRAIN_AUC=${AUC}" >> "$GITHUB_ENV"
+
+      - name: モデルを GitHub Releases にアップロード
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PKL_FILES=$(ls keiba_predictor/model/*.pkl 2>/dev/null)
+          if [ -z "$PKL_FILES" ]; then
+            echo "::warning::アップロード対象の .pkl ファイルが見つかりません"
+            exit 0
+          fi
+          # model-latest タグが存在しなければ作成
+          if ! gh release view model-latest --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "model-latest タグを新規作成"
+            gh release create model-latest \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Model latest (JRA)" \
+              --notes "XGBoost モデル自動更新 (JRA)" \
+              --prerelease
+          fi
+          # 各 .pkl をアップロード（既存ファイルは上書き）
+          for PKL in $PKL_FILES; do
+            echo "  アップロード: $PKL"
+            gh release upload model-latest "$PKL" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          done
+          echo "✅ モデルアップロード完了 (AUC: ${TRAIN_AUC})"
+
+      # ── 今週末重賞をキャッシュに保存 ─────────────────────────
+      - name: 今週末重賞をキャッシュに保存
+        continue-on-error: true
+        run: python -m keiba_predictor.main update-featured --save-cache
+
+      # ── 成果物をリポジトリにコミット ──────────────────────────
+      - name: データをコミット（通常モード）
+        if: ${{ !inputs.skip_scrape }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config pull.rebase true
+          git config rebase.autoStash true
+          # LFS管理の旧CSVがあれば削除
+          git rm --cached keiba_predictor/data/cleaned_races.csv 2>/dev/null || true
+          git add keiba_predictor/data/cleaned_races.csv.gz 2>/dev/null || true
+          git add keiba_predictor/data/featured_races.csv 2>/dev/null || true
+          git add keiba_predictor/data/predictions_cache.json 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "ℹ️ 変更なし（コミットスキップ）"
+          else
+            git commit -m "chore: 水曜データ更新 — cleaned_races.csv.gz 更新 [skip ci]"
+            git pull --rebase -X theirs origin ${{ github.ref_name }} || true
+            git push
+            echo "✅ コミット・プッシュ完了（cleaned_races.csv.gz含む）"
+          fi
+
+      - name: モデルをコミット（再学習モード）
+        if: ${{ inputs.skip_scrape }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config pull.rebase true
+          git config rebase.autoStash true
+          git add keiba_predictor/model/best_params.json 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "ℹ️ 変更なし（コミットスキップ）"
+          else
+            git commit -m "chore: モデル再学習 — best_params.json 更新 [skip ci]"
+            git pull --rebase -X theirs origin ${{ github.ref_name }} || true
+            git push
+            echo "✅ コミット・プッシュ完了"
+          fi
+
+      # ── Discord に完了通知 ────────────────────────────────────
+      - name: ✅ 完了を Discord に通知（通常モード）
+        if: ${{ !inputs.skip_scrape }}
+        run: |
+          PAYLOAD=$(python3 -c "
+          import json
+          msg = (
+              '\`\`\`\n'
+              '✅ KEIBA EDGE データ更新完了\n'
+              '新規データ取得完了（直近2週間）\n'
+              'モデルはローカルPCで再学習してください\n'
+              '次回予想: 土曜9時\n'
+              '\`\`\`'
+          )
+          print(json.dumps({'content': msg}))
+          ")
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            && echo "✅ Discord 通知送信完了" \
+            || echo "::warning::Discord 通知の送信に失敗しました"
+
+      - name: ✅ 完了を Discord に通知（再学習モード）
+        if: ${{ inputs.skip_scrape }}
+        run: |
+          PAYLOAD=$(python3 -c "
+          import json
+          msg = (
+              '\`\`\`\n'
+              '✅ KEIBA EDGE モデル再学習完了\n'
+              'features → train 実行済み / AUC: ${{ env.TRAIN_AUC }}\n'
+              'モデルは GitHub Releases (model-latest) に保存しました\n'
+              '次回予想: 土曜9時\n'
+              '\`\`\`'
+          )
+          print(json.dumps({'content': msg}))
+          ")
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            && echo "✅ Discord 通知送信完了" \
+            || echo "::warning::Discord 通知の送信に失敗しました"
+
+      # ── クレジット残量チェック ─────────────────────────────────
+      # ── セキュリティチェック ──────────────────────────────────
+      - name: セキュリティチェック（pip-audit）
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip install --upgrade setuptools
+          pip-audit || true
+
+      # ── エラー時の Discord 通知 ──────────────────────────────
+      - name: ❌ エラーを Discord に通知
+        if: failure()
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then exit 0; fi
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"⚠️ **水曜データ更新ワークフローが失敗しました**\nログ: ${RUN_URL}\"}" || true
+
+
