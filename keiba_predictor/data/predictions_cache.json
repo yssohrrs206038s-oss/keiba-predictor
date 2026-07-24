@@ -6,36 +6,2684 @@
   },
   "202604020207": {
     "race_name": "関屋記念",
-    "race_date": "2026-07-25",
-    "start_time": "",
+    "race_date": "2026-07-26",
+    "start_time": "15:45",
     "venue": "新潟",
-    "course_info": "",
-    "honmei": null,
-    "taikou": null,
-    "ana": null,
-    "predicted_top3_nums": [],
-    "predicted_top5_nums": [],
-    "predicted_top5": [],
-    "ev_top3": [],
-    "dangerous_horses": [],
-    "ai_comments": {},
-    "status": "upcoming"
+    "course_info": "芝1600m",
+    "honmei": {
+      "horse_number": 3,
+      "horse_name": "アンパドゥ",
+      "prob": 0.5771
+    },
+    "taikou": {
+      "horse_number": 8,
+      "horse_name": "ダノンセンチュリー",
+      "prob": 0.5156
+    },
+    "ana": {
+      "horse_number": 1,
+      "horse_name": "ファーヴェント",
+      "prob": 0.3508
+    },
+    "predicted_top3_nums": [
+      3,
+      8,
+      1
+    ],
+    "predicted_top5_nums": [
+      3,
+      8,
+      1,
+      9,
+      12,
+      7
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 13,
+        "horse_name": "ブエナオンダ",
+        "ev_score": 5.702,
+        "prob": 0.2458
+      },
+      {
+        "horse_number": 14,
+        "horse_name": "メタルスピード",
+        "ev_score": 5.248,
+        "prob": 0.1544
+      },
+      {
+        "horse_number": 11,
+        "horse_name": "ドロップオブライト",
+        "ev_score": 5.247,
+        "prob": 0.2133
+      }
+    ],
+    "ana_horse_num": 13,
+    "is_grade": true,
+    "confidence": 3,
+    "confidence_stars": "★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            3,
+            8
+          ]
+        },
+        {
+          "nums": [
+            3,
+            1
+          ]
+        },
+        {
+          "nums": [
+            8,
+            1
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          3
+        ],
+        "aite": [
+          8,
+          1,
+          9,
+          12,
+          13
+        ]
+      },
+      "total_points": 40,
+      "total_cost": 4000,
+      "strategy_note": "ワイド + 3連複◎軸x5+穴",
+      "use_wide": true
+    },
+    "simulation": {
+      "3": {
+        "horse_name": "アンパドゥ",
+        "top3_rate": 0.944,
+        "top3_std": 0.013,
+        "is_stable": true,
+        "out_of_board_rate": 0.013,
+        "variance": 1.066,
+        "scenario": {
+          "high_pace": 0.94,
+          "slow_pace": 0.94,
+          "normal": 0.95
+        }
+      },
+      "8": {
+        "horse_name": "ダノンセンチュリー",
+        "top3_rate": 0.869,
+        "top3_std": 0.016,
+        "is_stable": true,
+        "out_of_board_rate": 0.04,
+        "variance": 1.455,
+        "scenario": {
+          "high_pace": 0.86,
+          "slow_pace": 0.88,
+          "normal": 0.86
+        }
+      },
+      "1": {
+        "horse_name": "ファーヴェント",
+        "top3_rate": 0.361,
+        "top3_std": 0.022,
+        "is_stable": true,
+        "out_of_board_rate": 0.326,
+        "variance": 2.633,
+        "scenario": {
+          "high_pace": 0.37,
+          "slow_pace": 0.36,
+          "normal": 0.36
+        }
+      },
+      "9": {
+        "horse_name": "サンダーストラック",
+        "top3_rate": 0.258,
+        "top3_std": 0.019,
+        "is_stable": true,
+        "out_of_board_rate": 0.444,
+        "variance": 2.858,
+        "scenario": {
+          "high_pace": 0.26,
+          "slow_pace": 0.26,
+          "normal": 0.26
+        }
+      },
+      "12": {
+        "horse_name": "ランスオブカオス",
+        "top3_rate": 0.177,
+        "top3_std": 0.015,
+        "is_stable": true,
+        "out_of_board_rate": 0.549,
+        "variance": 2.993,
+        "scenario": {
+          "high_pace": 0.17,
+          "slow_pace": 0.18,
+          "normal": 0.18
+        }
+      },
+      "race_volatility": 2.698,
+      "is_volatile_race": true
+    }
   },
   "202607020207": {
     "race_name": "東海S",
-    "race_date": "2026-07-25",
-    "start_time": "",
+    "race_date": "2026-07-26",
+    "start_time": "15:35",
     "venue": "中京",
-    "course_info": "",
-    "honmei": null,
-    "taikou": null,
-    "ana": null,
-    "predicted_top3_nums": [],
-    "predicted_top5_nums": [],
-    "predicted_top5": [],
-    "ev_top3": [],
-    "dangerous_horses": [],
-    "ai_comments": {},
-    "status": "upcoming"
+    "course_info": "芝1400m",
+    "honmei": {
+      "horse_number": 5,
+      "horse_name": "ドンインザムード",
+      "prob": 0.6862
+    },
+    "taikou": {
+      "horse_number": 7,
+      "horse_name": "ダノンフィーゴ",
+      "prob": 0.5535
+    },
+    "ana": {
+      "horse_number": 9,
+      "horse_name": "インユアパレス",
+      "prob": 0.5169
+    },
+    "predicted_top3_nums": [
+      5,
+      7,
+      9
+    ],
+    "predicted_top5_nums": [
+      5,
+      7,
+      9,
+      8,
+      13,
+      11
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 4,
+        "horse_name": "モンドプリューム",
+        "ev_score": 25.371,
+        "prob": 0.1023
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "ケイアイドリー",
+        "ev_score": 11.402,
+        "prob": 0.0632
+      },
+      {
+        "horse_number": 1,
+        "horse_name": "ノーブルロジャー",
+        "ev_score": 10.085,
+        "prob": 0.249
+      }
+    ],
+    "ana_horse_num": 4,
+    "is_grade": true,
+    "confidence": 5,
+    "confidence_stars": "★★★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [
+        {
+          "nums": [
+            5,
+            7
+          ]
+        },
+        {
+          "nums": [
+            5,
+            9
+          ]
+        },
+        {
+          "nums": [
+            7,
+            9
+          ]
+        }
+      ],
+      "sanrenpuku": {
+        "jiku": [
+          5
+        ],
+        "aite": [
+          7,
+          9,
+          8,
+          13,
+          4
+        ]
+      },
+      "total_points": 40,
+      "total_cost": 4000,
+      "strategy_note": "ワイド + 3連複◎軸x5+穴",
+      "use_wide": true
+    },
+    "simulation": {
+      "5": {
+        "horse_name": "ドンインザムード",
+        "top3_rate": 0.926,
+        "top3_std": 0.014,
+        "is_stable": true,
+        "out_of_board_rate": 0.007,
+        "variance": 1.048,
+        "scenario": {
+          "high_pace": 0.93,
+          "slow_pace": 0.92,
+          "normal": 0.93
+        }
+      },
+      "7": {
+        "horse_name": "ダノンフィーゴ",
+        "top3_rate": 0.643,
+        "top3_std": 0.022,
+        "is_stable": true,
+        "out_of_board_rate": 0.074,
+        "variance": 1.554,
+        "scenario": {
+          "high_pace": 0.64,
+          "slow_pace": 0.65,
+          "normal": 0.64
+        }
+      },
+      "9": {
+        "horse_name": "インユアパレス",
+        "top3_rate": 0.517,
+        "top3_std": 0.024,
+        "is_stable": true,
+        "out_of_board_rate": 0.118,
+        "variance": 1.64,
+        "scenario": {
+          "high_pace": 0.52,
+          "slow_pace": 0.52,
+          "normal": 0.51
+        }
+      },
+      "8": {
+        "horse_name": "ベルジュロネット",
+        "top3_rate": 0.404,
+        "top3_std": 0.024,
+        "is_stable": true,
+        "out_of_board_rate": 0.176,
+        "variance": 1.709,
+        "scenario": {
+          "high_pace": 0.41,
+          "slow_pace": 0.4,
+          "normal": 0.4
+        }
+      },
+      "13": {
+        "horse_name": "ドラゴンテイラー",
+        "top3_rate": 0.41,
+        "top3_std": 0.015,
+        "is_stable": true,
+        "out_of_board_rate": 0.172,
+        "variance": 1.705,
+        "scenario": {
+          "high_pace": 0.41,
+          "slow_pace": 0.41,
+          "normal": 0.41
+        }
+      },
+      "race_volatility": 1.946,
+      "is_volatile_race": true
+    }
+  },
+  "202604020105": {
+    "race_name": "3歳以上1勝クラス",
+    "race_date": "2026-07-25",
+    "start_time": "11:50",
+    "venue": "新潟",
+    "course_info": "芝1800m",
+    "honmei": {
+      "horse_number": 5,
+      "horse_name": "フィールドノート",
+      "prob": 0.5768
+    },
+    "taikou": {
+      "horse_number": 7,
+      "horse_name": "オルグジェシダ",
+      "prob": 0.5298
+    },
+    "ana": {
+      "horse_number": 6,
+      "horse_name": "カリーン",
+      "prob": 0.4281
+    },
+    "predicted_top3_nums": [
+      5,
+      7,
+      6
+    ],
+    "predicted_top5_nums": [
+      5,
+      7,
+      6,
+      10,
+      11,
+      1
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 3,
+        "horse_name": "メイショウキンタイ",
+        "ev_score": 4.195,
+        "prob": 0.0579
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "ケイツールピア",
+        "ev_score": 3.967,
+        "prob": 0.0469
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "ヴァリスマリネリス",
+        "ev_score": 3.956,
+        "prob": 0.2975
+      }
+    ],
+    "ana_horse_num": 3,
+    "is_grade": false,
+    "confidence": 3,
+    "confidence_stars": "★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（クラス戦: 特別戦/重賞に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "5": {
+        "horse_name": "フィールドノート",
+        "top3_rate": 0.948,
+        "top3_std": 0.009,
+        "is_stable": true,
+        "out_of_board_rate": 0.009,
+        "variance": 0.989,
+        "scenario": {
+          "high_pace": 0.94,
+          "slow_pace": 0.95,
+          "normal": 0.95
+        }
+      },
+      "7": {
+        "horse_name": "オルグジェシダ",
+        "top3_rate": 0.906,
+        "top3_std": 0.011,
+        "is_stable": true,
+        "out_of_board_rate": 0.014,
+        "variance": 1.134,
+        "scenario": {
+          "high_pace": 0.91,
+          "slow_pace": 0.91,
+          "normal": 0.9
+        }
+      },
+      "6": {
+        "horse_name": "カリーン",
+        "top3_rate": 0.665,
+        "top3_std": 0.019,
+        "is_stable": true,
+        "out_of_board_rate": 0.082,
+        "variance": 1.539,
+        "scenario": {
+          "high_pace": 0.67,
+          "slow_pace": 0.66,
+          "normal": 0.66
+        }
+      },
+      "10": {
+        "horse_name": "ヴァリスマリネリス",
+        "top3_rate": 0.189,
+        "top3_std": 0.012,
+        "is_stable": true,
+        "out_of_board_rate": 0.39,
+        "variance": 2.03,
+        "scenario": {
+          "high_pace": 0.19,
+          "slow_pace": 0.19,
+          "normal": 0.18
+        }
+      },
+      "11": {
+        "horse_name": "キシダンチョウ",
+        "top3_rate": 0.151,
+        "top3_std": 0.014,
+        "is_stable": true,
+        "out_of_board_rate": 0.44,
+        "variance": 2.06,
+        "scenario": {
+          "high_pace": 0.15,
+          "slow_pace": 0.15,
+          "normal": 0.15
+        }
+      },
+      "race_volatility": 1.798,
+      "is_volatile_race": true
+    }
+  },
+  "202604020106": {
+    "race_name": "豊栄特別",
+    "race_date": "2026-07-25",
+    "start_time": "15:10",
+    "venue": "新潟",
+    "course_info": "芝1600m",
+    "honmei": {
+      "horse_number": 13,
+      "horse_name": "ミッキースターダム",
+      "prob": 0.6062
+    },
+    "taikou": {
+      "horse_number": 8,
+      "horse_name": "ルナルーチェット",
+      "prob": 0.5619
+    },
+    "ana": {
+      "horse_number": 14,
+      "horse_name": "シャンソンドール",
+      "prob": 0.449
+    },
+    "predicted_top3_nums": [
+      13,
+      8,
+      14
+    ],
+    "predicted_top5_nums": [
+      13,
+      8,
+      14,
+      12,
+      6,
+      5
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 1,
+        "horse_name": "ゴールドスター",
+        "ev_score": 88.019,
+        "prob": 0.088
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "ラビットアイ",
+        "ev_score": 19.873,
+        "prob": 0.0199
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "メランジェ",
+        "ev_score": 14.277,
+        "prob": 0.0143
+      }
+    ],
+    "ana_horse_num": 1,
+    "is_grade": false,
+    "confidence": 5,
+    "confidence_stars": "★★★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "13": {
+        "horse_name": "ミッキースターダム",
+        "top3_rate": 0.96,
+        "top3_std": 0.008,
+        "is_stable": true,
+        "out_of_board_rate": 0.004,
+        "variance": 0.892,
+        "scenario": {
+          "high_pace": 0.96,
+          "slow_pace": 0.96,
+          "normal": 0.96
+        }
+      },
+      "8": {
+        "horse_name": "ルナルーチェット",
+        "top3_rate": 0.926,
+        "top3_std": 0.012,
+        "is_stable": true,
+        "out_of_board_rate": 0.009,
+        "variance": 1.044,
+        "scenario": {
+          "high_pace": 0.93,
+          "slow_pace": 0.92,
+          "normal": 0.93
+        }
+      },
+      "14": {
+        "horse_name": "シャンソンドール",
+        "top3_rate": 0.688,
+        "top3_std": 0.022,
+        "is_stable": true,
+        "out_of_board_rate": 0.07,
+        "variance": 1.517,
+        "scenario": {
+          "high_pace": 0.7,
+          "slow_pace": 0.69,
+          "normal": 0.68
+        }
+      },
+      "12": {
+        "horse_name": "ギフテッド",
+        "top3_rate": 0.212,
+        "top3_std": 0.018,
+        "is_stable": true,
+        "out_of_board_rate": 0.304,
+        "variance": 2.214,
+        "scenario": {
+          "high_pace": 0.21,
+          "slow_pace": 0.21,
+          "normal": 0.21
+        }
+      },
+      "6": {
+        "horse_name": "ドリームクルーズ",
+        "top3_rate": 0.128,
+        "top3_std": 0.017,
+        "is_stable": true,
+        "out_of_board_rate": 0.438,
+        "variance": 2.494,
+        "scenario": {
+          "high_pace": 0.13,
+          "slow_pace": 0.13,
+          "normal": 0.13
+        }
+      },
+      "race_volatility": 2.5,
+      "is_volatile_race": true
+    }
+  },
+  "202604020107": {
+    "race_name": "新潟日報賞",
+    "race_date": "2026-07-25",
+    "start_time": "15:45",
+    "venue": "新潟",
+    "course_info": "芝1400m",
+    "honmei": {
+      "horse_number": 2,
+      "horse_name": "コートアリシアン",
+      "prob": 0.5396
+    },
+    "taikou": {
+      "horse_number": 10,
+      "horse_name": "チューラワンサ",
+      "prob": 0.4588
+    },
+    "ana": {
+      "horse_number": 15,
+      "horse_name": "ウナギノボリ",
+      "prob": 0.3681
+    },
+    "predicted_top3_nums": [
+      2,
+      10,
+      15
+    ],
+    "predicted_top5_nums": [
+      2,
+      10,
+      15,
+      4,
+      17,
+      3
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 5,
+        "horse_name": "エイムフォーエース",
+        "ev_score": 8.738,
+        "prob": 0.076
+      },
+      {
+        "horse_number": 11,
+        "horse_name": "ヴェサリウス",
+        "ev_score": 8.167,
+        "prob": 0.3025
+      },
+      {
+        "horse_number": 18,
+        "horse_name": "フライングブレード",
+        "ev_score": 6.62,
+        "prob": 0.1153
+      }
+    ],
+    "ana_horse_num": 5,
+    "is_grade": false,
+    "confidence": 4,
+    "confidence_stars": "★★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "2": {
+        "horse_name": "コートアリシアン",
+        "top3_rate": 0.851,
+        "top3_std": 0.013,
+        "is_stable": true,
+        "out_of_board_rate": 0.06,
+        "variance": 1.869,
+        "scenario": {
+          "high_pace": 0.86,
+          "slow_pace": 0.85,
+          "normal": 0.84
+        }
+      },
+      "10": {
+        "horse_name": "チューラワンサ",
+        "top3_rate": 0.635,
+        "top3_std": 0.024,
+        "is_stable": true,
+        "out_of_board_rate": 0.182,
+        "variance": 2.66,
+        "scenario": {
+          "high_pace": 0.63,
+          "slow_pace": 0.63,
+          "normal": 0.65
+        }
+      },
+      "15": {
+        "horse_name": "ウナギノボリ",
+        "top3_rate": 0.32,
+        "top3_std": 0.023,
+        "is_stable": true,
+        "out_of_board_rate": 0.449,
+        "variance": 3.525,
+        "scenario": {
+          "high_pace": 0.32,
+          "slow_pace": 0.33,
+          "normal": 0.3
+        }
+      },
+      "4": {
+        "horse_name": "スマイルアップ",
+        "top3_rate": 0.239,
+        "top3_std": 0.02,
+        "is_stable": true,
+        "out_of_board_rate": 0.542,
+        "variance": 3.728,
+        "scenario": {
+          "high_pace": 0.24,
+          "slow_pace": 0.24,
+          "normal": 0.23
+        }
+      },
+      "17": {
+        "horse_name": "モジャーリオ",
+        "top3_rate": 0.242,
+        "top3_std": 0.013,
+        "is_stable": true,
+        "out_of_board_rate": 0.537,
+        "variance": 3.716,
+        "scenario": {
+          "high_pace": 0.25,
+          "slow_pace": 0.23,
+          "normal": 0.25
+        }
+      },
+      "race_volatility": 3.517,
+      "is_volatile_race": true
+    }
+  },
+  "202604020108": {
+    "race_name": "清津峡特別",
+    "race_date": "2026-07-25",
+    "start_time": "16:20",
+    "venue": "新潟",
+    "course_info": "芝1800m",
+    "honmei": {
+      "horse_number": 10,
+      "horse_name": "パイオニアスクエア",
+      "prob": 0.6694
+    },
+    "taikou": {
+      "horse_number": 8,
+      "horse_name": "コッレヴェッキオ",
+      "prob": 0.4314
+    },
+    "ana": {
+      "horse_number": 11,
+      "horse_name": "インナーパッション",
+      "prob": 0.4074
+    },
+    "predicted_top3_nums": [
+      10,
+      8,
+      11
+    ],
+    "predicted_top5_nums": [
+      10,
+      8,
+      11,
+      9,
+      1,
+      2
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 7,
+        "horse_name": "ハルノアラシ",
+        "ev_score": 10.681,
+        "prob": 0.1103
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "ライヴスプーン",
+        "ev_score": 7.377,
+        "prob": 0.2291
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "ブレスドナイル",
+        "ev_score": 6.448,
+        "prob": 0.2003
+      }
+    ],
+    "ana_horse_num": 7,
+    "is_grade": false,
+    "confidence": 5,
+    "confidence_stars": "★★★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "10": {
+        "horse_name": "パイオニアスクエア",
+        "top3_rate": 0.98,
+        "top3_std": 0.006,
+        "is_stable": true,
+        "out_of_board_rate": 0.002,
+        "variance": 0.66,
+        "scenario": {
+          "high_pace": 0.98,
+          "slow_pace": 0.98,
+          "normal": 0.98
+        }
+      },
+      "8": {
+        "horse_name": "コッレヴェッキオ",
+        "top3_rate": 0.555,
+        "top3_std": 0.025,
+        "is_stable": true,
+        "out_of_board_rate": 0.152,
+        "variance": 1.955,
+        "scenario": {
+          "high_pace": 0.56,
+          "slow_pace": 0.55,
+          "normal": 0.56
+        }
+      },
+      "11": {
+        "horse_name": "インナーパッション",
+        "top3_rate": 0.472,
+        "top3_std": 0.024,
+        "is_stable": true,
+        "out_of_board_rate": 0.199,
+        "variance": 2.057,
+        "scenario": {
+          "high_pace": 0.47,
+          "slow_pace": 0.47,
+          "normal": 0.47
+        }
+      },
+      "9": {
+        "horse_name": "アヴァランチ",
+        "top3_rate": 0.436,
+        "top3_std": 0.019,
+        "is_stable": true,
+        "out_of_board_rate": 0.225,
+        "variance": 2.148,
+        "scenario": {
+          "high_pace": 0.44,
+          "slow_pace": 0.43,
+          "normal": 0.44
+        }
+      },
+      "1": {
+        "horse_name": "ヴィエントデコラ",
+        "top3_rate": 0.39,
+        "top3_std": 0.02,
+        "is_stable": true,
+        "out_of_board_rate": 0.255,
+        "variance": 2.159,
+        "scenario": {
+          "high_pace": 0.39,
+          "slow_pace": 0.4,
+          "normal": 0.38
+        }
+      },
+      "race_volatility": 2.253,
+      "is_volatile_race": true
+    }
+  },
+  "202604020112": {
+    "race_name": "3歳以上1勝クラス",
+    "race_date": "2026-07-25",
+    "start_time": "18:30",
+    "venue": "新潟",
+    "course_info": "芝1400m",
+    "honmei": {
+      "horse_number": 15,
+      "horse_name": "タイセイフレッサ",
+      "prob": 0.5581
+    },
+    "taikou": {
+      "horse_number": 7,
+      "horse_name": "ロジャリーマイン",
+      "prob": 0.4153
+    },
+    "ana": {
+      "horse_number": 11,
+      "horse_name": "ガラク",
+      "prob": 0.4036
+    },
+    "predicted_top3_nums": [
+      15,
+      7,
+      11
+    ],
+    "predicted_top5_nums": [
+      15,
+      7,
+      11,
+      4,
+      1,
+      3
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 13,
+        "horse_name": "ジョワイユノエル",
+        "ev_score": 7.079,
+        "prob": 0.1242
+      },
+      {
+        "horse_number": 12,
+        "horse_name": "ワディアルリヤハ",
+        "ev_score": 5.885,
+        "prob": 0.0774
+      },
+      {
+        "horse_number": 5,
+        "horse_name": "リアライズリバティ",
+        "ev_score": 5.686,
+        "prob": 0.1496
+      }
+    ],
+    "ana_horse_num": 13,
+    "is_grade": false,
+    "confidence": 4,
+    "confidence_stars": "★★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（クラス戦: 特別戦/重賞に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "15": {
+        "horse_name": "タイセイフレッサ",
+        "top3_rate": 0.93,
+        "top3_std": 0.011,
+        "is_stable": true,
+        "out_of_board_rate": 0.014,
+        "variance": 1.167,
+        "scenario": {
+          "high_pace": 0.93,
+          "slow_pace": 0.93,
+          "normal": 0.93
+        }
+      },
+      "7": {
+        "horse_name": "ロジャリーマイン",
+        "top3_rate": 0.596,
+        "top3_std": 0.021,
+        "is_stable": true,
+        "out_of_board_rate": 0.159,
+        "variance": 2.307,
+        "scenario": {
+          "high_pace": 0.6,
+          "slow_pace": 0.59,
+          "normal": 0.6
+        }
+      },
+      "11": {
+        "horse_name": "ガラク",
+        "top3_rate": 0.553,
+        "top3_std": 0.024,
+        "is_stable": true,
+        "out_of_board_rate": 0.183,
+        "variance": 2.42,
+        "scenario": {
+          "high_pace": 0.55,
+          "slow_pace": 0.55,
+          "normal": 0.57
+        }
+      },
+      "4": {
+        "horse_name": "ルージュダリア",
+        "top3_rate": 0.546,
+        "top3_std": 0.021,
+        "is_stable": true,
+        "out_of_board_rate": 0.182,
+        "variance": 2.415,
+        "scenario": {
+          "high_pace": 0.54,
+          "slow_pace": 0.55,
+          "normal": 0.55
+        }
+      },
+      "1": {
+        "horse_name": "ミスバレンシア",
+        "top3_rate": 0.076,
+        "top3_std": 0.015,
+        "is_stable": true,
+        "out_of_board_rate": 0.731,
+        "variance": 3.705,
+        "scenario": {
+          "high_pace": 0.08,
+          "slow_pace": 0.08,
+          "normal": 0.07
+        }
+      },
+      "race_volatility": 3.261,
+      "is_volatile_race": true
+    }
+  },
+  "202607020106": {
+    "race_name": "四日市特別",
+    "race_date": "2026-07-25",
+    "start_time": "15:00",
+    "venue": "中京",
+    "course_info": "芝1400m",
+    "honmei": {
+      "horse_number": 6,
+      "horse_name": "ゼロヴィジビリティ",
+      "prob": 0.7293
+    },
+    "taikou": {
+      "horse_number": 9,
+      "horse_name": "ポートデラメール",
+      "prob": 0.7291
+    },
+    "ana": {
+      "horse_number": 2,
+      "horse_name": "モズケイスター",
+      "prob": 0.4214
+    },
+    "predicted_top3_nums": [
+      6,
+      9,
+      2
+    ],
+    "predicted_top5_nums": [
+      6,
+      9,
+      2,
+      11,
+      14,
+      13
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 10,
+        "horse_name": "モズタチアガレ",
+        "ev_score": 13.512,
+        "prob": 0.2026
+      },
+      {
+        "horse_number": 8,
+        "horse_name": "ジェミート",
+        "ev_score": 11.646,
+        "prob": 0.3595
+      },
+      {
+        "horse_number": 16,
+        "horse_name": "アレ",
+        "ev_score": 10.632,
+        "prob": 0.1969
+      }
+    ],
+    "ana_horse_num": 10,
+    "is_grade": false,
+    "confidence": 5,
+    "confidence_stars": "★★★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "6": {
+        "horse_name": "ゼロヴィジビリティ",
+        "top3_rate": 0.973,
+        "top3_std": 0.007,
+        "is_stable": true,
+        "out_of_board_rate": 0.004,
+        "variance": 0.791,
+        "scenario": {
+          "high_pace": 0.97,
+          "slow_pace": 0.98,
+          "normal": 0.97
+        }
+      },
+      "9": {
+        "horse_name": "ポートデラメール",
+        "top3_rate": 0.976,
+        "top3_std": 0.008,
+        "is_stable": true,
+        "out_of_board_rate": 0.004,
+        "variance": 0.785,
+        "scenario": {
+          "high_pace": 0.97,
+          "slow_pace": 0.98,
+          "normal": 0.98
+        }
+      },
+      "2": {
+        "horse_name": "モズケイスター",
+        "top3_rate": 0.256,
+        "top3_std": 0.018,
+        "is_stable": true,
+        "out_of_board_rate": 0.422,
+        "variance": 2.597,
+        "scenario": {
+          "high_pace": 0.26,
+          "slow_pace": 0.25,
+          "normal": 0.27
+        }
+      },
+      "11": {
+        "horse_name": "チュウワチーフ",
+        "top3_rate": 0.238,
+        "top3_std": 0.017,
+        "is_stable": true,
+        "out_of_board_rate": 0.439,
+        "variance": 2.65,
+        "scenario": {
+          "high_pace": 0.23,
+          "slow_pace": 0.24,
+          "normal": 0.25
+        }
+      },
+      "14": {
+        "horse_name": "ザックザク",
+        "top3_rate": 0.14,
+        "top3_std": 0.016,
+        "is_stable": true,
+        "out_of_board_rate": 0.59,
+        "variance": 2.888,
+        "scenario": {
+          "high_pace": 0.14,
+          "slow_pace": 0.14,
+          "normal": 0.15
+        }
+      },
+      "race_volatility": 2.533,
+      "is_volatile_race": true
+    }
+  },
+  "202607020107": {
+    "race_name": "関ケ原S",
+    "race_date": "2026-07-25",
+    "start_time": "15:35",
+    "venue": "中京",
+    "course_info": "芝2200m",
+    "honmei": {
+      "horse_number": 1,
+      "horse_name": "ミッキーゴールド",
+      "prob": 0.9299
+    },
+    "taikou": {
+      "horse_number": 7,
+      "horse_name": "ハーツコンチェルト",
+      "prob": 0.4949
+    },
+    "ana": {
+      "horse_number": 9,
+      "horse_name": "ミュージシャン",
+      "prob": 0.4073
+    },
+    "predicted_top3_nums": [
+      1,
+      7,
+      9
+    ],
+    "predicted_top5_nums": [
+      1,
+      7,
+      9,
+      5,
+      6,
+      4
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 2,
+        "horse_name": "エイカイマッケンロ",
+        "ev_score": 8.794,
+        "prob": 0.0793
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "サトノクローク",
+        "ev_score": 7.547,
+        "prob": 0.2194
+      },
+      {
+        "horse_number": 8,
+        "horse_name": "メイショウソウタ",
+        "ev_score": 7.315,
+        "prob": 0.066
+      }
+    ],
+    "ana_horse_num": 2,
+    "is_grade": false,
+    "confidence": 4,
+    "confidence_stars": "★★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "1": {
+        "horse_name": "ミッキーゴールド",
+        "top3_rate": 1.0,
+        "top3_std": 0.0,
+        "is_stable": true,
+        "out_of_board_rate": 0.0,
+        "variance": 0.082,
+        "scenario": {
+          "high_pace": 1.0,
+          "slow_pace": 1.0,
+          "normal": 1.0
+        }
+      },
+      "7": {
+        "horse_name": "ハーツコンチェルト",
+        "top3_rate": 0.837,
+        "top3_std": 0.014,
+        "is_stable": true,
+        "out_of_board_rate": 0.02,
+        "variance": 1.012,
+        "scenario": {
+          "high_pace": 0.84,
+          "slow_pace": 0.84,
+          "normal": 0.83
+        }
+      },
+      "9": {
+        "horse_name": "ミュージシャン",
+        "top3_rate": 0.567,
+        "top3_std": 0.016,
+        "is_stable": true,
+        "out_of_board_rate": 0.086,
+        "variance": 1.397,
+        "scenario": {
+          "high_pace": 0.57,
+          "slow_pace": 0.57,
+          "normal": 0.56
+        }
+      },
+      "5": {
+        "horse_name": "ウインデイジー",
+        "top3_rate": 0.436,
+        "top3_std": 0.015,
+        "is_stable": true,
+        "out_of_board_rate": 0.132,
+        "variance": 1.523,
+        "scenario": {
+          "high_pace": 0.44,
+          "slow_pace": 0.44,
+          "normal": 0.43
+        }
+      },
+      "6": {
+        "horse_name": "サトノクローク",
+        "top3_rate": 0.063,
+        "top3_std": 0.011,
+        "is_stable": true,
+        "out_of_board_rate": 0.617,
+        "variance": 2.046,
+        "scenario": {
+          "high_pace": 0.06,
+          "slow_pace": 0.06,
+          "normal": 0.07
+        }
+      },
+      "race_volatility": 1.615,
+      "is_volatile_race": true
+    }
+  },
+  "202607020108": {
+    "race_name": "香嵐渓特別",
+    "race_date": "2026-07-25",
+    "start_time": "16:10",
+    "venue": "中京",
+    "course_info": "芝2000m",
+    "honmei": {
+      "horse_number": 8,
+      "horse_name": "ロードフィレール",
+      "prob": 0.8987
+    },
+    "taikou": {
+      "horse_number": 1,
+      "horse_name": "スノースケープ",
+      "prob": 0.701
+    },
+    "ana": {
+      "horse_number": 2,
+      "horse_name": "サラコスティ",
+      "prob": 0.5321
+    },
+    "predicted_top3_nums": [
+      8,
+      1,
+      2
+    ],
+    "predicted_top5_nums": [
+      8,
+      1,
+      2,
+      3,
+      6,
+      5
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 4,
+        "horse_name": "アンビアンス",
+        "ev_score": 8.758,
+        "prob": 0.1139
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "サラコスティ",
+        "ev_score": 6.811,
+        "prob": 0.5321
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "サイモンシャリオ",
+        "ev_score": 6.587,
+        "prob": 0.3182
+      }
+    ],
+    "ana_horse_num": 4,
+    "is_grade": false,
+    "confidence": 4,
+    "confidence_stars": "★★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "8": {
+        "horse_name": "ロードフィレール",
+        "top3_rate": 0.998,
+        "top3_std": 0.002,
+        "is_stable": true,
+        "out_of_board_rate": 0.0,
+        "variance": 0.4,
+        "scenario": {
+          "high_pace": 1.0,
+          "slow_pace": 1.0,
+          "normal": 1.0
+        }
+      },
+      "1": {
+        "horse_name": "スノースケープ",
+        "top3_rate": 0.923,
+        "top3_std": 0.01,
+        "is_stable": true,
+        "out_of_board_rate": 0.008,
+        "variance": 0.862,
+        "scenario": {
+          "high_pace": 0.92,
+          "slow_pace": 0.92,
+          "normal": 0.93
+        }
+      },
+      "2": {
+        "horse_name": "サラコスティ",
+        "top3_rate": 0.494,
+        "top3_std": 0.028,
+        "is_stable": true,
+        "out_of_board_rate": 0.128,
+        "variance": 1.323,
+        "scenario": {
+          "high_pace": 0.49,
+          "slow_pace": 0.49,
+          "normal": 0.5
+        }
+      },
+      "3": {
+        "horse_name": "サンダーバード",
+        "top3_rate": 0.207,
+        "top3_std": 0.021,
+        "is_stable": true,
+        "out_of_board_rate": 0.341,
+        "variance": 1.426,
+        "scenario": {
+          "high_pace": 0.2,
+          "slow_pace": 0.21,
+          "normal": 0.21
+        }
+      },
+      "6": {
+        "horse_name": "アトレッタ",
+        "top3_rate": 0.176,
+        "top3_std": 0.014,
+        "is_stable": true,
+        "out_of_board_rate": 0.364,
+        "variance": 1.407,
+        "scenario": {
+          "high_pace": 0.18,
+          "slow_pace": 0.17,
+          "normal": 0.17
+        }
+      },
+      "race_volatility": 1.062,
+      "is_volatile_race": true
+    }
+  },
+  "202607020109": {
+    "race_name": "3歳以上1勝クラス",
+    "race_date": "2026-07-25",
+    "start_time": "16:45",
+    "venue": "中京",
+    "course_info": "芝1400m",
+    "honmei": {
+      "horse_number": 16,
+      "horse_name": "ステライヴ",
+      "prob": 0.6431
+    },
+    "taikou": {
+      "horse_number": 12,
+      "horse_name": "ダンシングドール",
+      "prob": 0.6306
+    },
+    "ana": {
+      "horse_number": 1,
+      "horse_name": "ワイズギャング",
+      "prob": 0.4384
+    },
+    "predicted_top3_nums": [
+      16,
+      12,
+      1
+    ],
+    "predicted_top5_nums": [
+      16,
+      12,
+      1,
+      14,
+      11,
+      13
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 4,
+        "horse_name": "ナムラティアラ",
+        "ev_score": 11.948,
+        "prob": 0.1391
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "ヴァカンツァ",
+        "ev_score": 7.892,
+        "prob": 0.3107
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "リカード",
+        "ev_score": 7.23,
+        "prob": 0.3064
+      }
+    ],
+    "ana_horse_num": 4,
+    "is_grade": false,
+    "confidence": 5,
+    "confidence_stars": "★★★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（クラス戦: 特別戦/重賞に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "16": {
+        "horse_name": "ステライヴ",
+        "top3_rate": 0.946,
+        "top3_std": 0.01,
+        "is_stable": true,
+        "out_of_board_rate": 0.01,
+        "variance": 1.016,
+        "scenario": {
+          "high_pace": 0.95,
+          "slow_pace": 0.95,
+          "normal": 0.94
+        }
+      },
+      "12": {
+        "horse_name": "ダンシングドール",
+        "top3_rate": 0.938,
+        "top3_std": 0.013,
+        "is_stable": true,
+        "out_of_board_rate": 0.012,
+        "variance": 1.059,
+        "scenario": {
+          "high_pace": 0.93,
+          "slow_pace": 0.94,
+          "normal": 0.94
+        }
+      },
+      "1": {
+        "horse_name": "ワイズギャング",
+        "top3_rate": 0.447,
+        "top3_std": 0.025,
+        "is_stable": true,
+        "out_of_board_rate": 0.242,
+        "variance": 2.262,
+        "scenario": {
+          "high_pace": 0.45,
+          "slow_pace": 0.44,
+          "normal": 0.46
+        }
+      },
+      "14": {
+        "horse_name": "イーブンベター",
+        "top3_rate": 0.233,
+        "top3_std": 0.018,
+        "is_stable": true,
+        "out_of_board_rate": 0.425,
+        "variance": 2.72,
+        "scenario": {
+          "high_pace": 0.22,
+          "slow_pace": 0.23,
+          "normal": 0.25
+        }
+      },
+      "11": {
+        "horse_name": "ミスヘンリー",
+        "top3_rate": 0.115,
+        "top3_std": 0.015,
+        "is_stable": true,
+        "out_of_board_rate": 0.63,
+        "variance": 3.044,
+        "scenario": {
+          "high_pace": 0.12,
+          "slow_pace": 0.11,
+          "normal": 0.11
+        }
+      },
+      "race_volatility": 2.648,
+      "is_volatile_race": true
+    }
+  },
+  "202607020110": {
+    "race_name": "3歳以上1勝クラス",
+    "race_date": "2026-07-25",
+    "start_time": "17:20",
+    "venue": "中京",
+    "course_info": "芝1800m",
+    "honmei": {
+      "horse_number": 2,
+      "horse_name": "ガウラディスコ",
+      "prob": 0.7162
+    },
+    "taikou": {
+      "horse_number": 1,
+      "horse_name": "ミランド",
+      "prob": 0.534
+    },
+    "ana": {
+      "horse_number": 4,
+      "horse_name": "インシオン",
+      "prob": 0.5266
+    },
+    "predicted_top3_nums": [
+      2,
+      1,
+      4
+    ],
+    "predicted_top5_nums": [
+      2,
+      1,
+      4,
+      12,
+      6,
+      3
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 6,
+        "horse_name": "ステイクオール",
+        "ev_score": 5.731,
+        "prob": 0.3081
+      },
+      {
+        "horse_number": 12,
+        "horse_name": "リヒトミューレ",
+        "ev_score": 4.432,
+        "prob": 0.3574
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "インシオン",
+        "ev_score": 3.897,
+        "prob": 0.5266
+      }
+    ],
+    "ana_horse_num": 11,
+    "is_grade": false,
+    "confidence": 3,
+    "confidence_stars": "★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（クラス戦: 特別戦/重賞に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "2": {
+        "horse_name": "ガウラディスコ",
+        "top3_rate": 0.989,
+        "top3_std": 0.005,
+        "is_stable": true,
+        "out_of_board_rate": 0.001,
+        "variance": 0.62,
+        "scenario": {
+          "high_pace": 0.99,
+          "slow_pace": 0.99,
+          "normal": 0.99
+        }
+      },
+      "1": {
+        "horse_name": "ミランド",
+        "top3_rate": 0.817,
+        "top3_std": 0.017,
+        "is_stable": true,
+        "out_of_board_rate": 0.03,
+        "variance": 1.219,
+        "scenario": {
+          "high_pace": 0.82,
+          "slow_pace": 0.82,
+          "normal": 0.81
+        }
+      },
+      "4": {
+        "horse_name": "インシオン",
+        "top3_rate": 0.796,
+        "top3_std": 0.018,
+        "is_stable": true,
+        "out_of_board_rate": 0.035,
+        "variance": 1.26,
+        "scenario": {
+          "high_pace": 0.79,
+          "slow_pace": 0.79,
+          "normal": 0.81
+        }
+      },
+      "12": {
+        "horse_name": "リヒトミューレ",
+        "top3_rate": 0.192,
+        "top3_std": 0.019,
+        "is_stable": true,
+        "out_of_board_rate": 0.334,
+        "variance": 2.018,
+        "scenario": {
+          "high_pace": 0.19,
+          "slow_pace": 0.2,
+          "normal": 0.19
+        }
+      },
+      "6": {
+        "horse_name": "ステイクオール",
+        "top3_rate": 0.098,
+        "top3_std": 0.012,
+        "is_stable": true,
+        "out_of_board_rate": 0.518,
+        "variance": 2.228,
+        "scenario": {
+          "high_pace": 0.1,
+          "slow_pace": 0.09,
+          "normal": 0.1
+        }
+      },
+      "race_volatility": 1.936,
+      "is_volatile_race": true
+    }
+  },
+  "202607020111": {
+    "race_name": "3歳以上1勝クラス",
+    "race_date": "2026-07-25",
+    "start_time": "17:50",
+    "venue": "中京",
+    "course_info": "芝1200m",
+    "honmei": {
+      "horse_number": 7,
+      "horse_name": "ケールハイム",
+      "prob": 0.7003
+    },
+    "taikou": {
+      "horse_number": 2,
+      "horse_name": "ベランジェール",
+      "prob": 0.4776
+    },
+    "ana": {
+      "horse_number": 3,
+      "horse_name": "ルージュスプリヤ",
+      "prob": 0.4453
+    },
+    "predicted_top3_nums": [
+      7,
+      2,
+      3
+    ],
+    "predicted_top5_nums": [
+      7,
+      2,
+      3,
+      5,
+      6,
+      4
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 4,
+        "horse_name": "アウクソー",
+        "ev_score": 6.063,
+        "prob": 0.2874
+      },
+      {
+        "horse_number": 3,
+        "horse_name": "ルージュスプリヤ",
+        "ev_score": 2.983,
+        "prob": 0.4453
+      },
+      {
+        "horse_number": 1,
+        "horse_name": "フェブリノ",
+        "ev_score": 2.978,
+        "prob": 0.1211
+      }
+    ],
+    "ana_horse_num": 1,
+    "is_grade": false,
+    "confidence": 3,
+    "confidence_stars": "★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（クラス戦: 特別戦/重賞に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "7": {
+        "horse_name": "ケールハイム",
+        "top3_rate": 0.989,
+        "top3_std": 0.005,
+        "is_stable": true,
+        "out_of_board_rate": 0.001,
+        "variance": 0.565,
+        "scenario": {
+          "high_pace": 0.99,
+          "slow_pace": 0.99,
+          "normal": 0.99
+        }
+      },
+      "2": {
+        "horse_name": "ベランジェール",
+        "top3_rate": 0.682,
+        "top3_std": 0.018,
+        "is_stable": true,
+        "out_of_board_rate": 0.069,
+        "variance": 1.416,
+        "scenario": {
+          "high_pace": 0.7,
+          "slow_pace": 0.68,
+          "normal": 0.68
+        }
+      },
+      "3": {
+        "horse_name": "ルージュスプリヤ",
+        "top3_rate": 0.567,
+        "top3_std": 0.028,
+        "is_stable": true,
+        "out_of_board_rate": 0.11,
+        "variance": 1.499,
+        "scenario": {
+          "high_pace": 0.57,
+          "slow_pace": 0.56,
+          "normal": 0.58
+        }
+      },
+      "5": {
+        "horse_name": "ニシノトリビュート",
+        "top3_rate": 0.443,
+        "top3_std": 0.029,
+        "is_stable": true,
+        "out_of_board_rate": 0.174,
+        "variance": 1.582,
+        "scenario": {
+          "high_pace": 0.43,
+          "slow_pace": 0.45,
+          "normal": 0.45
+        }
+      },
+      "6": {
+        "horse_name": "サヨノパララックス",
+        "top3_rate": 0.135,
+        "top3_std": 0.016,
+        "is_stable": true,
+        "out_of_board_rate": 0.492,
+        "variance": 1.579,
+        "scenario": {
+          "high_pace": 0.14,
+          "slow_pace": 0.13,
+          "normal": 0.13
+        }
+      },
+      "race_volatility": 1.33,
+      "is_volatile_race": true
+    }
+  },
+  "202601010107": {
+    "race_name": "3歳以上1勝クラス",
+    "race_date": "2026-07-25",
+    "start_time": "13:20",
+    "venue": "札幌",
+    "course_info": "芝1200m",
+    "honmei": {
+      "horse_number": 7,
+      "horse_name": "ニシノサリーナ",
+      "prob": 0.514
+    },
+    "taikou": {
+      "horse_number": 8,
+      "horse_name": "サトノカスターニャ",
+      "prob": 0.4806
+    },
+    "ana": {
+      "horse_number": 10,
+      "horse_name": "アイアムステキ",
+      "prob": 0.4567
+    },
+    "predicted_top3_nums": [
+      7,
+      8,
+      10
+    ],
+    "predicted_top5_nums": [
+      7,
+      8,
+      10,
+      6,
+      9,
+      11
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 3,
+        "horse_name": "ナンナンプー",
+        "ev_score": 6.065,
+        "prob": 0.0627
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "セガンティーニ",
+        "ev_score": 4.623,
+        "prob": 0.432
+      },
+      {
+        "horse_number": 13,
+        "horse_name": "グランテレーズ",
+        "ev_score": 4.344,
+        "prob": 0.1349
+      }
+    ],
+    "ana_horse_num": 3,
+    "is_grade": false,
+    "confidence": 2,
+    "confidence_stars": "★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（クラス戦: 特別戦/重賞に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "7": {
+        "horse_name": "ニシノサリーナ",
+        "top3_rate": 0.713,
+        "top3_std": 0.019,
+        "is_stable": true,
+        "out_of_board_rate": 0.1,
+        "variance": 1.927,
+        "scenario": {
+          "high_pace": 0.73,
+          "slow_pace": 0.71,
+          "normal": 0.71
+        }
+      },
+      "8": {
+        "horse_name": "サトノカスターニャ",
+        "top3_rate": 0.604,
+        "top3_std": 0.023,
+        "is_stable": true,
+        "out_of_board_rate": 0.159,
+        "variance": 2.162,
+        "scenario": {
+          "high_pace": 0.6,
+          "slow_pace": 0.61,
+          "normal": 0.6
+        }
+      },
+      "10": {
+        "horse_name": "アイアムステキ",
+        "top3_rate": 0.524,
+        "top3_std": 0.013,
+        "is_stable": true,
+        "out_of_board_rate": 0.207,
+        "variance": 2.312,
+        "scenario": {
+          "high_pace": 0.53,
+          "slow_pace": 0.53,
+          "normal": 0.51
+        }
+      },
+      "6": {
+        "horse_name": "セガンティーニ",
+        "top3_rate": 0.428,
+        "top3_std": 0.019,
+        "is_stable": true,
+        "out_of_board_rate": 0.267,
+        "variance": 2.414,
+        "scenario": {
+          "high_pace": 0.42,
+          "slow_pace": 0.44,
+          "normal": 0.43
+        }
+      },
+      "9": {
+        "horse_name": "カイショー",
+        "top3_rate": 0.417,
+        "top3_std": 0.024,
+        "is_stable": true,
+        "out_of_board_rate": 0.282,
+        "variance": 2.43,
+        "scenario": {
+          "high_pace": 0.42,
+          "slow_pace": 0.4,
+          "normal": 0.44
+        }
+      },
+      "race_volatility": 2.486,
+      "is_volatile_race": true
+    }
+  },
+  "202601010108": {
+    "race_name": "3歳以上1勝クラス",
+    "race_date": "2026-07-25",
+    "start_time": "13:50",
+    "venue": "札幌",
+    "course_info": "芝1700m",
+    "honmei": {
+      "horse_number": 5,
+      "horse_name": "ジェネラスキング",
+      "prob": 0.7406
+    },
+    "taikou": {
+      "horse_number": 12,
+      "horse_name": "ピエナオルカ",
+      "prob": 0.5746
+    },
+    "ana": {
+      "horse_number": 10,
+      "horse_name": "ファンタイムギフト",
+      "prob": 0.4638
+    },
+    "predicted_top3_nums": [
+      5,
+      12,
+      10
+    ],
+    "predicted_top5_nums": [
+      5,
+      12,
+      10,
+      7,
+      2,
+      6
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 6,
+        "horse_name": "ザハント",
+        "ev_score": 6.272,
+        "prob": 0.2987
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "リュミナーズ",
+        "ev_score": 6.259,
+        "prob": 0.2981
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "マーベリックシチー",
+        "ev_score": 5.866,
+        "prob": 0.3154
+      }
+    ],
+    "ana_horse_num": 3,
+    "is_grade": false,
+    "confidence": 3,
+    "confidence_stars": "★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（クラス戦: 特別戦/重賞に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "5": {
+        "horse_name": "ジェネラスキング",
+        "top3_rate": 0.99,
+        "top3_std": 0.004,
+        "is_stable": true,
+        "out_of_board_rate": 0.001,
+        "variance": 0.559,
+        "scenario": {
+          "high_pace": 0.99,
+          "slow_pace": 0.99,
+          "normal": 0.99
+        }
+      },
+      "12": {
+        "horse_name": "ピエナオルカ",
+        "top3_rate": 0.873,
+        "top3_std": 0.017,
+        "is_stable": true,
+        "out_of_board_rate": 0.019,
+        "variance": 1.103,
+        "scenario": {
+          "high_pace": 0.88,
+          "slow_pace": 0.87,
+          "normal": 0.87
+        }
+      },
+      "10": {
+        "horse_name": "ファンタイムギフト",
+        "top3_rate": 0.558,
+        "top3_std": 0.018,
+        "is_stable": true,
+        "out_of_board_rate": 0.117,
+        "variance": 1.546,
+        "scenario": {
+          "high_pace": 0.56,
+          "slow_pace": 0.55,
+          "normal": 0.57
+        }
+      },
+      "7": {
+        "horse_name": "オンザムービー",
+        "top3_rate": 0.303,
+        "top3_std": 0.022,
+        "is_stable": true,
+        "out_of_board_rate": 0.252,
+        "variance": 1.802,
+        "scenario": {
+          "high_pace": 0.3,
+          "slow_pace": 0.31,
+          "normal": 0.3
+        }
+      },
+      "2": {
+        "horse_name": "マーベリックシチー",
+        "top3_rate": 0.106,
+        "top3_std": 0.015,
+        "is_stable": true,
+        "out_of_board_rate": 0.547,
+        "variance": 2.077,
+        "scenario": {
+          "high_pace": 0.11,
+          "slow_pace": 0.11,
+          "normal": 0.1
+        }
+      },
+      "race_volatility": 1.747,
+      "is_volatile_race": true
+    }
+  },
+  "202601010109": {
+    "race_name": "3歳以上1勝クラス",
+    "race_date": "2026-07-25",
+    "start_time": "14:20",
+    "venue": "札幌",
+    "course_info": "芝1800m",
+    "honmei": {
+      "horse_number": 3,
+      "horse_name": "ルーチェフィオーレ",
+      "prob": 0.5463
+    },
+    "taikou": {
+      "horse_number": 5,
+      "horse_name": "シニャンガ",
+      "prob": 0.4117
+    },
+    "ana": {
+      "horse_number": 1,
+      "horse_name": "ガーネットフレア",
+      "prob": 0.411
+    },
+    "predicted_top3_nums": [
+      3,
+      5,
+      1
+    ],
+    "predicted_top5_nums": [
+      3,
+      5,
+      1,
+      6,
+      8,
+      4
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 1,
+        "horse_name": "ガーネットフレア",
+        "ev_score": 6.041,
+        "prob": 0.411
+      },
+      {
+        "horse_number": 8,
+        "horse_name": "ディヒターリーベ",
+        "ev_score": 5.591,
+        "prob": 0.3937
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "キタノサリスカ",
+        "ev_score": 3.831,
+        "prob": 0.115
+      }
+    ],
+    "ana_horse_num": 9,
+    "is_grade": false,
+    "confidence": 3,
+    "confidence_stars": "★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（クラス戦: 特別戦/重賞に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "3": {
+        "horse_name": "ルーチェフィオーレ",
+        "top3_rate": 0.839,
+        "top3_std": 0.014,
+        "is_stable": true,
+        "out_of_board_rate": 0.047,
+        "variance": 1.54,
+        "scenario": {
+          "high_pace": 0.84,
+          "slow_pace": 0.84,
+          "normal": 0.84
+        }
+      },
+      "5": {
+        "horse_name": "シニャンガ",
+        "top3_rate": 0.415,
+        "top3_std": 0.02,
+        "is_stable": true,
+        "out_of_board_rate": 0.285,
+        "variance": 2.149,
+        "scenario": {
+          "high_pace": 0.42,
+          "slow_pace": 0.42,
+          "normal": 0.41
+        }
+      },
+      "1": {
+        "horse_name": "ガーネットフレア",
+        "top3_rate": 0.418,
+        "top3_std": 0.021,
+        "is_stable": true,
+        "out_of_board_rate": 0.288,
+        "variance": 2.138,
+        "scenario": {
+          "high_pace": 0.42,
+          "slow_pace": 0.41,
+          "normal": 0.42
+        }
+      },
+      "6": {
+        "horse_name": "ラコンチャビエン",
+        "top3_rate": 0.368,
+        "top3_std": 0.013,
+        "is_stable": true,
+        "out_of_board_rate": 0.338,
+        "variance": 2.173,
+        "scenario": {
+          "high_pace": 0.37,
+          "slow_pace": 0.37,
+          "normal": 0.36
+        }
+      },
+      "8": {
+        "horse_name": "ディヒターリーベ",
+        "top3_rate": 0.358,
+        "top3_std": 0.022,
+        "is_stable": true,
+        "out_of_board_rate": 0.341,
+        "variance": 2.166,
+        "scenario": {
+          "high_pace": 0.37,
+          "slow_pace": 0.35,
+          "normal": 0.36
+        }
+      },
+      "race_volatility": 1.886,
+      "is_volatile_race": true
+    }
+  },
+  "202601010110": {
+    "race_name": "ライラック賞",
+    "race_date": "2026-07-25",
+    "start_time": "14:50",
+    "venue": "札幌",
+    "course_info": "芝2600m",
+    "honmei": {
+      "horse_number": 8,
+      "horse_name": "レイヤードレッド",
+      "prob": 0.7721
+    },
+    "taikou": {
+      "horse_number": 6,
+      "horse_name": "アスクデッドヒート",
+      "prob": 0.584
+    },
+    "ana": {
+      "horse_number": 9,
+      "horse_name": "バースライト",
+      "prob": 0.5826
+    },
+    "predicted_top3_nums": [
+      8,
+      6,
+      9
+    ],
+    "predicted_top5_nums": [
+      8,
+      6,
+      9,
+      7,
+      4,
+      11
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 10,
+        "horse_name": "ドッビアーコ",
+        "ev_score": 10.039,
+        "prob": 0.2567
+      },
+      {
+        "horse_number": 7,
+        "horse_name": "ジュンツバメガエシ",
+        "ev_score": 8.664,
+        "prob": 0.5626
+      },
+      {
+        "horse_number": 6,
+        "horse_name": "アスクデッドヒート",
+        "ev_score": 8.001,
+        "prob": 0.584
+      }
+    ],
+    "ana_horse_num": 3,
+    "is_grade": false,
+    "confidence": 5,
+    "confidence_stars": "★★★★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "8": {
+        "horse_name": "レイヤードレッド",
+        "top3_rate": 0.966,
+        "top3_std": 0.008,
+        "is_stable": true,
+        "out_of_board_rate": 0.002,
+        "variance": 0.801,
+        "scenario": {
+          "high_pace": 0.96,
+          "slow_pace": 0.97,
+          "normal": 0.97
+        }
+      },
+      "6": {
+        "horse_name": "アスクデッドヒート",
+        "top3_rate": 0.624,
+        "top3_std": 0.02,
+        "is_stable": true,
+        "out_of_board_rate": 0.062,
+        "variance": 1.393,
+        "scenario": {
+          "high_pace": 0.62,
+          "slow_pace": 0.63,
+          "normal": 0.62
+        }
+      },
+      "9": {
+        "horse_name": "バースライト",
+        "top3_rate": 0.611,
+        "top3_std": 0.016,
+        "is_stable": true,
+        "out_of_board_rate": 0.066,
+        "variance": 1.387,
+        "scenario": {
+          "high_pace": 0.61,
+          "slow_pace": 0.61,
+          "normal": 0.6
+        }
+      },
+      "7": {
+        "horse_name": "ジュンツバメガエシ",
+        "top3_rate": 0.536,
+        "top3_std": 0.021,
+        "is_stable": true,
+        "out_of_board_rate": 0.085,
+        "variance": 1.428,
+        "scenario": {
+          "high_pace": 0.54,
+          "slow_pace": 0.53,
+          "normal": 0.54
+        }
+      },
+      "4": {
+        "horse_name": "レイデラルース",
+        "top3_rate": 0.131,
+        "top3_std": 0.013,
+        "is_stable": true,
+        "out_of_board_rate": 0.436,
+        "variance": 1.442,
+        "scenario": {
+          "high_pace": 0.13,
+          "slow_pace": 0.13,
+          "normal": 0.14
+        }
+      },
+      "race_volatility": 1.345,
+      "is_volatile_race": true
+    }
+  },
+  "202601010111": {
+    "race_name": "TVh賞",
+    "race_date": "2026-07-25",
+    "start_time": "15:25",
+    "venue": "札幌",
+    "course_info": "芝1200m",
+    "honmei": {
+      "horse_number": 12,
+      "horse_name": "パクスロマーナ",
+      "prob": 0.3842
+    },
+    "taikou": {
+      "horse_number": 10,
+      "horse_name": "アスクケンタッキー",
+      "prob": 0.3414
+    },
+    "ana": {
+      "horse_number": 4,
+      "horse_name": "ルーフ",
+      "prob": 0.2791
+    },
+    "predicted_top3_nums": [
+      12,
+      10,
+      4
+    ],
+    "predicted_top5_nums": [
+      12,
+      10,
+      4,
+      8,
+      11,
+      7
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 12,
+        "horse_name": "パクスロマーナ",
+        "ev_score": 7.414,
+        "prob": 0.3842
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "アスクケンタッキー",
+        "ev_score": 6.588,
+        "prob": 0.3414
+      },
+      {
+        "horse_number": 4,
+        "horse_name": "ルーフ",
+        "ev_score": 5.386,
+        "prob": 0.2791
+      }
+    ],
+    "ana_horse_num": null,
+    "is_grade": false,
+    "confidence": 2,
+    "confidence_stars": "★★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "12": {
+        "horse_name": "パクスロマーナ",
+        "top3_rate": 0.67,
+        "top3_std": 0.016,
+        "is_stable": true,
+        "out_of_board_rate": 0.174,
+        "variance": 2.56,
+        "scenario": {
+          "high_pace": 0.67,
+          "slow_pace": 0.68,
+          "normal": 0.66
+        }
+      },
+      "10": {
+        "horse_name": "アスクケンタッキー",
+        "top3_rate": 0.52,
+        "top3_std": 0.021,
+        "is_stable": true,
+        "out_of_board_rate": 0.291,
+        "variance": 2.906,
+        "scenario": {
+          "high_pace": 0.51,
+          "slow_pace": 0.52,
+          "normal": 0.52
+        }
+      },
+      "4": {
+        "horse_name": "ルーフ",
+        "top3_rate": 0.299,
+        "top3_std": 0.02,
+        "is_stable": true,
+        "out_of_board_rate": 0.488,
+        "variance": 3.205,
+        "scenario": {
+          "high_pace": 0.3,
+          "slow_pace": 0.29,
+          "normal": 0.31
+        }
+      },
+      "8": {
+        "horse_name": "アンジュプロミス",
+        "top3_rate": 0.3,
+        "top3_std": 0.022,
+        "is_stable": true,
+        "out_of_board_rate": 0.494,
+        "variance": 3.212,
+        "scenario": {
+          "high_pace": 0.29,
+          "slow_pace": 0.3,
+          "normal": 0.31
+        }
+      },
+      "11": {
+        "horse_name": "ゴールドサーベル",
+        "top3_rate": 0.218,
+        "top3_std": 0.017,
+        "is_stable": true,
+        "out_of_board_rate": 0.595,
+        "variance": 3.236,
+        "scenario": {
+          "high_pace": 0.23,
+          "slow_pace": 0.21,
+          "normal": 0.21
+        }
+      },
+      "race_volatility": 3.098,
+      "is_volatile_race": true
+    }
+  },
+  "202601010112": {
+    "race_name": "桑園特別",
+    "race_date": "2026-07-25",
+    "start_time": "16:00",
+    "venue": "札幌",
+    "course_info": "芝1700m",
+    "honmei": {
+      "horse_number": 6,
+      "horse_name": "ジュンラトゥール",
+      "prob": 0.345
+    },
+    "taikou": {
+      "horse_number": 10,
+      "horse_name": "マッスルバック",
+      "prob": 0.3292
+    },
+    "ana": {
+      "horse_number": 8,
+      "horse_name": "ベラジオワールド",
+      "prob": 0.3138
+    },
+    "predicted_top3_nums": [
+      6,
+      10,
+      8
+    ],
+    "predicted_top5_nums": [
+      6,
+      10,
+      8,
+      5,
+      1,
+      7
+    ],
+    "ev_top3": [
+      {
+        "horse_number": 6,
+        "horse_name": "ジュンラトゥール",
+        "ev_score": 6.658,
+        "prob": 0.345
+      },
+      {
+        "horse_number": 10,
+        "horse_name": "マッスルバック",
+        "ev_score": 6.353,
+        "prob": 0.3292
+      },
+      {
+        "horse_number": 8,
+        "horse_name": "ベラジオワールド",
+        "ev_score": 6.057,
+        "prob": 0.3138
+      }
+    ],
+    "ana_horse_num": null,
+    "is_grade": false,
+    "confidence": 1,
+    "confidence_stars": "★",
+    "bet_strategy": {
+      "fukusho": [],
+      "umaren": [],
+      "wide": [],
+      "sanrenpuku": {},
+      "total_points": 0,
+      "total_cost": 0,
+      "strategy_note": "見送り（古馬特別: 重賞/3歳特別に厳選）",
+      "use_wide": false
+    },
+    "simulation": {
+      "6": {
+        "horse_name": "ジュンラトゥール",
+        "top3_rate": 0.486,
+        "top3_std": 0.019,
+        "is_stable": true,
+        "out_of_board_rate": 0.312,
+        "variance": 2.887,
+        "scenario": {
+          "high_pace": 0.47,
+          "slow_pace": 0.49,
+          "normal": 0.49
+        }
+      },
+      "10": {
+        "horse_name": "マッスルバック",
+        "top3_rate": 0.431,
+        "top3_std": 0.025,
+        "is_stable": true,
+        "out_of_board_rate": 0.363,
+        "variance": 2.951,
+        "scenario": {
+          "high_pace": 0.43,
+          "slow_pace": 0.44,
+          "normal": 0.42
+        }
+      },
+      "8": {
+        "horse_name": "ベラジオワールド",
+        "top3_rate": 0.368,
+        "top3_std": 0.017,
+        "is_stable": true,
+        "out_of_board_rate": 0.421,
+        "variance": 2.981,
+        "scenario": {
+          "high_pace": 0.37,
+          "slow_pace": 0.37,
+          "normal": 0.35
+        }
+      },
+      "5": {
+        "horse_name": "セボンサデッセ",
+        "top3_rate": 0.3,
+        "top3_std": 0.02,
+        "is_stable": true,
+        "out_of_board_rate": 0.503,
+        "variance": 3.044,
+        "scenario": {
+          "high_pace": 0.3,
+          "slow_pace": 0.3,
+          "normal": 0.3
+        }
+      },
+      "1": {
+        "horse_name": "リメンバーヒム",
+        "top3_rate": 0.256,
+        "top3_std": 0.014,
+        "is_stable": true,
+        "out_of_board_rate": 0.543,
+        "variance": 3.04,
+        "scenario": {
+          "high_pace": 0.26,
+          "slow_pace": 0.25,
+          "normal": 0.26
+        }
+      },
+      "race_volatility": 2.968,
+      "is_volatile_race": true
+    }
   }
 }
