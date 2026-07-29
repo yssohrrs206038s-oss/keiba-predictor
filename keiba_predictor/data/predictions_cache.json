@@ -4971,5 +4971,39 @@
       "race_volatility": 1.17,
       "is_volatile_race": true
     }
+  },
+  "202604020407": {
+    "race_name": "アイビスSD",
+    "race_date": "2026-08-01",
+    "start_time": "",
+    "venue": "新潟",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202601010411": {
+    "race_name": "クイーンS",
+    "race_date": "2026-08-01",
+    "start_time": "",
+    "venue": "札幌",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
