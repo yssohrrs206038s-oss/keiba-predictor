@@ -5228,5 +5228,39 @@
       "race_volatility": 1.158,
       "is_volatile_race": true
     }
+  },
+  "202607020807": {
+    "race_name": "中京記念",
+    "race_date": "2026-08-15",
+    "start_time": "",
+    "venue": "中京",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202601010811": {
+    "race_name": "札幌記念",
+    "race_date": "2026-08-15",
+    "start_time": "",
+    "venue": "札幌",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
