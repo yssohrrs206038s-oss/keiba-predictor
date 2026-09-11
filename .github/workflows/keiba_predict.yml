@@ -68,7 +68,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ ! -f keiba_predictor/model/xgb_model.pkl ]; then
-            echo "⬇️ モデルファイルが見つかりません — GitHub Releases からダウンロードします"
+            echo "⬇️ GitHub Releases (model-latest) からモデルをダウンロードします"
             python keiba_predictor/scripts/download_model.py
           fi
           SIZE=$(du -h keiba_predictor/model/xgb_model.pkl | cut -f1)

@@ -18,8 +18,8 @@ keiba_predictor/data/*.csv
 !keiba_predictor/data/results_history.csv
 keiba_predictor/data/*.png
 
-# Model (binary) - xgb_model.pkl はリポジトリで管理する
-# keiba_predictor/model/*.pkl
+# Model (binary) - pklはGitHub Releases (model-latest) で管理する
+keiba_predictor/model/*.pkl
 
 # Jupyter
 .ipynb_checkpoints/
