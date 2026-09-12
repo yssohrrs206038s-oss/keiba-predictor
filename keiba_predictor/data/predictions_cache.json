@@ -517,17 +517,20 @@
     "honmei": {
       "horse_number": 1,
       "horse_name": "ヴァルカンテソーロ",
-      "prob": 0.7783
+      "prob": 0.7783,
+      "odds": 4.7
     },
     "taikou": {
       "horse_number": 8,
       "horse_name": "マイネルアウルム",
-      "prob": 0.7009
+      "prob": 0.7009,
+      "odds": 5.5
     },
     "ana": {
       "horse_number": 5,
       "horse_name": "ヤマニンヘルシェ",
-      "prob": 0.5491
+      "prob": 0.5491,
+      "odds": 7.0
     },
     "predicted_top3_nums": [
       1,
@@ -546,20 +549,26 @@
       {
         "horse_number": 6,
         "horse_name": "パーリーブラック",
-        "ev_score": 11.95,
-        "prob": 0.388
+        "ev_score": 12.998,
+        "prob": 0.388,
+        "odds": 33.5,
+        "popularity": 12
       },
       {
         "horse_number": 7,
         "horse_name": "ウインターブレス",
-        "ev_score": 7.806,
-        "prob": 0.4731
+        "ev_score": 5.725,
+        "prob": 0.4731,
+        "odds": 12.1,
+        "popularity": 8
       },
       {
         "horse_number": 8,
         "horse_name": "マイネルアウルム",
-        "ev_score": 6.028,
-        "prob": 0.7009
+        "ev_score": 3.855,
+        "prob": 0.7009,
+        "odds": 5.5,
+        "popularity": 2
       }
     ],
     "ana_horse_num": 6,
@@ -793,17 +802,20 @@
     "honmei": {
       "horse_number": 8,
       "horse_name": "ショウナンサムデイ",
-      "prob": 0.6449
+      "prob": 0.6449,
+      "odds": 6.2
     },
     "taikou": {
       "horse_number": 1,
       "horse_name": "デルアヴァー",
-      "prob": 0.5796
+      "prob": 0.5796,
+      "odds": 4.7
     },
     "ana": {
       "horse_number": 10,
       "horse_name": "ダンツファイター",
-      "prob": 0.5597
+      "prob": 0.5597,
+      "odds": 5.4
     },
     "predicted_top3_nums": [
       8,
@@ -822,20 +834,26 @@
       {
         "horse_number": 11,
         "horse_name": "キーパフォーマー",
-        "ev_score": 5.169,
-        "prob": 0.4495
+        "ev_score": 11.462,
+        "prob": 0.4495,
+        "odds": 25.5,
+        "popularity": 10
       },
       {
         "horse_number": 7,
         "horse_name": "キントリヒ",
-        "ev_score": 4.97,
-        "prob": 0.2062
+        "ev_score": 6.186,
+        "prob": 0.2062,
+        "odds": 30.0,
+        "popularity": 11
       },
       {
         "horse_number": 3,
         "horse_name": "ルールーリマ",
-        "ev_score": 4.739,
-        "prob": 0.427
+        "ev_score": 2.477,
+        "prob": 0.427,
+        "odds": 5.8,
+        "popularity": 3
       }
     ],
     "ana_horse_num": 7,
@@ -931,17 +949,20 @@
     "honmei": {
       "horse_number": 10,
       "horse_name": "ゲイルライダー",
-      "prob": 0.6527
+      "prob": 0.6527,
+      "odds": 7.2
     },
     "taikou": {
       "horse_number": 15,
       "horse_name": "ユキマル",
-      "prob": 0.5968
+      "prob": 0.5968,
+      "odds": 7.8
     },
     "ana": {
       "horse_number": 5,
       "horse_name": "ジョーローリット",
-      "prob": 0.5057
+      "prob": 0.5057,
+      "odds": 7.5
     },
     "predicted_top3_nums": [
       10,
@@ -960,20 +981,26 @@
       {
         "horse_number": 12,
         "horse_name": "ゲッティヴィラ",
-        "ev_score": 17.824,
-        "prob": 0.3068
+        "ev_score": 12.456,
+        "prob": 0.3068,
+        "odds": 40.6,
+        "popularity": 15
       },
       {
         "horse_number": 3,
         "horse_name": "イスラアネーロ",
-        "ev_score": 17.625,
-        "prob": 0.14
+        "ev_score": 8.33,
+        "prob": 0.14,
+        "odds": 59.5,
+        "popularity": 16
       },
       {
         "horse_number": 16,
         "horse_name": "ロードフロンティア",
-        "ev_score": 10.069,
-        "prob": 0.3117
+        "ev_score": 4.956,
+        "prob": 0.3117,
+        "odds": 15.9,
+        "popularity": 8
       }
     ],
     "ana_horse_num": 12,
@@ -1345,17 +1372,20 @@
     "honmei": {
       "horse_number": 2,
       "horse_name": "ライラ",
-      "prob": 0.5859
+      "prob": 0.5859,
+      "odds": 4.6
     },
     "taikou": {
       "horse_number": 13,
       "horse_name": "キャッスルレイク",
-      "prob": 0.4567
+      "prob": 0.4567,
+      "odds": 17.6
     },
     "ana": {
       "horse_number": 12,
       "horse_name": "ロンドボス",
-      "prob": 0.418
+      "prob": 0.418,
+      "odds": 6.1
     },
     "predicted_top3_nums": [
       2,
@@ -1372,22 +1402,28 @@
     ],
     "ev_top3": [
       {
-        "horse_number": 10,
-        "horse_name": "キングケープ",
-        "ev_score": 5.853,
-        "prob": 0.1663
+        "horse_number": 3,
+        "horse_name": "リアライズ",
+        "ev_score": 8.416,
+        "prob": 0.2535,
+        "odds": 33.2,
+        "popularity": 11
       },
       {
         "horse_number": 9,
         "horse_name": "ジッピーレーサー",
-        "ev_score": 5.121,
-        "prob": 0.0385
+        "ev_score": 4.466,
+        "prob": 0.0385,
+        "odds": 116.0,
+        "popularity": 13
       },
       {
-        "horse_number": 3,
-        "horse_name": "リアライズ",
-        "ev_score": 4.893,
-        "prob": 0.2535
+        "horse_number": 10,
+        "horse_name": "キングケープ",
+        "ev_score": 3.742,
+        "prob": 0.1663,
+        "odds": 22.5,
+        "popularity": 9
       }
     ],
     "ana_horse_num": 10,
