@@ -3291,5 +3291,22 @@
       "race_volatility": 3.621,
       "is_volatile_race": true
     }
+  },
+  "202606040611": {
+    "race_name": "オールカマー",
+    "race_date": "2026-09-19",
+    "start_time": "",
+    "venue": "中山",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
