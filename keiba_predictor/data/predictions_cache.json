@@ -4031,5 +4031,39 @@
       "race_volatility": 2.764,
       "is_volatile_race": true
     }
+  },
+  "202609040811": {
+    "race_name": "シリウスS",
+    "race_date": "2026-09-26",
+    "start_time": "",
+    "venue": "阪神",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202606040911": {
+    "race_name": "スプリンター",
+    "race_date": "2026-09-26",
+    "start_time": "",
+    "venue": "中山",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
