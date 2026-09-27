@@ -2574,17 +2574,20 @@
     "honmei": {
       "horse_number": 6,
       "horse_name": "デイジー",
-      "prob": 0.5438
+      "prob": 0.5438,
+      "odds": 5.4
     },
     "taikou": {
       "horse_number": 16,
       "horse_name": "サンヴィクトワール",
-      "prob": 0.4769
+      "prob": 0.4769,
+      "odds": 6.5
     },
     "ana": {
       "horse_number": 7,
       "horse_name": "スワローシチー",
-      "prob": 0.3272
+      "prob": 0.3272,
+      "odds": 9.6
     },
     "predicted_top3_nums": [
       6,
@@ -2603,20 +2606,26 @@
       {
         "horse_number": 14,
         "horse_name": "カイトグート",
-        "ev_score": 5.459,
-        "prob": 0.0735
-      },
-      {
-        "horse_number": 9,
-        "horse_name": "ポッドロルフ",
-        "ev_score": 4.519,
-        "prob": 0.2226
+        "ev_score": 5.954,
+        "prob": 0.0735,
+        "odds": 81.0,
+        "popularity": 16
       },
       {
         "horse_number": 1,
         "horse_name": "ウインロゼライト",
-        "ev_score": 4.235,
-        "prob": 0.084
+        "ev_score": 4.192,
+        "prob": 0.084,
+        "odds": 49.9,
+        "popularity": 14
+      },
+      {
+        "horse_number": 9,
+        "horse_name": "ポッドロルフ",
+        "ev_score": 4.163,
+        "prob": 0.2226,
+        "odds": 18.7,
+        "popularity": 8
       }
     ],
     "ana_horse_num": 14,
