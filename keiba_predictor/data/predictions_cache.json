@@ -4192,5 +4192,39 @@
       "race_volatility": 2.727,
       "is_volatile_race": true
     }
+  },
+  "202605040211": {
+    "race_name": "毎日王冠",
+    "race_date": "2026-10-03",
+    "start_time": "",
+    "venue": "東京",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202608040211": {
+    "race_name": "京都大賞典",
+    "race_date": "2026-10-03",
+    "start_time": "",
+    "venue": "京都",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
