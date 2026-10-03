@@ -641,17 +641,20 @@
     "honmei": {
       "horse_number": 6,
       "horse_name": "コッレヴェッキオ",
-      "prob": 0.3306
+      "prob": 0.3306,
+      "odds": 29.6
     },
     "taikou": {
       "horse_number": 2,
       "horse_name": "プレースメント",
-      "prob": 0.3191
+      "prob": 0.3191,
+      "odds": 1.5
     },
     "ana": {
       "horse_number": 5,
       "horse_name": "エドワードバローズ",
-      "prob": 0.3071
+      "prob": 0.3071,
+      "odds": 17.6
     },
     "predicted_top3_nums": [
       6,
@@ -670,20 +673,26 @@
       {
         "horse_number": 6,
         "horse_name": "コッレヴェッキオ",
-        "ev_score": 6.381,
-        "prob": 0.3306
-      },
-      {
-        "horse_number": 2,
-        "horse_name": "プレースメント",
-        "ev_score": 6.158,
-        "prob": 0.3191
+        "ev_score": 9.786,
+        "prob": 0.3306,
+        "odds": 29.6,
+        "popularity": 6
       },
       {
         "horse_number": 5,
         "horse_name": "エドワードバローズ",
-        "ev_score": 5.926,
-        "prob": 0.3071
+        "ev_score": 5.405,
+        "prob": 0.3071,
+        "odds": 17.6,
+        "popularity": 5
+      },
+      {
+        "horse_number": 2,
+        "horse_name": "プレースメント",
+        "ev_score": 0.479,
+        "prob": 0.3191,
+        "odds": 1.5,
+        "popularity": 1
       }
     ],
     "ana_horse_num": null,
@@ -1349,17 +1358,20 @@
     "honmei": {
       "horse_number": 15,
       "horse_name": "ヴァカンツァ",
-      "prob": 0.4157
+      "prob": 0.4157,
+      "odds": 30.3
     },
     "taikou": {
       "horse_number": 11,
       "horse_name": "ヒルノプーリア",
-      "prob": 0.3839
+      "prob": 0.3839,
+      "odds": 3.7
     },
     "ana": {
       "horse_number": 8,
       "horse_name": "テーオーアンジェラ",
-      "prob": 0.3205
+      "prob": 0.3205,
+      "odds": 369.7
     },
     "predicted_top3_nums": [
       15,
@@ -1376,22 +1388,28 @@
     ],
     "ev_top3": [
       {
+        "horse_number": 8,
+        "horse_name": "テーオーアンジェラ",
+        "ev_score": 118.489,
+        "prob": 0.3205,
+        "odds": 369.7,
+        "popularity": 16
+      },
+      {
         "horse_number": 15,
         "horse_name": "ヴァカンツァ",
-        "ev_score": 8.023,
-        "prob": 0.4157
+        "ev_score": 12.596,
+        "prob": 0.4157,
+        "odds": 30.3,
+        "popularity": 8
       },
       {
         "horse_number": 11,
         "horse_name": "ヒルノプーリア",
-        "ev_score": 7.409,
-        "prob": 0.3839
-      },
-      {
-        "horse_number": 8,
-        "horse_name": "テーオーアンジェラ",
-        "ev_score": 6.186,
-        "prob": 0.3205
+        "ev_score": 1.42,
+        "prob": 0.3839,
+        "odds": 3.7,
+        "popularity": 2
       }
     ],
     "ana_horse_num": null,
