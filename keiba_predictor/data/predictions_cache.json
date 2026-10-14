@@ -3887,5 +3887,39 @@
       "race_volatility": 3.215,
       "is_volatile_race": true
     }
+  },
+  "202605040611": {
+    "race_name": "富士S",
+    "race_date": "2026-10-17",
+    "start_time": "",
+    "venue": "東京",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202608040711": {
+    "race_name": "秋華賞",
+    "race_date": "2026-10-17",
+    "start_time": "",
+    "venue": "京都",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
