@@ -6551,5 +6551,39 @@
       "race_volatility": 1.384,
       "is_volatile_race": true
     }
+  },
+  "202605040811": {
+    "race_name": "アルテミスS",
+    "race_date": "2026-10-24",
+    "start_time": "",
+    "venue": "東京",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202608040911": {
+    "race_name": "菊花賞",
+    "race_date": "2026-10-24",
+    "start_time": "",
+    "venue": "京都",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
