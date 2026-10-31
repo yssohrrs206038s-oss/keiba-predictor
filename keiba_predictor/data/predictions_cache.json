@@ -1555,19 +1555,19 @@
       "horse_number": 13,
       "horse_name": "ライトオブヌカタ",
       "prob": 0.6159,
-      "odds": 5.8
+      "odds": 3.8
     },
     "taikou": {
       "horse_number": 4,
       "horse_name": "ビッグドリーム",
       "prob": 0.607,
-      "odds": 15.0
+      "odds": 19.7
     },
     "ana": {
       "horse_number": 3,
       "horse_name": "ダノンモンテローザ",
       "prob": 0.5494,
-      "odds": 5.4
+      "odds": 4.2
     },
     "predicted_top3_nums": [
       13,
@@ -1584,28 +1584,28 @@
     ],
     "ev_top3": [
       {
-        "horse_number": 5,
-        "horse_name": "ダズリングダンス",
-        "ev_score": 7.247,
-        "prob": 0.2946,
-        "odds": 24.6,
-        "popularity": 9
-      },
-      {
         "horse_number": 11,
         "horse_name": "ワイノナオミ",
-        "ev_score": 6.478,
+        "ev_score": 10.731,
         "prob": 0.2181,
-        "odds": 29.7,
-        "popularity": 11
+        "odds": 49.2,
+        "popularity": 12
       },
       {
         "horse_number": 6,
         "horse_name": "ズバットマサムネ",
-        "ev_score": 4.763,
+        "ev_score": 6.87,
         "prob": 0.1609,
-        "odds": 29.6,
+        "odds": 42.7,
         "popularity": 10
+      },
+      {
+        "horse_number": 5,
+        "horse_name": "ダズリングダンス",
+        "ev_score": 5.745,
+        "prob": 0.2946,
+        "odds": 19.5,
+        "popularity": 7
       }
     ],
     "ana_horse_num": 6,
