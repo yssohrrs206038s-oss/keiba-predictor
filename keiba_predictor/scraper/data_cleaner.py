@@ -160,26 +160,6 @@ def clean_raw_data(raw_df: pd.DataFrame) -> pd.DataFrame:
     # ── 日付変換 ─────────────────────────────────────────────
     df["race_date"] = pd.to_datetime(_ensure_col(df, "race_date"), errors="coerce")
 
-    # race_dateがNaN または 1970年（Unixエポックのプレースホルダー）の行を
-    # race_idの先頭8桁（YYYYMMDD）から補完・上書きする。
-    # netkeibaのHTMLには "1970年01月01日" がJSプレースホルダとして
-    # 埋め込まれることがあり、古いデータにはこの誤った日付が残っている。
-    if "race_id" in df.columns:
-        epoch_or_missing = (
-            df["race_date"].isna()
-            | (df["race_date"].dt.year == 1970)
-        )
-        if epoch_or_missing.any():
-            fallback = pd.to_datetime(
-                df.loc[epoch_or_missing, "race_id"].astype(str).str[:8],
-                format="%Y%m%d",
-                errors="coerce",
-            )
-            df.loc[epoch_or_missing, "race_date"] = fallback
-            logger.info(
-                f"race_date: {epoch_or_missing.sum()}行をrace_idから補完・修正しました"
-                f"（NaN または 1970年のエポック値）"
-            )
 
     # ── 目的変数の整合 ───────────────────────────────────────
     if "top3" not in df.columns:
@@ -215,6 +195,48 @@ def clean_raw_data(raw_df: pd.DataFrame) -> pd.DataFrame:
             n_jra = (derived == "JRA").sum()
             n_nar = (derived == "NAR").sum()
             logger.info(f"league補完: JRA={n_jra}行, NAR={n_nar}行 (race_id[4:6]から判定)")
+
+    # ── race_date / venue の補完・修正（league 確定後に実施） ──────────
+    # JRA race_id は YYYY+競馬場+開催回+開催日目+R で日付を含まない。
+    # 先頭8桁を YYYYMMDD とみなす旧処理は誤った日付を作っていたため廃止し、
+    #   JRA: 開催カレンダー由来の対応表（jra_kaisai_dates.csv）
+    #   NAR: race_id[6:10]（MMDD）
+    # から補完する。JRA の venue は race_id[4:6] から常に上書きする。
+    if "race_id" in df.columns and "league" in df.columns:
+        from keiba_predictor.scraper.jra_dates import (
+            load_kaisai_map, jra_date_from_race_id, nar_date_from_race_id,
+            jra_venue_from_race_id,
+        )
+        rid = df["race_id"].astype(str)
+        is_jra = df["league"].astype(str).str.upper().eq("JRA")
+        is_nar = df["league"].astype(str).str.upper().eq("NAR")
+
+        need = df["race_date"].isna() | (df["race_date"].dt.year == 1970)
+        # JRA: 先頭8桁から作られた疑いのある日付も対応表で検証・修正する
+        fake_jra = is_jra & (df["race_date"].dt.strftime("%Y%m%d") == rid.str[:8])
+        kaisai_map = load_kaisai_map() if (is_jra & (need | fake_jra)).any() else {}
+
+        jra_fix = is_jra & (need | fake_jra)
+        if jra_fix.any():
+            mapped = pd.to_datetime(rid[jra_fix].map(lambda r: jra_date_from_race_id(r, kaisai_map)),
+                                    errors="coerce")
+            df.loc[jra_fix, "race_date"] = mapped
+            n_bad = int(mapped.isna().sum())
+            logger.info(f"race_date(JRA): {int(jra_fix.sum())}行を開催日対応表で補完・修正"
+                        f"（対応表に無く未確定: {n_bad}行）")
+
+        nar_fix = is_nar & need
+        if nar_fix.any():
+            df.loc[nar_fix, "race_date"] = pd.to_datetime(
+                rid[nar_fix].map(nar_date_from_race_id), errors="coerce")
+            logger.info(f"race_date(NAR): {int(nar_fix.sum())}行を race_id[6:10] から補完")
+
+        if is_jra.any():
+            df.loc[is_jra, "venue"] = rid[is_jra].map(jra_venue_from_race_id)
+
+        n_nat = int(df["race_date"].isna().sum())
+        if n_nat:
+            logger.warning(f"race_date が確定しない行: {n_nat}行（開催日対応表の更新が必要）")
 
     # ── league 分布を表示 ─────────────────────────────────────
     if "league" in df.columns:

@@ -1,0 +1,74 @@
+name: JRA開催日修正
+
+# cleaned_races.csv.gz の JRA 行の race_date / venue を、開催カレンダー由来の正しい値に直す。
+# 1回目は dry_run=true で集計だけ確認し、問題なければ dry_run=false で書き込む。
+# 水曜データ更新（keiba_update.yml）と同時に走らせないこと。
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_year:
+        description: '対応表を作る開始年'
+        required: false
+        type: string
+        default: '2021'
+      dry_run:
+        description: 'true: 集計のみ（書き込まない） / false: 修正してコミット'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jra-date-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements.txt
+
+      - name: 開催日対応表を作成して修正（dry-run）
+        if: ${{ inputs.dry_run }}
+        run: python scripts/repair_jra_dates.py --build-map --start-year "${{ inputs.start_year }}" --dry-run
+
+      - name: 開催日対応表を作成して修正（書き込み）
+        if: ${{ !inputs.dry_run }}
+        run: python scripts/repair_jra_dates.py --build-map --start-year "${{ inputs.start_year }}"
+
+      - name: 対応表をアーティファクトとして保存
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jra_kaisai_dates
+          path: keiba_predictor/data/jra_kaisai_dates.csv
+          if-no-files-found: warn
+
+      - name: 修正結果をコミット
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add keiba_predictor/data/jra_kaisai_dates.csv keiba_predictor/data/cleaned_races.csv.gz
+          if git diff --staged --quiet; then
+            echo "変更なし"
+            exit 0
+          fi
+          git commit -m "fix: JRA race_date/venue を開催カレンダー基準に修正 [skip ci]"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push

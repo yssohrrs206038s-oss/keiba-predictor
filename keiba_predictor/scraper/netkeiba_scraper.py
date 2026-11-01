@@ -362,14 +362,6 @@ def _fill_from_img_alts(el, race_info: dict) -> None:
             race_info["track_condition"] = alt
 
 
-def _race_id_to_date(race_id: str) -> str:
-    """race_id の先頭8桁（YYYYMMDD）から YYYY-MM-DD 形式の日付を返す。
-
-    HTMLに依存せず、race_id が常に正確な日付を持つことを前提とする。
-    """
-    return f"{race_id[:4]}-{race_id[4:6]}-{race_id[6:8]}"
-
-
 def _scrape_meta_from_race_site(
     race_id: str, session: requests.Session, race_info: dict
 ) -> None:
@@ -418,7 +410,11 @@ def _scrape_meta_from_race_site(
         _parse_course_distance(title_el.get_text(strip=True), race_info)
 
 
-def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.DataFrame]:
+def scrape_race_result(
+    race_id: str,
+    session: requests.Session,
+    kaisai_date: Optional[str] = None,
+) -> Optional[pd.DataFrame]:
     """
     db.netkeiba.com/race/{race_id}/ からレース結果を取得してDataFrameで返す。
 
@@ -431,8 +427,9 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
           <p class="smalltxt">2024年01月06日 / 芝・右2000m / 天候 : 晴 / 馬場 : 良</p>
         </div>
 
-    race_id は YYYYMMDD+会場コード+日次+レース番号（12桁）のため、
-    先頭8桁から日付を確実に取得できる。
+    JRA の race_id は YYYY + 競馬場(2) + 開催回(2) + 開催日目(2) + レース番号(2) で、
+    日付を含まない。race_date はカレンダー由来の kaisai_date（YYYYMMDD）を最優先し、
+    無い場合のみ HTML 内の「YYYY年M月D日」表記から取得する。race_id からは算出しない。
     """
     url = RACE_RESULT_URL.format(race_id=race_id)
     logger.info(f"結果ページ取得: {url}")
@@ -471,8 +468,11 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         "track_condition": None,
     }
 
-    # ── race_date: HTMLから取得（JRA race_id は YYYY+VV+KK+DD+RR で日付ではない）──
+    # ── race_date: カレンダー由来の kaisai_date を最優先（JRA race_id は日付を含まない）──
     race_info["race_date"] = None
+    if kaisai_date and re.fullmatch(r"\d{8}", str(kaisai_date)):
+        kd = str(kaisai_date)
+        race_info["race_date"] = f"{kd[:4]}-{kd[4:6]}-{kd[6:8]}"
 
     # ── レース名 ──────────────────────────────────────────────
     name_el = (
@@ -552,7 +552,8 @@ def scrape_race_result(race_id: str, session: requests.Session) -> Optional[pd.D
         logger.warning(f"  [race_date] HTMLから取得できず: {race_id}")
 
     # ── 競馬場名・リーグをrace_idから設定 ───────────────────────
-    venue_code = race_id[8:10] if len(race_id) >= 10 else ""
+    # JRA race_id: YYYY + 競馬場(2) + 開催回(2) + 開催日目(2) + R(2) → 競馬場は [4:6]
+    venue_code = race_id[4:6] if len(race_id) >= 6 else ""
     race_info["venue"]  = VENUE_CODE_MAP.get(venue_code, venue_code)
     race_info["league"] = "JRA"
 
@@ -832,7 +833,7 @@ def scrape_races(
 
                 # Step3: レース結果取得
                 logger.info(f"    Scraping: {race_id}")
-                df = scrape_race_result(race_id, session)
+                df = scrape_race_result(race_id, session, kaisai_date=kaisai_date)
                 if df is not None and not df.empty:
                     all_dfs.append(df)
                     existing_ids.add(race_id)
