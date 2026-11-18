@@ -6149,5 +6149,39 @@
       "race_volatility": 4.128,
       "is_volatile_race": true
     }
+  },
+  "202603030511": {
+    "race_name": "福島記念",
+    "race_date": "2026-11-21",
+    "start_time": "",
+    "venue": "福島",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202608050611": {
+    "race_name": "マイルCS",
+    "race_date": "2026-11-21",
+    "start_time": "",
+    "venue": "京都",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
