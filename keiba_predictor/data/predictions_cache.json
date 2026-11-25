@@ -3938,5 +3938,56 @@
       "race_volatility": 3.076,
       "is_volatile_race": true
     }
+  },
+  "202608050711": {
+    "race_name": "京都2歳S",
+    "race_date": "2026-11-28",
+    "start_time": "",
+    "venue": "京都",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202605050812": {
+    "race_name": "ジャパンC",
+    "race_date": "2026-11-28",
+    "start_time": "",
+    "venue": "東京",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
+  },
+  "202608050812": {
+    "race_name": "京阪杯",
+    "race_date": "2026-11-28",
+    "start_time": "",
+    "venue": "京都",
+    "course_info": "",
+    "honmei": null,
+    "taikou": null,
+    "ana": null,
+    "predicted_top3_nums": [],
+    "predicted_top5_nums": [],
+    "predicted_top5": [],
+    "ev_top3": [],
+    "dangerous_horses": [],
+    "ai_comments": {},
+    "status": "upcoming"
   }
 }
